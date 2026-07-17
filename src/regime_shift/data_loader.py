@@ -48,6 +48,49 @@ def _simulate_prices(start="2019-01-01", end="2022-12-31"):
     return prices
 
 
+def compute_features(returns, tickers, window=20):
+    """
+    Build a feature DataFrame from rolling statistics on a returns matrix.
+
+    Parameters
+    ----------
+    returns : DataFrame
+        Daily returns indexed by date, one column per ticker.
+    tickers : list[str]
+        Ordered list of ticker symbols (at least 3 expected).
+    window : int
+        Rolling window length for correlation / volatility features.
+
+    Returns
+    -------
+    DataFrame with columns such as:
+        vol_<ticker>      — rolling std of returns
+        corr_eq_gold      — rolling correlation equity ↔ gold
+        corr_eq_bond      — rolling correlation equity ↔ bonds
+        corr_gold_bond    — rolling correlation gold ↔ bonds
+    """
+    features = pd.DataFrame(index=returns.index)
+
+    # Rolling volatility per asset
+    for tk in tickers:
+        features[f"vol_{tk}"] = (
+            returns[tk].rolling(window, min_periods=int(window * 0.8)).std()
+        )
+
+    # Correlations — compute via rolling corr with reference series
+    if len(tickers) == 3:
+        roll_ret = returns[tickers].rolling(
+            window, min_periods=int(window * 0.8)
+        )
+        eq_corr = roll_ret.corr(returns[tickers[0]], pairwise=False)
+        features["corr_eq_gold"]   = eq_corr[tickers[1]]
+        features["corr_eq_bond"]   = eq_corr[tickers[2]]
+        gd_corr = roll_ret.corr(returns[tickers[1]], pairwise=False)
+        features["corr_gold_bond"] = gd_corr[tickers[2]]
+
+    return features
+
+
 def run_backtest_simulated():
     """Load simulated prices, run the strategy, and display results."""
     prices = _simulate_prices()
