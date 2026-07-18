@@ -10,8 +10,11 @@ transition matrix — producing persistent regime runs of 5–10 days
 rather than daily flickering.
 """
 
+import logging
 import numpy as np
 import pandas as pd
+
+logger = logging.getLogger(__name__)
 
 
 class RegimeDetector:
@@ -66,7 +69,8 @@ class RegimeDetector:
             return pd.Series("Bull", index=features.dropna().index)
 
         self.n_features_ = X.shape[1]
-        states = self._fit_fallback(X)
+        self._fit_fallback(X)  # sets self.mu_, self.cov_, self.trans_, self.weights_
+        states = self._viterbi(X)
 
         valid_idx = features.dropna().index
         return pd.Series(states, index=valid_idx[: len(states)])
@@ -79,24 +83,72 @@ class RegimeDetector:
         """Return human-readable name for a state index."""
         return self.STATE_NAMES.get(state_idx, f"State_{state_idx}")
 
+    def select_n_states(self, features, candidates=None):
+        """Select optimal number of states via BIC.
+
+        Fits the HMM for each candidate ``n_states`` and returns the
+        value with the lowest Bayesian Information Criterion.
+
+        Parameters
+        ----------
+        features : DataFrame, shape (n_samples, n_features)
+            Feature matrix indexed by date.
+        candidates : list[int], optional
+            State counts to evaluate.  Defaults to [2, 3, 4, 5].
+
+        Returns
+        -------
+        int — the optimal number of states.
+        """
+        if candidates is None:
+            candidates = [2, 3, 4, 5]
+
+        X = features.dropna().values.astype(np.float64)
+        if len(X) < candidates[0]:
+            return candidates[0]
+
+        n_samples, n_dims = X.shape
+        best_bic = float("inf")
+        best_k = candidates[0]
+
+        for k in candidates:
+            if len(X) < k:
+                continue
+            # Subsample for speed on large datasets
+            sub = X[: min(len(X), 2000)]
+            saved_n = self.n_states
+            saved_iter = self.n_iter
+            self.n_states = k
+            self.n_iter = 20  # fewer iterations for BIC search
+            ll = self._fit_fallback(sub)
+            self.n_states = saved_n
+            self.n_iter = saved_iter
+            if ll is None or not np.isfinite(ll):
+                continue
+
+            # Parameter count: k means + k covariances + k transitions + k initial
+            n_params = k * n_dims + k * n_dims * (n_dims + 1) // 2 + k * k + k - 1
+            bic = -2.0 * ll + n_params * np.log(n_samples)
+
+            logger.debug("BIC for k=%d: %.2f (params=%d)", k, bic, n_params)
+            if bic < best_bic:
+                best_bic = bic
+                best_k = k
+
+        logger.info("BIC selected n_states=%d (BIC=%.1f)", best_k, best_bic)
+        return best_k
+
     # ------------------------------------------------------------------
     # Core: EM + Viterbi
     # ------------------------------------------------------------------
 
     def _fit_fallback(self, features):
-        """Fit HMM parameters via EM and decode states via Viterbi.
-
-        Parameters
-        ----------
-        features : ndarray, shape (n, d)
-
-        Returns
-        -------
-        ndarray of shape (n,) — integer state labels.
-        """
-        rng = np.random.RandomState(self.random_state)
+        """Fit HMM parameters via EM and return log-likelihood."""
         n, d = features.shape
         k = self.n_states
+        self.n_features_ = d
+
+        rng = np.random.RandomState(self.random_state)
 
         # ---- Random initialization ----
         init_idx = rng.choice(n, k, replace=False)
@@ -108,20 +160,14 @@ class RegimeDetector:
         # ---- EM loop ----
         prev_log_lik = -np.inf
         for _ in range(self.n_iter):
-            # E-step
             resp = self._e_step(features)
-
-            # M-step
             self._m_step(features, resp)
-
-            # Convergence check
             log_lik = self._log_likelihood(features)
             if abs(log_lik - prev_log_lik) < 1e-6:
                 break
             prev_log_lik = log_lik
 
-        # ---- Viterbi decoding (replaces point-wise MAP) ----
-        return self._viterbi(features)
+        return log_lik
 
     # ------------------------------------------------------------------
     # E-step: Forward-Backward

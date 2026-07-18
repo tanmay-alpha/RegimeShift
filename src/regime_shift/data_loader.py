@@ -3,6 +3,7 @@ import pandas as pd
 import matplotlib.pyplot as plt
 
 ASSETS = ["equity", "gold", "bonds"]
+ASSET_LABELS = {t: t for t in ASSETS}  # ticker → display label map
 
 
 def _simulate_prices(start="2019-01-01", end="2022-12-31"):
@@ -50,7 +51,7 @@ def _simulate_prices(start="2019-01-01", end="2022-12-31"):
 
 def compute_features(returns, tickers, window=20):
     """
-    Build a feature DataFrame from rolling statistics on a returns matrix.
+    Build rolling-statistic features for regime detection.
 
     Parameters
     ----------
@@ -59,35 +60,40 @@ def compute_features(returns, tickers, window=20):
     tickers : list[str]
         Ordered list of ticker symbols (at least 3 expected).
     window : int
-        Rolling window length for correlation / volatility features.
+        Rolling window length for statistics.
 
     Returns
     -------
-    DataFrame with columns such as:
-        vol_<ticker>      — rolling std of returns
+    DataFrame with columns:
+        ret_<ticker>      — annualised rolling mean return (252×)
+        vol_<ticker>      — annualised rolling std (√252×)
         corr_eq_gold      — rolling correlation equity ↔ gold
         corr_eq_bond      — rolling correlation equity ↔ bonds
         corr_gold_bond    — rolling correlation gold ↔ bonds
+
+    Total: 6 + 3 = 9 features (reduced from 13 to avoid overfitting).
     """
+    tickers = returns.columns.tolist()
+    labels = [ASSET_LABELS.get(t, t) for t in tickers]
     features = pd.DataFrame(index=returns.index)
 
-    # Rolling volatility per asset
-    for tk in tickers:
-        features[f"vol_{tk}"] = (
-            returns[tk].rolling(window, min_periods=int(window * 0.8)).std()
-        )
+    window = int(window)
+    min_p = max(int(window * 0.8), 10)
 
-    # Correlations — compute via rolling corr with reference series
+    for ticker, label in zip(tickers, labels):
+        roll = returns[ticker].rolling(window, min_periods=min_p)
+        features[f"ret_{label}"]  = roll.mean() * 252
+        features[f"vol_{label}"]  = roll.std() * np.sqrt(252)
+
     if len(tickers) == 3:
-        roll_ret = returns[tickers].rolling(
-            window, min_periods=int(window * 0.8)
-        )
+        roll_ret = returns[tickers].rolling(window, min_periods=min_p)
         eq_corr = roll_ret.corr(returns[tickers[0]], pairwise=False)
         features["corr_eq_gold"]   = eq_corr[tickers[1]]
         features["corr_eq_bond"]   = eq_corr[tickers[2]]
         gd_corr = roll_ret.corr(returns[tickers[1]], pairwise=False)
         features["corr_gold_bond"] = gd_corr[tickers[2]]
 
+    features = features.replace([np.inf, -np.inf], np.nan).dropna()
     return features
 
 

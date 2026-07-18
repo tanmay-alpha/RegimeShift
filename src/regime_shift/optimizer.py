@@ -76,4 +76,15 @@ class PortfolioOptimizer:
             if np.linalg.norm(grad) < 1e-6:
                 break
 
+        # Enforce turnover constraint — project onto L1 ball
+        if current_weights is not None and max_turnover is not None:
+            delta = w - current_weights
+            turnover = np.abs(delta).sum() / 2.0
+            if turnover > max_turnover:
+                scale = max_turnover / (turnover + 1e-12)
+                delta = delta * min(scale, 1.0)
+                w = current_weights + delta
+                w = np.clip(w, lb, ub)
+                w = w / (w.sum() + 1e-12)
+
         return w.astype(np.float64)
