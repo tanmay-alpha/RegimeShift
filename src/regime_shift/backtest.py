@@ -49,6 +49,7 @@ class WalkForwardBacktest:
         window_size=20,
         n_regimes=3,
         transaction_cost=0.0015,
+        regime_persistence=3,
     ):
         self.prices = prices
         self.tickers = tickers
@@ -56,6 +57,7 @@ class WalkForwardBacktest:
         self.window_size = window_size
         self.n_regimes = n_regimes
         self.transaction_cost = transaction_cost
+        self.regime_persistence = regime_persistence
 
         self.detector = RegimeDetector(n_states=n_regimes)
         self.optimizer = PortfolioOptimizer(n_assets=len(tickers))
@@ -71,7 +73,6 @@ class WalkForwardBacktest:
         on a returns DataFrame passed in.
         """
         from .data_loader import compute_features
-        return compute_features(returns, self.tickers, window=self.window_size)
         return compute_features(returns, self.tickers, window=self.window_size)
 
     # ------------------------------------------------------------------
@@ -111,6 +112,7 @@ class WalkForwardBacktest:
         equity = np.zeros(n)
         current_weights = np.ones(len(self.tickers)) / len(self.tickers)
         current_regime = 0  # default to Bull
+        regime_counter = {}  # persistence counter per regime label
         capital = 1.0
 
         for day_idx in range(self.window_size, n):
@@ -132,8 +134,19 @@ class WalkForwardBacktest:
                 else:
                     pred_regime = current_regime
 
+                # -- Regime persistence filter --
+                # Require N consecutive days in the same regime before
+                # acting on it, to avoid spurious single-day flips.
+                if pred_regime == current_regime:
+                    regime_counter[pred_regime] = regime_counter.get(pred_regime, 0) + 1
+                else:
+                    regime_counter = {pred_regime: 1}
+                if regime_counter.get(pred_regime, 0) >= self.regime_persistence:
+                    current_regime = pred_regime
+                else:
+                    pred_regime = current_regime
+
                 regimes[day_idx] = pred_regime
-                current_regime = pred_regime
 
                 # Regime-conditioned expected returns / covariance
                 mu, cov = self._estimate_moments(returns, regimes, pred_regime, day_idx)
@@ -154,8 +167,11 @@ class WalkForwardBacktest:
             weights_history[day_idx] = current_weights
 
             # Portfolio return for the day
-            port_ret = (current_weights * returns.iloc[day_idx].values).sum()
-            port_ret -= turnover[day_idx] * self.transaction_cost
+            daily_ret = (current_weights * returns.iloc[day_idx].values).sum()
+            if rebalance and turnover[day_idx] > 0:
+                port_ret = daily_ret - turnover[day_idx] * self.transaction_cost
+            else:
+                port_ret = daily_ret
             capital *= 1.0 + port_ret
             equity[day_idx] = capital
 
