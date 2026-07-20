@@ -11,19 +11,19 @@ venv/
 *.egg-info/
 dist/
 build/
+.pytest_cache/
+
+# Data & Temp Files
+live_trader.log
+_temp_*.csv
 
 # Jupyter Notebooks
 .ipynb_checkpoints/
 
-# Data Files (large - optionally ignore)
-# *.csv  # Uncomment if you want to ignore CSV data files
-
-# IDE
+# IDE & OS
 .vscode/
 .idea/
 *.swp
 *.swo
-
-# OS
 .DS_Store
 Thumbs.db
