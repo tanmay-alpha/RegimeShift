@@ -1,6 +1,10 @@
 pandas
 numpy
-TA-Lib
-pandas-ta
+pandas-ta-classic
 matplotlib
 plotly
+streamlit
+scipy
+seaborn
+pytest
+ccxt

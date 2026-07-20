@@ -94,7 +94,7 @@ class BackTester:
         if "SL" not in self.data.columns:
             self.data["SL"] = 0
 
-        master_file_path = master_file_path if master_file_path else signal_data_path
+        master_file_path = master_file_path if master_file_path is not None else signal_data_path
         self.master_data = self.preprocess_csv(master_file_path)
 
         self.trades = []
@@ -104,10 +104,18 @@ class BackTester:
         self.sl = 0
 
     def preprocess_csv(self, file_path):
-        data = pd.read_csv(file_path, header=0)
-        data['datetime'] = pd.to_datetime(data['datetime'])
-        data["nextdatetime"] = data["datetime"] + pd.Timedelta(minutes=1)
-        data.set_index("datetime", inplace=True)
+        if isinstance(file_path, pd.DataFrame):
+            data = file_path.copy()
+        else:
+            data = pd.read_csv(file_path, header=0)
+
+        if "datetime" in data.columns:
+            data['datetime'] = pd.to_datetime(data['datetime'])
+            data["nextdatetime"] = data["datetime"] + pd.Timedelta(days=1)
+            data.set_index("datetime", inplace=True)
+        elif not isinstance(data.index, pd.DatetimeIndex):
+            data.index = pd.to_datetime(data.index)
+
         return data
 
     def check_tp_sl(self, timestamp, next_timestamp):
