@@ -9,6 +9,8 @@ Key design:
   today's return) is never in the training window.
 - Portfolio optimization is regime-conditioned using the
   PortfolioOptimizer from regime_shift.optimizer.
+- Enhanced feature engineering: 54 standardized features including
+  returns, volatility, momentum, tail risk, and cross-asset signals.
 """
 
 import numpy as np
@@ -16,6 +18,7 @@ import pandas as pd
 from datetime import timedelta
 
 from .regime_detector import RegimeDetector
+from .regime_signal import RegimeSignal
 from .optimizer import PortfolioOptimizer
 
 from backtester import BackTester, sign
@@ -46,7 +49,7 @@ class WalkForwardBacktest:
         prices,
         tickers,
         rebalance_freq="1M",
-        window_size=20,
+        window_size=252,
         n_regimes=3,
         transaction_cost=0.0015,
         regime_persistence=3,
@@ -59,7 +62,11 @@ class WalkForwardBacktest:
         self.transaction_cost = transaction_cost
         self.regime_persistence = regime_persistence
 
-        self.detector = RegimeDetector(n_states=n_regimes)
+        self.detector = RegimeDetector(
+            n_states=n_regimes,
+            lookback=window_size,
+            random_state=42,
+        )
         self.optimizer = PortfolioOptimizer(n_assets=len(tickers))
 
     # ------------------------------------------------------------------
@@ -67,10 +74,18 @@ class WalkForwardBacktest:
     # ------------------------------------------------------------------
 
     def compute_features(self, returns):
-        """Build rolling-statistic features for regime detection.
+        """Build enhanced features for regime detection.
 
-        Mirrors the style from data_loader.compute_features but works
-        on a returns DataFrame passed in.
+        Uses RegimeFeatureEngineer to compute 54 standardized features
+        including returns, volatility, momentum, tail risk, and
+        cross-asset signals. All features are z-scored using a rolling
+        calibration window.
+
+        Args:
+            returns: DataFrame of daily returns
+
+        Returns:
+            DataFrame of standardized features
         """
         from .data_loader import compute_features
         return compute_features(returns, self.tickers, window=self.window_size)
@@ -123,9 +138,8 @@ class WalkForwardBacktest:
                 # ----------------------------------------------------------
                 # LOOK-AHEAD BIAS FIX:
                 # Train ONLY on features up to the END of the PREVIOUS
-                # trading day (today_idx - 1).  Today's feature row
+                # trading day (today_idx - 1). Today's feature row
                 # includes today's return — it must NOT be in the fit set.
-                # Then use the LAST predicted regime as today's label.
                 # ----------------------------------------------------------
                 train_features = features.iloc[:day_idx - 1]
                 regime_series = self.detector.fit_predict(train_features)
@@ -271,42 +285,11 @@ class WalkForwardBacktest:
             }
         return stats
 
+    def get_detector_metrics(self) -> dict:
+        """Return diagnostic metrics from the regime detector."""
+        return self.detector.get_regime_metrics()
+
     def plot_equity_and_regimes(self, result):
         """Plot equity curve with regime background shading."""
-        import matplotlib.pyplot as plt
-        import matplotlib.patches as mpatches
-
-        equity = result["equity_curve"]
-        regimes = result["regimes"]
-        fig, ax = plt.subplots(figsize=(14, 6))
-
-        ax.plot(equity.index, equity.values, label="Strategy", linewidth=1.5)
-
-        # Shade regime periods
-        colors = {0: "#2ecc71", 1: "#f1c40f", 2: "#e74c3c"}
-        labels = {0: "Bull", 1: "Bear", 2: "Crisis"}
-        for state_id in regimes.unique():
-            if state_id < 0:
-                continue
-            mask = regimes == state_id
-            ax.fill_between(
-                regimes.index,
-                0,
-                equity.values.max() * 1.1,
-                where=mask,
-                color=colors.get(state_id, "#95a5a6"),
-                alpha=0.08,
-            )
-
-        ax.set_title("Equity Curve with Regime Shading")
-        ax.set_xlabel("Date")
-        ax.set_ylabel("Equity")
-        ax.legend(loc="upper left")
-        patches = [
-            mpatches.Patch(color=c, alpha=0.3, label=labels.get(s, f"State {s}"))
-            for s, c in colors.items()
-            if s in regimes.unique()
-        ]
-        ax.legend(handles=patches, loc="upper left")
-        plt.tight_layout()
-        plt.show()
+        from .visualize import plot_equity_and_regimes
+        plot_equity_and_regimes(result)
