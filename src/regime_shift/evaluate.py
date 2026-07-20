@@ -87,3 +87,85 @@ def print_confidence_intervals(result):
     print("Bootstrap confidence intervals (1000 draws, 21-day blocks):")
     for metric, (med, lo, hi) in ci.items():
         print(f"  {metric}: {med:.3f} [{lo:.3f}, {hi:.3f}]")
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Regime-Specific Performance Metrics
+# ─────────────────────────────────────────────────────────────────────────────
+
+def compute_regime_metrics(
+    returns: pd.Series,
+    regimes: pd.Series,
+) -> pd.DataFrame:
+    """
+    Compute performance metrics broken down by regime.
+
+    This reveals which regimes the strategy profits from vs. loses in.
+
+    Parameters
+    ----------
+    returns : pd.Series
+        Daily portfolio returns indexed by date.
+    regimes : pd.Series
+        Regime labels indexed by date (must align with returns index).
+
+    Returns
+    -------
+    pd.DataFrame
+        Rows = regime labels, columns = metrics:
+        - days: number of days in regime
+        - total_return: cumulative return during regime
+        - annualized_return: annualized return
+        - annualized_vol: annualized volatility
+        - sharpe_ratio: return / vol
+        - max_drawdown: worst peak-to-trough
+        - win_rate: fraction of positive return days
+    """
+    # Align indices
+    common_idx = returns.index.intersection(regimes.index)
+    if len(common_idx) == 0:
+        logger.warning("No overlapping dates between returns and regimes")
+        return pd.DataFrame()
+
+    aligned_returns = returns.loc[common_idx]
+    aligned_regimes = regimes.loc[common_idx]
+
+    rows = []
+    for regime in aligned_regimes.unique():
+        mask = aligned_regimes == regime
+        if mask.sum() == 0:
+            continue
+
+        regime_rets = aligned_returns[mask]
+        n_days = mask.sum()
+
+        # Basic metrics
+        total_ret = (1.0 + regime_rets).prod() - 1.0
+        ann_ret = (1.0 + total_ret) ** (252.0 / max(n_days, 1)) - 1.0
+        ann_vol = regime_rets.std() * np.sqrt(252.0)
+        sharpe = ann_ret / (ann_vol + 1e-12) if ann_vol > 0 else 0.0
+
+        # Max drawdown
+        cum = (1.0 + regime_rets).cumprod()
+        peak = np.maximum.accumulate(cum.values)
+        mdd = np.min((cum.values - peak) / (peak + 1e-12))
+
+        # Win rate
+        win_rate = (regime_rets > 0).mean()
+
+        rows.append({
+            "regime": regime,
+            "days": n_days,
+            "total_return": float(total_ret),
+            "annualized_return": float(ann_ret),
+            "annualized_vol": float(ann_vol),
+            "sharpe_ratio": float(sharpe),
+            "max_drawdown": float(mdd),
+            "win_rate": float(win_rate),
+        })
+
+    df = pd.DataFrame(rows)
+    if not df.empty:
+        df = df.set_index("regime")
+
+    return df

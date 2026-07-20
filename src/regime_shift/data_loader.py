@@ -260,23 +260,42 @@ def compute_features_btc(df: pd.DataFrame, window: int = 20) -> pd.DataFrame:
 # ─────────────────────────────────────────────────────────────────────────────
 
 def compute_features(returns: pd.DataFrame, tickers: list,
-                     window: int = 20) -> pd.DataFrame:
+                     window: int = 252) -> pd.DataFrame:
     """
     Build rolling-statistic features for multi-asset regime detection.
+
+    Uses RegimeFeatureEngineer for enhanced feature computation including
+    returns, volatility, momentum, tail risk, and cross-asset signals.
 
     Parameters
     ----------
     returns : DataFrame — daily returns, one column per ticker
     tickers : list[str]
-    window : int
+    window : int — rolling window (passed to feature engineer)
 
     Returns
     -------
-    DataFrame with columns:
-        ret_<ticker>   — annualised rolling mean return
-        vol_<ticker>   — annualised rolling std
-        corr_*         — rolling pairwise correlations (if 3 assets)
+    DataFrame with standardized features, no NaN.
     """
+    try:
+        from regime_shift.regime_features import RegimeFeatureEngineer
+
+        # Build price DataFrame from returns for the feature engineer
+        prices = (1.0 + returns).cumprod()
+        engineer = RegimeFeatureEngineer(lookback_window=window)
+        features = engineer.fit_transform(prices)
+        logger.info("Computed %d enhanced features from %d return observations",
+                    features.shape[1], len(features))
+        return features
+    except Exception as e:
+        logger.warning("Enhanced feature engineering failed (%s), falling back to basic features", e)
+        # Fallback to basic computation
+        return _compute_basic_features(returns, tickers, window)
+
+
+def _compute_basic_features(returns: pd.DataFrame, tickers: list,
+                             window: int = 20) -> pd.DataFrame:
+    """Fallback basic feature computation when enhanced features fail."""
     tickers = returns.columns.tolist()
     labels  = [ASSET_LABELS.get(t, t) for t in tickers]
     features = pd.DataFrame(index=returns.index)
