@@ -121,12 +121,12 @@ class WalkForwardBacktest:
         rebalance_dates = rebalance_dates[rebalance_dates.isin(dates)]
 
         n = len(dates)
-        regimes = np.full(n, -1, dtype=int)
+        regimes = np.full(n, -1, dtype=object)
         weights_history = np.zeros((n, len(self.tickers)))
         turnover = np.zeros(n)
         equity = np.zeros(n)
         current_weights = np.ones(len(self.tickers)) / len(self.tickers)
-        current_regime = 0  # default to Bull
+        current_regime = "Bull"  # default regime label
         regime_counter = {}  # persistence counter per regime label
         capital = 1.0
 
@@ -262,28 +262,54 @@ class WalkForwardBacktest:
         return (excess.mean() / std) * np.sqrt(252)
 
     def regime_statistics(self, regime_series):
-        """Return dict of regime quality metrics."""
+        """Return dict of regime quality metrics.
+
+        Accepts either an int state-id Series (legacy) or a string label
+        Series (current). String labels are detected automatically.
+        """
         stats = {}
-        for state_id in regime_series.unique():
-            if state_id < 0:
-                continue
-            runs = regime_series.eq(state_id).astype(int)
-            # Find consecutive runs
-            changes = runs.diff().fillna(0).ne(0)
-            run_starts = changes[changes].index
-            run_lengths = []
-            for i, start in enumerate(run_starts):
-                end = run_starts[i + 1] if i + 1 < len(run_starts) else regime_series.index[-1]
-                run_lengths.append(
-                    regime_series.loc[start:end].eq(state_id).sum()
-                )
-            stats[f"regime_{state_id}"] = {
-                "name": self.detector.get_state_name(state_id),
-                "freq_pct": (regime_series == state_id).mean() * 100,
-                "avg_duration_days": float(np.mean(run_lengths)) if run_lengths else 0,
-                "max_duration_days": float(np.max(run_lengths)) if run_lengths else 0,
+        unique_vals = regime_series.unique()
+        for val in unique_vals:
+            # Skip 'no regime assigned' sentinels (-1 or -1.0)
+            try:
+                if int(val) == -1:
+                    continue
+            except (TypeError, ValueError):
+                # String labels are valid regimes, not sentinels
+                pass
+
+            mask = regime_series == val
+            label = str(val)
+            stats[f"regime_{label}"] = {
+                "name": label,
+                "freq_pct": float(mask.mean() * 100),
+                "avg_duration_days": self._avg_run_length(regime_series, val),
+                "max_duration_days": self._max_run_length(regime_series, val),
             }
         return stats
+
+    def _avg_run_length(self, regime_series: pd.Series, val) -> float:
+        """Average length (days) of consecutive runs of val in regime_series."""
+        mask = (regime_series == val).astype(int)
+        diff = mask.diff().fillna(0)
+        # Run starts where diff == 1
+        starts = mask.index[diff == 1].tolist()
+        if not starts:
+            # Entire series is the value (e.g., all "Bull")
+            return float(len(regime_series))
+        if mask.iloc[0] == 1:
+            starts = [regime_series.index[0]] + starts
+        lengths = []
+        for i, s in enumerate(starts):
+            e = starts[i + 1] if i + 1 < len(starts) else regime_series.index[-1]
+            lengths.append(int(mask.loc[s:e].sum()))
+        return float(np.mean(lengths)) if lengths else 0.0
+
+    def _max_run_length(self, regime_series: pd.Series, val) -> float:
+        """Max consecutive-run length of val in regime_series."""
+        mask = (regime_series == val).astype(int)
+        runs = (mask.groupby((mask != mask.shift()).cumsum()).cumsum())
+        return float(runs.max()) if len(runs) else 0.0
 
     def get_detector_metrics(self) -> dict:
         """Return diagnostic metrics from the regime detector."""
