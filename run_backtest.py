@@ -156,11 +156,27 @@ def main():
     print(f"  {'Metric':<30} {'Strategy':>10} {'Buy&Hold':>10} {'60/40':>10}")
     print(f"  {'-'*30} {'-'*10} {'-'*10} {'-'*10}")
 
+    # Wrap strategy result in BenchmarkResult so the comparison
+    # functions (which call .returns) work on both strategy and benchmarks.
+    # Compute portfolio returns (multi-asset returns × weights) for benchmark
+    # comparison. result["returns"] is a multi-asset DataFrame; we want the
+    # scalar portfolio return series here.
+    portfolio_returns = (result["returns"].values * result["weights"].values).sum(axis=1)
+    portfolio_returns = pd.Series(
+        portfolio_returns,
+        index=result["returns"].index,
+        name="strategy",
+    )
+    strategy_result = BenchmarkResult(
+        name="Strategy",
+        returns=portfolio_returns,
+    )
+
     for metric_name, fn in [
         ("Sharpe Ratio",  compute_sharpe),
         ("Total Return",  compute_total_return),
     ]:
-        vals = [fn(result)]
+        vals = [fn(strategy_result)]
         for b in aligned_bench.values():
             vals.append(fn(b))
         print(f"  {metric_name:<30} {vals[0]:>10.3f} {vals[1]:>10.3f} {vals[2]:>10.3f}")
