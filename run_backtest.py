@@ -1,28 +1,19 @@
 #!/usr/bin/env python3
 """
-RegimeShift — HMM Walk-Forward Backtest Runner
-
-Runs the full HMM-based regime detection + walk-forward backtest.
-By default operates on real BTC/USD data. Falls back to simulated multi-asset
-data for algorithm testing.
+Main entry point for RegimeShift backtest.
 
 Usage:
-    python run_backtest.py                            # BTC data, 3-state HMM
-    python run_backtest.py --simulate                 # Simulated multi-asset data
-    python run_backtest.py --select-nstates           # Auto-select n_states via BIC
-    python run_backtest.py --n-states 4               # Specify number of HMM states
-    python run_backtest.py --bootstrap                # Bootstrap confidence intervals
+    python run_backtest.py                    # Simulated data
+    python run_backtest.py --export           # Export CSV + plots
+    python run_backtest.py --lookback 300     # Custom lookback
+    python run_backtest.py --n-states 4       # Specify number of HMM regimes
+    python run_backtest.py --simulate         # Simulated multi-asset data
 """
 
 import argparse
 import logging
-import sys
 import os
-
-if hasattr(sys.stdout, 'reconfigure'):
-    sys.stdout.reconfigure(encoding='utf-8')
-if hasattr(sys.stderr, 'reconfigure'):
-    sys.stderr.reconfigure(encoding='utf-8')
+import sys
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "src"))
 
@@ -32,13 +23,18 @@ import numpy as np
 import config
 from src.regime_shift.data_loader import (
     load_btc_data, compute_features_btc,
-    _simulate_prices, compute_features, compute_returns,
+    _simulate_prices, compute_features, compute_returns, load_prices,
 )
 from src.regime_shift.regime_detector import RegimeDetector
-from src.regime_shift.backtest         import WalkForwardBacktest
-from src.regime_shift.optimizer        import PortfolioOptimizer
-from src.regime_shift.benchmarks       import run_benchmarks, compute_sharpe, compute_total_return, BenchmarkResult
-from src.regime_shift.evaluate         import print_confidence_intervals
+from src.regime_shift.optimizer import PortfolioOptimizer
+from src.regime_shift.transaction_costs import TransactionCostModel
+from src.regime_shift.backtest import WalkForwardBacktest, BacktestResult
+from src.regime_shift.benchmarks import run_benchmarks
+from src.regime_shift.evaluate import compute_metrics, compute_regime_metrics, compute_turnover_metrics
+from src.regime_shift.visualize import (
+    plot_backtest_results, plot_turnover_costs,
+    plot_regime_performance, plot_weight_evolution,
+)
 
 logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(message)s")
 logger = logging.getLogger(__name__)
@@ -64,6 +60,8 @@ def parse_args():
                    help="Transaction cost per trade (proportional)")
     p.add_argument("--bootstrap",     action="store_true",
                    help="Run block bootstrap confidence intervals after backtest")
+    p.add_argument("--export",        action="store_true",
+                   help="Export CSV + plots to results/")
     return p.parse_args()
 
 
@@ -80,7 +78,6 @@ def main():
         data_path = args.prices or config.DATA_PATH
         logger.info("Loading BTC data from %s", data_path)
         btc_df  = load_btc_data(data_path)
-        # For walk-forward, treat BTC close as single-asset "price"
         btc_df["datetime"] = pd.to_datetime(btc_df["datetime"])
         prices  = btc_df.set_index("datetime")[["close"]].rename(columns={"close": "BTC"})
         returns = prices.pct_change().dropna()
@@ -101,92 +98,108 @@ def main():
         n_states = det.select_n_states(features)
         logger.info("BIC selected n_states=%d", n_states)
 
+    # ── Build features ──
+    features = compute_features(returns, tickers, window=args.window)
+    features = features.dropna()
+    if len(features) == 0:
+        logger.error("No valid features computed. Check data and window size.")
+        sys.exit(1)
+
     # ── Walk-forward backtest ──
     logger.info(
         "Running walk-forward backtest (n_states=%d, persistence=%d, rebalance=%s)",
         n_states, args.persistence, args.rebalance,
     )
+    detector = RegimeDetector(
+        n_states=n_states,
+        lookback=args.window,
+        retrain_freq=21,
+    )
+    optimizer = PortfolioOptimizer(n_assets=len(tickers))
+    cost_model = TransactionCostModel()
+
     wb = WalkForwardBacktest(
         prices=prices,
-        tickers=tickers,
-        rebalance_freq=args.rebalance,
-        window_size=args.window,
-        n_regimes=n_states,
-        transaction_cost=args.cost,
-        regime_persistence=args.persistence,
+        returns=returns,
+        features=features,
+        lookback=args.window,
+        retrain_freq=21,
+        n_states=n_states,
+        cost_model=cost_model,
+        detector=detector,
+        optimizer=optimizer,
+        turnover_limit=0.20,
     )
-    result = wb.run(returns)
+    result = wb.run()
 
-    # ── Strategy metrics ──
-    strategy_sharpe = wb.sharpe_ratio(result["equity_curve"])
-    strategy_total  = float((1.0 + result["returns"].sum(axis=1)).prod() - 1.0)
-    avg_turnover    = result["turnover"].mean()
+    # ── Compute metrics ──
+    strategy_metrics = compute_metrics(result.portfolio_returns, name="RegimeShift")
+    regime_metrics = compute_regime_metrics(result.portfolio_returns, result.regime_series)
+    turnover_metrics = compute_turnover_metrics(result.weights_history, result.regime_series)
 
-    print("\n" + "=" * 55)
-    print("           REGIMESHIFT — WALK-FORWARD BACKTEST")
-    print("=" * 55)
-    print(f"  Sharpe Ratio          : {strategy_sharpe:.3f}")
-    print(f"  Total Return          : {strategy_total * 100:.2f}%")
-    print(f"  Avg Daily Turnover    : {avg_turnover:.4f}")
-    print(f"  Max Daily Turnover    : {result['turnover'].max():.4f}")
-
-    regime_stats = wb.regime_statistics(result["regimes"])
-    print("\n  Regime Breakdown:")
-    for k, v in regime_stats.items():
-        print(f"    {v['name']:8s}: freq={v['freq_pct']:.1f}%  "
-              f"avg_duration={v['avg_duration_days']:.1f}d  "
-              f"max_duration={v['max_duration_days']:.0f}d")
-
-    # ── Benchmark comparison ──
-    bench_results = run_benchmarks(prices, returns)
-    strategy_start = result["returns"].index[0]
-    strategy_end   = result["returns"].index[-1]
-
-    aligned_bench = {}
-    for name, bench in bench_results.items():
-        aligned = BenchmarkResult(
-            name=bench.name,
-            returns=bench.returns.loc[strategy_start:strategy_end],
-        )
-        aligned_bench[name] = aligned
-
-    print("\n" + "=" * 55)
-    print("              BENCHMARK COMPARISON")
-    print("=" * 55)
-    print(f"  {'Metric':<30} {'Strategy':>10} {'Buy&Hold':>10} {'60/40':>10}")
-    print(f"  {'-'*30} {'-'*10} {'-'*10} {'-'*10}")
-
-    # Wrap strategy result in BenchmarkResult so the comparison
-    # functions (which call .returns) work on both strategy and benchmarks.
-    # Compute portfolio returns (multi-asset returns × weights) for benchmark
-    # comparison. result["returns"] is a multi-asset DataFrame; we want the
-    # scalar portfolio return series here.
-    portfolio_returns = (result["returns"].values * result["weights"].values).sum(axis=1)
-    portfolio_returns = pd.Series(
-        portfolio_returns,
-        index=result["returns"].index,
-        name="strategy",
-    )
-    strategy_result = BenchmarkResult(
-        name="Strategy",
-        returns=portfolio_returns,
+    # ── Run benchmarks ──
+    logger.info("Running benchmarks...")
+    bench_results = run_benchmarks(
+        prices, returns, features,
+        cost_model=cost_model,
+        rebalance_freq=21,
+        lookback=args.window,
     )
 
-    for metric_name, fn in [
-        ("Sharpe Ratio",  compute_sharpe),
-        ("Total Return",  compute_total_return),
-    ]:
-        vals = [fn(strategy_result)]
-        for b in aligned_bench.values():
-            vals.append(fn(b))
-        print(f"  {metric_name:<30} {vals[0]:>10.3f} {vals[1]:>10.3f} {vals[2]:>10.3f}")
+    # ── Print results ──
+    print("\n" + "=" * 70)
+    print("  REGIMESHIFT — WALK-FORWARD BACKTEST RESULTS")
+    print("=" * 70)
+
+    print(f"\n{'Strategy':<20} {'Return':>10} {'Sharpe':>8} {'MaxDD':>10} {'Turnover':>10} {'Costs':>8}")
+    print("-" * 70)
+
+    all_results: dict[str, BacktestResult] = {"RegimeShift": result}
+    all_results.update(bench_results)
+
+    for name, res in all_results.items():
+        m = compute_metrics(res.portfolio_returns, name=name)
+        cost_drag = res.cost_drag if hasattr(res, 'cost_drag') else 0.0
+        print(f"{name:<20} {m.total_return:>9.1%} {m.sharpe_ratio:>8.2f} "
+              f"{m.max_drawdown:>9.1%} {res.turnover:>9.1f}x {cost_drag:>7.2%}")
+
+    print("\n--- Regime Breakdown ---")
+    if len(regime_metrics) > 0:
+        print(regime_metrics.to_string())
+
+    print(f"\n--- Turnover Analysis ---")
+    print(f"  Avg daily turnover: {turnover_metrics['avg_daily_turnover']:.4f}")
+    print(f"  Avg annual turnover: {turnover_metrics['avg_annual_turnover']:.1f}x")
+
+    print(f"\n--- Regime Detection ---")
+    print(f"  Regime changes: {result.regime_changes}")
+    if len(result.regime_series) > 0:
+        regime_counts = result.regime_series.value_counts()
+        for regime, count in regime_counts.items():
+            pct = count / len(result.regime_series) * 100
+            print(f"  {regime}: {count} days ({pct:.0f}%)")
 
     # ── Bootstrap CIs ──
     if args.bootstrap:
+        from src.regime_shift.evaluate import print_confidence_intervals
         print()
         print_confidence_intervals(result)
 
-    print("=" * 55 + "\n")
+    # ── Export ──
+    if args.export:
+        os.makedirs("results", exist_ok=True)
+        result.portfolio_returns.to_csv("results/portfolio_returns.csv")
+        result.weights_history.to_csv("results/weights_history.csv")
+        result.regime_series.to_csv("results/regime_series.csv")
+        result.costs.to_csv("results/transaction_costs.csv")
+
+        plot_backtest_results(result, bench_results, output_path="results/backtest_chart.png")
+        plot_turnover_costs(result, output_path="results/turnover_chart.png")
+        plot_regime_performance(regime_metrics, output_path="results/regime_performance.png")
+        plot_weight_evolution(result.weights_history, output_path="results/weights.png")
+        logger.info("Results exported to results/")
+
+    print("=" * 70 + "\n")
 
 
 if __name__ == "__main__":

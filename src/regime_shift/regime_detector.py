@@ -116,6 +116,13 @@ CONVERGENCE_TOL: float = 1e-4
 #: Number of consecutive iterations below tolerance to declare convergence
 CONVERGENCE_WINDOW: int = 5
 
+#: Default regime labels for n_states
+REGIME_LABELS: dict = {
+    2: ["Bear", "Bull"],
+    3: ["Crisis", "Bear", "Bull"],
+    4: ["Extreme_Crisis", "Crisis", "Bear", "Bull"],
+}
+
 
 def _log_gamma_scalar(z: float) -> float:
     """
@@ -475,6 +482,12 @@ class RegimeDetector:
     # --------------------------------------------------------------------------
     # Public API -- Backward Compatible
     # --------------------------------------------------------------------------
+
+    @property
+    def is_fitted(self) -> bool:
+        """Check if the model has been fit (has learned parameters)."""
+        return (self.mu_ is not None and self.cov_ is not None
+                and self.trans_ is not None and self.weights_ is not None)
 
     def fit_predict(self, features: pd.DataFrame) -> pd.Series:
         """

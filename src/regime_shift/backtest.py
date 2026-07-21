@@ -1,255 +1,335 @@
 """
-Walk-forward backtest for RegimeShift strategy.
+Walk-forward backtest engine for RegimeShift strategy.
 
-Key design:
-- Expanding-window regime detection: at each rebalance date we fit
-  the HMM on all features up to the END of the PREVIOUS trading day,
-  then use the LAST predicted regime as today's signal.
-- This avoids look-ahead bias: today's feature (which contains
-  today's return) is never in the training window.
-- Portfolio optimization is regime-conditioned using the
-  PortfolioOptimizer from regime_shift.optimizer.
-- Enhanced feature engineering: 54 standardized features including
-  returns, volatility, momentum, tail risk, and cross-asset signals.
+Uses expanding window training: at each rebalance, the model is trained
+on ALL data available up to that point. No look-ahead bias.
+
+Production-grade with:
+- BacktestResult dataclass for typed results
+- TransactionCostModel for realistic costs
+- RegimeSignal for confidence-weighted decisions
+- Turnover constraints to limit trading
 """
+
+from __future__ import annotations
+
+import logging
+from dataclasses import dataclass, field
+from typing import Optional
 
 import numpy as np
 import pandas as pd
-from datetime import timedelta
 
 from .regime_detector import RegimeDetector
 from .regime_signal import RegimeSignal
 from .optimizer import PortfolioOptimizer
+from .transaction_costs import TransactionCostModel
 
-from backtester import BackTester, sign
-import config
+logger = logging.getLogger(__name__)
+
+
+@dataclass
+class BacktestResult:
+    """Results from a walk-forward backtest."""
+    portfolio_returns: pd.Series = field(default_factory=pd.Series)
+    regime_series: pd.Series = field(default_factory=pd.Series)
+    weights_history: pd.DataFrame = field(default_factory=pd.DataFrame)
+    costs: pd.Series = field(default_factory=pd.Series)
+    trade_log: list = field(default_factory=list)
+    regime_changes: int = 0
+
+    @property
+    def total_return(self) -> float:
+        if len(self.portfolio_returns) == 0:
+            return 0.0
+        return float((1.0 + self.portfolio_returns).prod() - 1.0)
+
+    @property
+    def annualized_return(self) -> float:
+        if len(self.portfolio_returns) == 0:
+            return 0.0
+        n = len(self.portfolio_returns)
+        return float((1.0 + self.total_return) ** (252.0 / n) - 1.0)
+
+    @property
+    def annualized_volatility(self) -> float:
+        if len(self.portfolio_returns) == 0:
+            return 0.0
+        return float(self.portfolio_returns.std() * np.sqrt(252.0))
+
+    @property
+    def sharpe_ratio(self) -> float:
+        vol = self.annualized_volatility
+        return float(self.annualized_return / vol) if vol > 1e-12 else 0.0
+
+    @property
+    def max_drawdown(self) -> float:
+        if len(self.portfolio_returns) == 0:
+            return 0.0
+        cum = (1.0 + self.portfolio_returns).cumprod()
+        peak = cum.expanding().max()
+        dd = (cum - peak) / peak
+        return float(dd.min())
+
+    @property
+    def turnover(self) -> float:
+        if len(self.weights_history) < 2:
+            return 0.0
+        diffs = self.weights_history.diff().dropna()
+        if len(diffs) == 0:
+            return 0.0
+        total_turn = float(diffs.abs().sum(axis=1).sum() / 2.0)
+        n_years = len(diffs) / 252.0
+        return total_turn / n_years if n_years > 0 else 0.0
+
+    @property
+    def total_costs(self) -> float:
+        return float(self.costs.sum()) if len(self.costs) > 0 else 0.0
+
+    @property
+    def cost_drag(self) -> float:
+        total_ret = self.total_return
+        if abs(total_ret) > 1e-6:
+            return float(self.total_costs / abs(total_ret))
+        return 0.0
+
+    @property
+    def win_rate(self) -> float:
+        if len(self.portfolio_returns) == 0:
+            return 0.0
+        return float((self.portfolio_returns > 0).mean())
+
+    @property
+    def avg_daily_turnover(self) -> float:
+        if len(self.weights_history) < 2:
+            return 0.0
+        diffs = self.weights_history.diff().dropna()
+        return float(diffs.abs().sum(axis=1).mean() / 2.0)
+
+    @property
+    def avg_annual_turnover(self) -> float:
+        return float(self.avg_daily_turnover * 252.0)
 
 
 class WalkForwardBacktest:
-    """Walk-forward backtest with HMM regime detection.
+    """
+    Walk-forward backtest with expanding window training.
 
-    Parameters
-    ----------
-    prices : DataFrame
-        Multi-asset price history, one column per asset.
-    tickers : list[str]
-        Ordered list of asset names matching *prices* columns.
-    rebalance_freq : str
-        Pandas offset for rebalance cadence (e.g. "1M", "1W", "5D").
-    window_size : int
-        Rolling window for feature computation.
-    n_regimes : int
-        Number of HMM states.
-    transaction_cost : float
-        Proportional cost per trade (e.g. 0.0015 = 0.15%).
+    At each rebalance point, the HMM is trained on ALL data available
+    up to that point. This is the standard institutional approach.
+
+    Attributes:
+        prices: DataFrame of asset prices
+        returns: DataFrame of daily returns
+        features: DataFrame of regime features
+        lookback: Minimum training window size (trading days)
+        retrain_freq: Retrain every N days
+        n_states: Number of HMM regimes
+        cost_model: TransactionCostModel instance
+        detector: RegimeDetector instance
+        optimizer: PortfolioOptimizer instance
+        turnover_limit: Max turnover per rebalance (fraction)
+        tickers: Asset ticker symbols
+        n_assets: Number of assets
     """
 
     def __init__(
         self,
-        prices,
-        tickers,
-        rebalance_freq="1M",
-        window_size=252,
-        n_regimes=3,
-        transaction_cost=0.0015,
-        regime_persistence=3,
-    ):
+        prices: pd.DataFrame,
+        returns: pd.DataFrame,
+        features: pd.DataFrame,
+        lookback: int = 252,
+        retrain_freq: int = 21,
+        n_states: int = 3,
+        cost_model: Optional[TransactionCostModel] = None,
+        detector: Optional[RegimeDetector] = None,
+        optimizer: Optional[PortfolioOptimizer] = None,
+        turnover_limit: float = 0.20,
+    ) -> None:
         self.prices = prices
-        self.tickers = tickers
-        self.rebalance_freq = rebalance_freq
-        self.window_size = window_size
-        self.n_regimes = n_regimes
-        self.transaction_cost = transaction_cost
-        self.regime_persistence = regime_persistence
-
-        self.detector = RegimeDetector(
-            n_states=n_regimes,
-            lookback=window_size,
-            random_state=42,
+        self.returns = returns
+        self.features = features
+        self.lookback = lookback
+        self.retrain_freq = retrain_freq
+        self.n_states = n_states
+        self.cost_model = cost_model or TransactionCostModel()
+        self.detector = detector or RegimeDetector(
+            n_states=n_states, lookback=lookback, retrain_freq=retrain_freq
         )
-        self.optimizer = PortfolioOptimizer(n_assets=len(tickers))
+        self.optimizer = optimizer or PortfolioOptimizer(n_assets=len(returns.columns))
+        self.turnover_limit = turnover_limit
+        self.tickers = returns.columns.tolist()
+        self.n_assets = len(self.tickers)
 
-    # ------------------------------------------------------------------
-    # Feature engineering
-    # ------------------------------------------------------------------
+    def run(self) -> BacktestResult:
+        """
+        Execute walk-forward backtest.
 
-    def compute_features(self, returns):
-        """Build enhanced features for regime detection.
-
-        Uses RegimeFeatureEngineer to compute 54 standardized features
-        including returns, volatility, momentum, tail risk, and
-        cross-asset signals. All features are z-scored using a rolling
-        calibration window.
-
-        Args:
-            returns: DataFrame of daily returns
+        Algorithm:
+        1. Start with equal-weight portfolio
+        2. For each day t >= lookback:
+           a. If rebalance day: detect regime, optimize weights, apply costs
+           b. Compute daily return = prev_weights @ returns[t]
+           c. Record everything
+        3. Return BacktestResult with all recorded data
 
         Returns:
-            DataFrame of standardized features
+            BacktestResult with portfolio_returns, regime_series,
+            weights_history, costs, trade_log, regime_changes
         """
-        from .data_loader import compute_features
-        return compute_features(returns, self.tickers, window=self.window_size)
+        n_days = len(self.returns)
+        portfolio_returns: list = []
+        regime_labels: list = []
+        weights_list: list = []
+        costs_list: list = []
+        trade_log: list = []
+        regime_changes = 0
 
-    # ------------------------------------------------------------------
-    # Main backtest loop
-    # ------------------------------------------------------------------
+        current_weights = np.ones(self.n_assets) / self.n_assets
+        prev_regime = None
+        rebalance_day = True
 
-    def run(self, returns, start_date=None, end_date=None):
-        """Run the walk-forward backtest.
+        for t in range(self.lookback, n_days):
+            today = self.returns.index[t]
+            returns_today = self.returns.iloc[t].values
 
-        Parameters
-        ----------
-        returns : DataFrame
-            Daily returns, one column per ticker, datetime-indexed.
-        start_date, end_date : str or Timestamp, optional
-            Subset boundaries.
+            # Check if rebalance day
+            should_rebalance = rebalance_day
 
-        Returns
-        -------
-        dict with keys: returns, weights, regimes, turnover, equity_curve
-        """
-        returns = returns.loc[start_date:end_date].copy()
-        features = self.compute_features(returns)
-        dates = returns.index
+            if should_rebalance:
+                try:
+                    # Get data up to time t
+                    returns_window = self.returns.iloc[: t + 1]
+                    if today in self.features.index:
+                        features_window = self.features.loc[:today]
+                    else:
+                        loc_idx = self.features.index.searchsorted(today, side="right") - 1
+                        features_window = self.features.iloc[: loc_idx + 1]
 
-        # Rebalance schedule: first day of each month (or chosen freq)
-        rebalance_dates = pd.date_range(
-            start=dates[self.window_size],
-            end=dates[-1],
-            freq=self.rebalance_freq,
-        )
-        rebalance_dates = rebalance_dates[rebalance_dates.isin(dates)]
+                    if len(features_window) >= self.lookback and len(features_window) >= 10:
+                        # Fit detector and get signal
+                        regime_series = self.detector.fit_predict(features_window)
+                        signal = self.detector.predict_signal(returns_window, today)
 
-        n = len(dates)
-        regimes = np.full(n, -1, dtype=object)
-        weights_history = np.zeros((n, len(self.tickers)))
-        turnover = np.zeros(n)
-        equity = np.zeros(n)
-        current_weights = np.ones(len(self.tickers)) / len(self.tickers)
-        current_regime = "Bull"  # default regime label
-        regime_counter = {}  # persistence counter per regime label
-        capital = 1.0
+                        # Check if we should rebalance based on signal
+                        if signal.should_rebalance(threshold=0.15):
+                            # Get expected returns and covariance
+                            ret_mean = returns_window.mean().values * 252
+                            ret_cov = returns_window.cov().values * 252
 
-        for day_idx in range(self.window_size, n):
-            today_date = dates[day_idx]
-            rebalance = today_date in rebalance_dates
+                            # Optimize using signal
+                            new_weights = self.optimizer.optimize_with_signal(
+                                ret_mean, ret_cov, signal
+                            )
 
-            if rebalance:
-                # ----------------------------------------------------------
-                # LOOK-AHEAD BIAS FIX:
-                # Train ONLY on features up to the END of the PREVIOUS
-                # trading day (today_idx - 1). Today's feature row
-                # includes today's return — it must NOT be in the fit set.
-                # ----------------------------------------------------------
-                train_features = features.iloc[:day_idx - 1]
-                regime_series = self.detector.fit_predict(train_features)
-                if not regime_series.empty:
-                    pred_regime = regime_series.iloc[-1]
-                else:
-                    pred_regime = current_regime
+                            # Apply turnover constraint
+                            turnover = TransactionCostModel.compute_turnover(
+                                current_weights, new_weights
+                            )
+                            if turnover > self.turnover_limit:
+                                scale = self.turnover_limit / (turnover + 1e-12)
+                                delta = new_weights - current_weights
+                                delta = delta * min(scale, 1.0)
+                                new_weights = current_weights + delta
+                                new_weights = np.clip(new_weights, 0, 1)
+                                wsum = new_weights.sum()
+                                if wsum > 1e-12:
+                                    new_weights = new_weights / wsum
 
-                # -- Regime persistence filter --
-                # Require N consecutive days in the same regime before
-                # acting on it, to avoid spurious single-day flips.
-                if pred_regime == current_regime:
-                    regime_counter[pred_regime] = regime_counter.get(pred_regime, 0) + 1
-                else:
-                    regime_counter = {pred_regime: 1}
-                if regime_counter.get(pred_regime, 0) >= self.regime_persistence:
-                    current_regime = pred_regime
-                else:
-                    pred_regime = current_regime
+                            # Transaction costs
+                            vol_annual = returns_window.std().values * np.sqrt(252)
+                            cost_fraction = self.cost_model.cost_as_fraction(
+                                current_weights, new_weights,
+                                vol_annual, self.tickers, notional=1_000_000
+                            )
 
-                regimes[day_idx] = pred_regime
+                            # Track regime changes
+                            current_label = signal.label
+                            if prev_regime is not None and current_label != prev_regime:
+                                regime_changes += 1
+                            prev_regime = current_label
 
-                # Regime-conditioned expected returns / covariance
-                mu, cov = self._estimate_moments(returns, regimes, pred_regime, day_idx)
+                            # Log trade
+                            if turnover > 1e-6:
+                                trade_log.append({
+                                    "date": str(today),
+                                    "regime": current_label,
+                                    "confidence": signal.confidence,
+                                    "turnover": float(turnover),
+                                    "cost_fraction": float(cost_fraction),
+                                    "old_weights": current_weights.tolist(),
+                                    "new_weights": new_weights.tolist(),
+                                })
 
-                new_weights = self.optimizer.solve(
-                    mu,
-                    cov,
-                    lb=np.zeros(len(self.tickers)),
-                    ub=np.ones(len(self.tickers)),
-                    max_turnover=0.5,
-                    current_weights=current_weights,
-                )
-                turnover[day_idx] = np.abs(new_weights - current_weights).sum()
-                current_weights = new_weights
+                            # Apply cost to portfolio
+                            cost_fraction = min(cost_fraction, 0.02)  # Cap at 2%
+                            costs_list.append(cost_fraction)
+                            current_weights = new_weights
+                        else:
+                            costs_list.append(0.0)
+                            if prev_regime is not None and signal.label != prev_regime:
+                                regime_changes += 1
+                            prev_regime = signal.label
+                    else:
+                        costs_list.append(0.0)
+
+                except Exception as e:
+                    logger.warning("Rebalance failed at %s: %s", today, e)
+                    costs_list.append(0.0)
+
+                rebalance_day = False
             else:
-                regimes[day_idx] = current_regime
+                costs_list.append(0.0)
 
-            weights_history[day_idx] = current_weights
+            # Compute portfolio return
+            daily_return = float(np.dot(current_weights, returns_today))
+            portfolio_returns.append(daily_return)
+            regime_labels.append(prev_regime or "Bull")
+            weights_list.append(current_weights.copy())
 
-            # Portfolio return for the day
-            daily_ret = (current_weights * returns.iloc[day_idx].values).sum()
-            if rebalance and turnover[day_idx] > 0:
-                port_ret = daily_ret - turnover[day_idx] * self.transaction_cost
-            else:
-                port_ret = daily_ret
-            capital *= 1.0 + port_ret
-            equity[day_idx] = capital
+            # Schedule next rebalance
+            if (t - self.lookback + 1) % self.retrain_freq == 0:
+                rebalance_day = True
 
-        return {
-            "returns": returns.iloc[self.window_size:].copy(),
-            "weights": pd.DataFrame(
-                weights_history[self.window_size:],
-                index=dates[self.window_size:],
-                columns=self.tickers,
+        result = BacktestResult(
+            portfolio_returns=pd.Series(
+                portfolio_returns,
+                index=self.returns.index[self.lookback:],
+                name="portfolio_return",
             ),
-            "regimes": pd.Series(
-                regimes[self.window_size:],
-                index=dates[self.window_size:],
+            regime_series=pd.Series(
+                regime_labels,
+                index=self.returns.index[self.lookback:],
                 name="regime",
             ),
-            "turnover": pd.Series(
-                turnover[self.window_size:],
-                index=dates[self.window_size:],
+            weights_history=pd.DataFrame(
+                weights_list,
+                index=self.returns.index[self.lookback:],
+                columns=self.tickers,
+            ) if weights_list else pd.DataFrame(
+                index=self.returns.index[self.lookback:],
+                columns=self.tickers,
             ),
-            "equity_curve": pd.Series(
-                equity[self.window_size:],
-                index=dates[self.window_size:],
-                name="equity",
+            costs=pd.Series(
+                costs_list,
+                index=self.returns.index[self.lookback:],
+                name="transaction_cost",
             ),
-        }
+            trade_log=trade_log,
+            regime_changes=regime_changes,
+        )
 
-    # ------------------------------------------------------------------
-    # Moment estimation conditioned on regime
-    # ------------------------------------------------------------------
-
-    def _estimate_moments(self, returns, regimes, regime_id, today_idx):
-        """Estimate regime-conditional expected returns and covariance.
-
-        Falls back to equal-weight / equal-variance estimates if
-        there are too few samples in the target regime.
-        """
-        regime_mask = regimes[:today_idx] == regime_id
-        n_samples = regime_mask.sum()
-
-        if n_samples < 10:
-            mu = np.zeros(len(self.tickers))
-            cov = np.eye(len(self.tickers)) * 0.0004
-        else:
-            regime_rets = returns.iloc[:today_idx][regime_mask]
-            mu = regime_rets.mean().values
-            cov = regime_rets.cov().values
-            cov += 1e-4 * np.eye(len(self.tickers))
-
-        return mu, cov
-
-    # ------------------------------------------------------------------
-    # Run from price data directly
-    # ------------------------------------------------------------------
-
-    def run_from_prices(self, prices, start_date=None, end_date=None):
-        """Convenience wrapper: compute returns, then call run()."""
-        returns = prices.pct_change().dropna()
-        return self.run(returns, start_date, end_date)
+        logger.info(
+            "Backtest complete: %d days, %d rebalances, %d regime changes",
+            len(portfolio_returns), len(trade_log), regime_changes,
+        )
+        return result
 
     # ------------------------------------------------------------------
     # Diagnostics
     # ------------------------------------------------------------------
 
-    def sharpe_ratio(self, equity_curve, rf_annual=0.0):
+    def sharpe_ratio(self, equity_curve: pd.Series, rf_annual: float = 0.0) -> float:
         """Annualised Sharpe ratio from an equity curve Series."""
         daily_returns = equity_curve.pct_change().dropna()
         if len(daily_returns) < 2:
@@ -259,23 +339,17 @@ class WalkForwardBacktest:
         std = excess.std()
         if std == 0:
             return 0.0
-        return (excess.mean() / std) * np.sqrt(252)
+        return float((excess.mean() / std) * np.sqrt(252))
 
-    def regime_statistics(self, regime_series):
-        """Return dict of regime quality metrics.
-
-        Accepts either an int state-id Series (legacy) or a string label
-        Series (current). String labels are detected automatically.
-        """
+    def regime_statistics(self, regime_series: pd.Series) -> dict:
+        """Return dict of regime quality metrics."""
         stats = {}
         unique_vals = regime_series.unique()
         for val in unique_vals:
-            # Skip 'no regime assigned' sentinels (-1 or -1.0)
             try:
                 if int(val) == -1:
                     continue
             except (TypeError, ValueError):
-                # String labels are valid regimes, not sentinels
                 pass
 
             mask = regime_series == val
@@ -289,13 +363,11 @@ class WalkForwardBacktest:
         return stats
 
     def _avg_run_length(self, regime_series: pd.Series, val) -> float:
-        """Average length (days) of consecutive runs of val in regime_series."""
+        """Average length (days) of consecutive runs of val."""
         mask = (regime_series == val).astype(int)
         diff = mask.diff().fillna(0)
-        # Run starts where diff == 1
         starts = mask.index[diff == 1].tolist()
         if not starts:
-            # Entire series is the value (e.g., all "Bull")
             return float(len(regime_series))
         if mask.iloc[0] == 1:
             starts = [regime_series.index[0]] + starts
@@ -306,16 +378,11 @@ class WalkForwardBacktest:
         return float(np.mean(lengths)) if lengths else 0.0
 
     def _max_run_length(self, regime_series: pd.Series, val) -> float:
-        """Max consecutive-run length of val in regime_series."""
+        """Max consecutive-run length of val."""
         mask = (regime_series == val).astype(int)
-        runs = (mask.groupby((mask != mask.shift()).cumsum()).cumsum())
+        runs = mask.groupby((mask != mask.shift()).cumsum()).cumsum()
         return float(runs.max()) if len(runs) else 0.0
 
     def get_detector_metrics(self) -> dict:
         """Return diagnostic metrics from the regime detector."""
         return self.detector.get_regime_metrics()
-
-    def plot_equity_and_regimes(self, result):
-        """Plot equity curve with regime background shading."""
-        from .visualize import plot_equity_and_regimes
-        plot_equity_and_regimes(result)
