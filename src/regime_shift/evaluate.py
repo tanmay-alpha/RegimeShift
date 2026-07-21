@@ -1,12 +1,71 @@
 """Evaluation metrics with bootstrap confidence intervals."""
 
+from __future__ import annotations
+
 import logging
+from dataclasses import dataclass
+from typing import Optional
 
 import numpy as np
 import pandas as pd
 
 logger = logging.getLogger(__name__)
 
+
+@dataclass
+class MetricsResult:
+    """Container for performance metrics."""
+    name: str
+    total_return: float = 0.0
+    annualized_return: float = 0.0
+    annualized_volatility: float = 0.0
+    sharpe_ratio: float = 0.0
+    max_drawdown: float = 0.0
+    win_rate: float = 0.0
+
+    @classmethod
+    def from_returns(cls, returns: pd.Series, name: str = "Strategy") -> MetricsResult:
+        """Compute all metrics from a return series."""
+        rets = returns.dropna()
+        if len(rets) == 0:
+            return cls(name=name)
+
+        n = len(rets)
+        total_ret = (1.0 + rets).prod() - 1.0
+        ann_ret = (1.0 + total_ret) ** (252.0 / max(n, 1)) - 1.0 if n > 0 else 0.0
+        ann_vol = rets.std() * np.sqrt(252.0) if n > 1 else 0.0
+        sharpe = ann_ret / (ann_vol + 1e-12) if ann_vol > 1e-12 else 0.0
+
+        cum = (1.0 + rets).cumprod()
+        peak = np.maximum.accumulate(cum.values)
+        mdd = float(np.min((cum.values - peak) / (peak + 1e-12))) if len(cum) > 0 else 0.0
+
+        win_rate = float((rets > 0).mean()) if n > 0 else 0.0
+
+        return cls(
+            name=name,
+            total_return=total_ret,
+            annualized_return=ann_ret,
+            annualized_volatility=ann_vol,
+            sharpe_ratio=sharpe,
+            max_drawdown=mdd,
+            win_rate=win_rate,
+        )
+
+
+def compute_metrics(returns: pd.Series, name: str = "Strategy") -> MetricsResult:
+    """
+    Compute performance metrics from a return series.
+
+    Args:
+        returns: Daily portfolio returns indexed by date
+        name: Strategy name for the result
+
+    Returns:
+        MetricsResult with total_return, annualized_return, annualized_volatility,
+        sharpe_ratio, max_drawdown, win_rate
+    """
+    return MetricsResult.from_returns(returns, name)
 
 def bootstrap_metrics(
     returns: pd.Series,
@@ -169,3 +228,50 @@ def compute_regime_metrics(
         df = df.set_index("regime")
 
     return df
+
+
+def compute_turnover_metrics(
+    weights_history: pd.DataFrame,
+    regimes: Optional[pd.Series] = None,
+) -> dict:
+    """
+    Compute turnover statistics.
+
+    Args:
+        weights_history: DataFrame of daily portfolio weights (n_days, n_assets)
+        regimes: Optional Series of regime labels (same index as weights_history)
+
+    Returns:
+        Dict with keys:
+            - avg_daily_turnover: average daily turnover (fraction)
+            - avg_annual_turnover: annualized turnover (fraction * 252)
+            - max_single_day_turnover: max daily turnover
+            - turnover_by_regime: dict of regime -> avg turnover
+            - cost_drag: total costs / absolute total return
+    """
+    if len(weights_history) < 2:
+        return {
+            "avg_daily_turnover": 0.0,
+            "avg_annual_turnover": 0.0,
+            "max_single_day_turnover": 0.0,
+            "turnover_by_regime": {},
+            "cost_drag": 0.0,
+        }
+
+    diffs = weights_history.diff().dropna()
+    daily_turnovers = diffs.abs().sum(axis=1) / 2.0
+
+    result: dict = {
+        "avg_daily_turnover": float(daily_turnovers.mean()),
+        "avg_annual_turnover": float(daily_turnovers.mean() * 252),
+        "max_single_day_turnover": float(daily_turnovers.max()),
+        "turnover_by_regime": {},
+        "cost_drag": 0.0,
+    }
+
+    if regimes is not None:
+        aligned = pd.DataFrame({"turnover": daily_turnovers, "regime": regimes}).dropna()
+        for regime, group in aligned.groupby("regime"):
+            result["turnover_by_regime"][regime] = float(group["turnover"].mean())
+
+    return result

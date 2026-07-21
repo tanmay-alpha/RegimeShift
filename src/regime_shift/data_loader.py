@@ -375,6 +375,30 @@ def compute_returns(prices: pd.DataFrame) -> pd.DataFrame:
 # Utility
 # ─────────────────────────────────────────────────────────────────────────────
 
+def load_prices(use_simulated: bool = True, data_path: str = None) -> pd.DataFrame:
+    """
+    Load price data for backtesting.
+
+    Args:
+        use_simulated: If True, generate simulated multi-asset prices.
+                       If False, load from CSV (data_path required).
+        data_path: Path to OHLCV CSV file (required if use_simulated=False).
+
+    Returns:
+        DataFrame of prices, one column per asset, datetime-indexed.
+    """
+    if use_simulated:
+        logger.info("Using simulated multi-asset prices")
+        return _simulate_prices()
+    else:
+        path = data_path or "btc_18_22_1d.csv"
+        logger.info("Loading data from %s", path)
+        btc_df = load_btc_data(path)
+        btc_df["datetime"] = pd.to_datetime(btc_df["datetime"])
+        prices = btc_df.set_index("datetime")[["close"]].rename(columns={"close": "BTC"})
+        return prices
+
+
 def run_backtest_simulated():
     """Load simulated prices for quick testing."""
     prices = _simulate_prices()
