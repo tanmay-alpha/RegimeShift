@@ -362,6 +362,14 @@ class RegimeShiftConfig:
         return FeatureConfig(annualization_factor=self.annualization_factor)
 
     @property
+    def portfolio_config(self) -> "PortfolioConfig":
+        """Return PortfolioConfig with settings derived from this config."""
+        return PortfolioConfig(
+            estimation_lookback=self.train_window,
+            annualization_factor=self.annualization_factor,
+        )
+
+    @property
     def ticker_to_col(self) -> Dict[str, str]:
         """Return mapping of yfinance ticker → output column name."""
         return {
