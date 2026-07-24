@@ -4,7 +4,14 @@ RegimeShift: Market-Regime Identification & Dynamic Asset Allocation Framework.
 Designed for IIT Bombay Summer Quant 2026 assignment.
 """
 
-from regime_shift.config import RegimeShiftConfig, TickerConfig, DataConfig
+from regime_shift.config import (
+    AssetSpec,
+    DataConfig,
+    RegimeShiftConfig,
+    SeriesKind,
+    TickerConfig,
+    VIX_FALLBACK,
+)
 from regime_shift.exceptions import (
     RegimeShiftError,
     DataDownloadError,
@@ -21,6 +28,9 @@ __all__ = [
     "RegimeShiftConfig",
     "TickerConfig",
     "DataConfig",
+    "AssetSpec",
+    "SeriesKind",
+    "VIX_FALLBACK",
     # Exceptions
     "RegimeShiftError",
     "DataDownloadError",
