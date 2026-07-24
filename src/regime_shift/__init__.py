@@ -39,6 +39,7 @@ from regime_shift.features import (
 from regime_shift.regime_model import (
     fit_hmm,
     predict_current_state,
+    predict_current_probabilities,
     get_transition_matrix,
     get_state_statistics,
     get_regime,
@@ -97,6 +98,7 @@ __all__ = [
     # Regime detection
     "fit_hmm",
     "predict_current_state",
+    "predict_current_probabilities",
     "get_transition_matrix",
     "get_state_statistics",
     "get_regime",

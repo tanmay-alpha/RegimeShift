@@ -54,6 +54,7 @@ from regime_shift.features import (
 from regime_shift.regime_model import (
     fit_hmm,
     predict_current_state,
+    predict_current_probabilities,
     get_transition_matrix,
     get_state_statistics,
     get_regime,
@@ -644,6 +645,121 @@ class TestLeakageSafety:
             hmm, scaler, combined_at_T1, train_features, config
         )
         assert solution_at_T1.regime in ("Bull", "Bear", "Crisis")
+
+    def test_sequence_history_affects_posterior(self):
+        """
+        predict_current_state must pass the complete scaled feature sequence
+        (not just the last row) to hmm.predict_proba so that transition history
+        from the training period influences the current posterior.
+        """
+        train_features, test_features = _make_training_and_test()
+        config = HMMConfig()
+
+        scaler = fit_feature_scaler(train_features)
+        scaled_train = transform_features(scaler, train_features)
+        hmm, _, _ = fit_hmm(scaled_train, train_features, config)
+
+        current_raw = test_features.iloc[:1]
+        combined_full = pd.concat([train_features, current_raw])
+
+        # Spy on predict_proba to verify the sequence length passed to it
+        captured_args = {}
+        original_predict_proba = hmm.predict_proba
+
+        def spy_predict_proba(X, **kwargs):
+            captured_args["X"] = X
+            return original_predict_proba(X, **kwargs)
+
+        import unittest.mock
+        with unittest.mock.patch.object(hmm, "predict_proba", spy_predict_proba):
+            solution = predict_current_state(
+                hmm, scaler, combined_full, train_features, config
+            )
+
+        # The sequence passed to predict_proba must include all rows through t
+        expected_len = len(combined_full)
+        actual_len = captured_args["X"].shape[0]
+        assert actual_len == expected_len, (
+            f"predict_proba was called with {actual_len} rows, expected {expected_len}. "
+            f"The complete sequence through the current date must be passed."
+        )
+
+    def test_predict_current_probabilities_interface(self):
+        """
+        predict_current_probabilities() must return the same probabilities as
+        predict_current_state().probabilities.
+        """
+        train_features, test_features = _make_training_and_test()
+        config = HMMConfig()
+
+        scaler = fit_feature_scaler(train_features)
+        scaled_train = transform_features(scaler, train_features)
+        hmm, _, _ = fit_hmm(scaled_train, train_features, config)
+
+        combined = pd.concat([train_features, test_features.iloc[:1]])
+
+        solution = predict_current_state(hmm, scaler, combined, train_features, config)
+        probs = predict_current_probabilities(
+            hmm, scaler, combined, train_features, config
+        )
+
+        np.testing.assert_allclose(
+            solution.probabilities.sort_index().values,
+            probs.sort_index().values,
+            atol=1e-10,
+        )
+
+    def test_one_row_only_would_fail_sequence_test(self):
+        """
+        A one-row-only implementation (ignoring transition history) would pass
+        only the last observation to predict_proba. This test verifies that the
+        actual implementation passes the complete sequence.
+
+        We spy on predict_proba to confirm the input length matches the full
+        combined sequence, not just a single row.
+        """
+        train_features, test_features = _make_training_and_test()
+        config = HMMConfig()
+
+        scaler = fit_feature_scaler(train_features)
+        scaled_train = transform_features(scaler, train_features)
+        hmm, _, _ = fit_hmm(scaled_train, train_features, config)
+
+        current_raw = test_features.iloc[:1]
+        combined_full = pd.concat([train_features, current_raw])
+
+        # Spy on predict_proba
+        captured_args = {}
+        original_predict_proba = hmm.predict_proba
+
+        def spy_predict_proba(X, **kwargs):
+            captured_args["X"] = X
+            return original_predict_proba(X, **kwargs)
+
+        import unittest.mock
+        with unittest.mock.patch.object(hmm, "predict_proba", spy_predict_proba):
+            predict_current_state(
+                hmm, scaler, combined_full, train_features, config
+            )
+
+        # A one-row-only implementation would pass shape (1, n_features)
+        # The correct implementation passes the full sequence
+        expected_len = len(combined_full)
+        actual_len = captured_args["X"].shape[0]
+
+        # Verify the full sequence was passed, not just one row
+        assert actual_len == expected_len, (
+            f"predict_current_state passed {actual_len} rows to predict_proba "
+            f"but {expected_len} rows were available. A one-row implementation "
+            f"would pass only 1 row; the correct implementation must pass the "
+            f"complete sequence through the current date."
+        )
+        # Also verify it's NOT a single row (which would indicate a bug)
+        assert actual_len > 1, (
+            "predict_current_state passed only 1 row to predict_proba. "
+            "This indicates a one-row-only implementation that ignores "
+            "transition history from the training period."
+        )
 
 
 # ---------------------------------------------------------------------------
