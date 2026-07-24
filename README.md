@@ -89,7 +89,7 @@ RegimeShift/
 ## 5. Implementation Checklist
 
 - [x] Real multi-asset data loader (Phase 1 + Phase 1 hardening)
-- [ ] Leakage-safe feature engineering (Phase 2 — not started)
+- [x] Leakage-safe feature engineering (Phase 2)
 - [ ] Walk-forward HMM
 - [ ] Regime labelling
 - [ ] CVXPY portfolio optimization
@@ -104,6 +104,40 @@ RegimeShift/
 - [ ] Turnover
 - [ ] Truncation-invariance test
 - [ ] Final executed notebook
+
+### Feature Set
+
+The feature pipeline produces a small, interpretable feature set for the future 3-state Gaussian HMM. All features use **trailing rolling windows only** — no centered windows, no backward fill, no future data.
+
+| Feature | Formula | Window |
+|---|---|---|
+| `equity_log_return_1d` | `log(equity_t / equity_{t-1})` | 1 day |
+| `equity_momentum_21d` | `equity_t / equity_{t-21} - 1` | 21 days |
+| `equity_momentum_63d` | `equity_t / equity_{t-63} - 1` | 63 days |
+| `equity_volatility_21d` | `rolling_std(log_return, 21) * sqrt(252)` | 21 days |
+| `equity_volatility_ratio_21_63` | `vol_21d / vol_63d` | 21/63 days |
+| `equity_gold_correlation_63d` | `rolling_corr(equity_log_ret, gold_log_ret, 63)` | 63 days |
+| `equity_bond_correlation_63d` | `rolling_corr(equity_log_ret, bond_log_ret, 63)` | 63 days |
+| `vix_change_5d` *(optional)* | `vix_t / vix_{t-5} - 1` | 5 days |
+| `vix_level` *(optional)* | `vix_t` (raw level) | — |
+
+**Signal timing:** Feature observed at `t` is used to make the decision for `t+1`.
+
+**Scaling policy:** StandardScaler is fit on training rows only (not the full dataset). Walk-forward procedure: select training data ending at `t-1`, fit scaler, transform training + current observation.
+
+**Warmup:** 62 rows removed (first 63-day window has insufficient data). Deterministic count — no filling.
+
+**VIX:** Optional feature-only series. Never included in portfolio asset returns. Omitted cleanly if absent.
+
+### Leakage Protections
+
+- No `shift(-1)` or any negative shift
+- No centered rolling windows
+- No backward fill
+- No global mean/standard deviation
+- No full-sample normalization
+- No future Viterbi states, returns, or regime labels
+- No random train/test shuffling
 
 ---
 
