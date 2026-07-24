@@ -62,4 +62,19 @@ class DataAlignmentError(RegimeShiftError):
         super().__init__(f"Asset alignment failed: {reason}")
 
 
+class FeatureEngineeringError(RegimeShiftError, ValueError):
+    """
+    Raised when feature computation encounters an error or produces invalid output.
+
+    Inherits from ValueError for compatibility with pytest.raises(ValueError).
+
+    Attributes:
+        reason: Human-readable description of the failure.
+    """
+
+    def __init__(self, reason: str) -> None:
+        self.reason = reason
+        super().__init__(f"Feature engineering failed: {reason}")
+
+
 
