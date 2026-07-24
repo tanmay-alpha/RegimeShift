@@ -3,77 +3,204 @@ Data contract and integrity validation routines for multi-asset market data.
 
 Enforces strict input data guarantees required for leakage-safe regime detection
 and portfolio optimization.
+
+Rules enforced (see validate_price_data docstring for full contract):
+  - DatetimeIndex, sorted ascending, no duplicates, timezone-naive UTC-normalised.
+  - Required columns present.
+  - All price values numeric, strictly positive, non-infinite.
+  - No NaN values in required columns unless allow_missing=True.
+  - No backward-fill evidence (detected heuristically via zero-return run check).
+  - Forward-fill runs bounded by configurable limit.
 """
 
-from typing import List, Optional
-import pandas as pd
-import numpy as np
+from __future__ import annotations
 
+import logging
+from typing import List, Optional
+
+import numpy as np
+import pandas as pd
+
+from regime_shift.exceptions import DataValidationError
+
+logger = logging.getLogger(__name__)
+
+
+# ---------------------------------------------------------------------------
+# Individual check functions
+# ---------------------------------------------------------------------------
 
 def check_required_columns(df: pd.DataFrame, required_cols: List[str]) -> None:
-    """Verify that all required asset columns are present in the DataFrame."""
+    """Raise DataValidationError if any required asset columns are absent."""
     missing = [col for col in required_cols if col not in df.columns]
     if missing:
-        raise ValueError(f"Missing required asset columns in DataFrame: {missing}")
+        raise DataValidationError(
+            f"Missing required asset columns in DataFrame: {missing}"
+        )
 
 
 def check_monotonic_index(df: pd.DataFrame) -> None:
-    """Verify that DataFrame index is a DatetimeIndex and strictly monotonic ascending."""
+    """Raise DataValidationError if index is not a monotonic-ascending DatetimeIndex."""
     if not isinstance(df.index, pd.DatetimeIndex):
-        raise TypeError("DataFrame index must be a pandas DatetimeIndex.")
+        raise DataValidationError(
+            "DataFrame index must be a pandas DatetimeIndex."
+        )
     if not df.index.is_monotonic_increasing:
-        raise ValueError("DataFrame DatetimeIndex must be sorted in strictly ascending chronological order.")
+        raise DataValidationError(
+            "DataFrame DatetimeIndex must be sorted in strictly ascending "
+            "chronological order."
+        )
 
 
 def check_no_duplicates(df: pd.DataFrame) -> None:
-    """Verify that there are no duplicate dates in the DatetimeIndex."""
+    """Raise DataValidationError if any duplicate timestamps exist."""
     if df.index.has_duplicates:
         duplicates = df.index[df.index.duplicated()].unique()
-        raise ValueError(f"Duplicate dates found in DatetimeIndex: {duplicates}")
+        raise DataValidationError(
+            f"Duplicate dates found in DatetimeIndex: {duplicates.tolist()}"
+        )
+
+
+def check_timezone_naive(df: pd.DataFrame) -> None:
+    """Raise DataValidationError if the DatetimeIndex has timezone information."""
+    if df.index.tz is not None:
+        raise DataValidationError(
+            f"DatetimeIndex must be timezone-naive (UTC-normalised). "
+            f"Got tz='{df.index.tz}'. Call .tz_localize(None) first."
+        )
 
 
 def check_numeric_positive(df: pd.DataFrame, asset_cols: List[str]) -> None:
-    """Verify that asset price series contain strictly positive numeric values."""
+    """Raise DataValidationError if any price is non-numeric, non-positive, or infinite."""
     for col in asset_cols:
         if not pd.api.types.is_numeric_dtype(df[col]):
-            raise TypeError(f"Column '{col}' must be numeric.")
+            raise DataValidationError(f"Column '{col}' must be numeric.")
         if (df[col] <= 0).any():
-            raise ValueError(f"Column '{col}' contains non-positive price values (<= 0).")
+            raise DataValidationError(
+                f"Column '{col}' contains non-positive price values (<= 0)."
+            )
         if np.isinf(df[col]).any():
-            raise ValueError(f"Column '{col}' contains infinite values.")
+            raise DataValidationError(
+                f"Column '{col}' contains infinite values."
+            )
 
+
+def check_no_backward_fill(df: pd.DataFrame, asset_cols: List[str]) -> None:
+    """
+    Heuristically detect suspicious backward-fill patterns.
+
+    A backward-fill creates *increasing* identical runs from the future.
+    We detect columns where NaN positions in the raw data appear after
+    non-NaN values that could only be filled from the future.  Since we
+    cannot observe the pre-fill state, we instead flag any column where
+    more than 20 % of observations are exact duplicates of the *next*
+    observation (which is what bfill produces).
+    """
+    for col in asset_cols:
+        series = df[col].dropna()
+        if len(series) < 2:
+            continue
+        # Check: how many values equal their *next* value?
+        bfill_like = (series == series.shift(-1)).sum()
+        frac = bfill_like / len(series)
+        if frac > 0.20:
+            logger.warning(
+                "Column '%s' has %.0f%% values equal to their successor — "
+                "possible backward-fill detected. Verify raw data source.",
+                col, frac * 100,
+            )
+
+
+def check_forward_fill_limit(
+    df: pd.DataFrame,
+    asset_cols: List[str],
+    max_consecutive: int,
+) -> None:
+    """
+    Raise DataValidationError if any column contains a forward-fill run longer
+    than `max_consecutive` identical consecutive values.
+
+    A run of identical prices for more than `max_consecutive` days is a strong
+    indicator of an over-extended forward fill.
+    """
+    if max_consecutive <= 0:
+        return  # limit disabled
+    for col in asset_cols:
+        series = df[col].dropna()
+        if len(series) < 2:
+            continue
+        # Compute run lengths of constant values
+        is_same = series == series.shift(1)
+        run_id = (~is_same).cumsum()
+        run_lengths = is_same.groupby(run_id).sum()
+        max_run = int(run_lengths.max()) if len(run_lengths) > 0 else 0
+        if max_run > max_consecutive:
+            raise DataValidationError(
+                f"Column '{col}' has a constant-price run of {max_run} days, "
+                f"exceeding the forward-fill limit of {max_consecutive}. "
+                "Check data source or reduce forward_fill_limit."
+            )
+
+
+# ---------------------------------------------------------------------------
+# Primary validation entry-point
+# ---------------------------------------------------------------------------
 
 def validate_price_data(
     df: pd.DataFrame,
     required_cols: Optional[List[str]] = None,
-    allow_missing: bool = False
+    allow_missing: bool = False,
+    forward_fill_limit: int = 3,
+    check_bfill: bool = True,
 ) -> pd.DataFrame:
     """
-    Validate multi-asset price DataFrame against the official RegimeShift data contract.
+    Validate a multi-asset price DataFrame against the RegimeShift data contract.
+
+    Contract rules:
+      1. Index is a timezone-naive DatetimeIndex.
+      2. Index is monotonically ascending.
+      3. Index has no duplicate dates.
+      4. Required columns ['equity', 'gold', 'bond'] are present.
+      5. All required column values are numeric, strictly positive, and finite.
+      6. No NaN values in required columns (unless allow_missing=True).
+      7. No backward-fill evidence (heuristic warning, not hard error).
+      8. Forward-fill runs do not exceed forward_fill_limit days.
 
     Args:
         df: Input price DataFrame.
-        required_cols: List of required asset column names. Defaults to ['equity', 'gold', 'bond'].
-        allow_missing: If False, raises error when missing NaN values are detected.
+        required_cols: Required asset column names; defaults to ['equity','gold','bond'].
+        allow_missing: If False (default), raise on any NaN in required columns.
+        forward_fill_limit: Max consecutive identical prices tolerated (0 = disabled).
+        check_bfill: Whether to run the backward-fill heuristic check.
 
     Returns:
-        Validated DataFrame.
+        The validated DataFrame (unchanged).
 
     Raises:
-        ValueError, TypeError if data contract specifications are violated.
+        DataValidationError: When any contract rule is violated.
     """
     if required_cols is None:
         required_cols = ["equity", "gold", "bond"]
 
     if df.empty:
-        raise ValueError("Price DataFrame is empty.")
+        raise DataValidationError("Price DataFrame is empty.")
 
+    check_timezone_naive(df)
     check_monotonic_index(df)
     check_no_duplicates(df)
     check_required_columns(df, required_cols)
     check_numeric_positive(df, required_cols)
 
     if not allow_missing and df[required_cols].isna().any().any():
-        raise ValueError("Price DataFrame contains missing (NaN) values.")
+        nan_cols = df[required_cols].columns[df[required_cols].isna().any()].tolist()
+        raise DataValidationError(
+            f"Price DataFrame contains missing (NaN) values in columns: {nan_cols}"
+        )
+
+    if check_bfill:
+        check_no_backward_fill(df, required_cols)
+
+    if forward_fill_limit > 0:
+        check_forward_fill_limit(df, required_cols, forward_fill_limit)
 
     return df
