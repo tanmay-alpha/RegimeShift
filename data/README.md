@@ -4,15 +4,23 @@ This directory holds multi-asset market datasets used by the RegimeShift pipelin
 
 ## Standard Asset Universe
 
-| Column | Asset | Default Ticker | Source | Rationale |
-| :----- | :---- | :------------- | :----- | :-------- |
-| `equity` | NSE NIFTY 50 Index | `^NSEI` | Yahoo Finance | Canonical NSE large-cap benchmark |
-| `gold` | COMEX Gold Futures | `GC=F` | Yahoo Finance | Liquid USD gold proxy; widely used in Indian academic studies |
-| `bond` | 13-Week T-Bill Yield | `^IRX` | Yahoo Finance | Short-rate proxy; replace with `0P00009OSF.BO` (SBI Magnum Gilt) for India-specific runs |
-| `vix` | CBOE VIX (optional) | `^VIX` | Yahoo Finance | Volatility regime indicator; swap to `^INDIAVIX` when available |
+| Column | Asset | Default Ticker | Kind | Currency | Notes |
+| :----- | :---- | :------------- | :--- | :------- | :---- |
+| `equity` | NSE NIFTY 50 Index | `^NSEI` | PRICE | INR | Canonical NSE large-cap benchmark |
+| `gold` | Nippon India ETF Gold Bees | `GOLDBEES.NS` | PRICE | INR | INR-denominated gold ETF (NSE); avoids USD/INR FX mismatch |
+| `bond` | SBI Magnum Gilt Fund – Regular Plan | `0P0001BVE8.BO` | PRICE | INR | Indian government gilt fund NAV; genuine bond price series |
+| `vix` | India VIX (preferred) | `^INDIAVIX` | INDICATOR | — | NSE implied volatility; preferred over CBOE `^VIX` |
 
-All ticker defaults are defined in [`src/regime_shift/config.py`](../src/regime_shift/config.py)  
-(`TickerConfig`) and can be overridden at runtime without touching any other module.
+> **Gold currency policy**: `GOLDBEES.NS` is INR-denominated and avoids USD/INR FX conversion.
+> If `GC=F` (USD) is substituted, an explicit INR/USD FX adjustment is required before computing
+> returns — this is NOT yet implemented in the feature-engineering phase.
+>
+> **VIX fallback**: `^INDIAVIX` is the preferred default. The CBOE `^VIX` (`VIX_FALLBACK` constant)
+> must be set **explicitly** by overriding `TickerConfig.vix`. There is NO silent automatic fallback.
+
+> **Yield series rejected**: `^IRX` (13-week T-Bill yield) is documented in `TickerConfig.irx_yield`
+> as a reference-only `YIELD` kind spec. It cannot be used as a portfolio price; attempting to do so
+> raises `TypeError` via `AssetSpec.require_price()`.
 
 ## Data Format
 
