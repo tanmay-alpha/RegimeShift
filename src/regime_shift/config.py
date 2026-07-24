@@ -259,6 +259,62 @@ class DataConfig:
 
 
 @dataclass
+class FeatureConfig:
+    """
+    Configuration parameters for leakage-safe feature engineering.
+
+    All window sizes are expressed in trading days.  The annualization_factor
+    is inherited from the parent RegimeShiftConfig so that all time-based
+    scaling uses a single canonical value.
+
+    Attributes:
+        short_window: Window for 21-day momentum and volatility (default 21).
+        medium_window: Window for 63-day momentum and volatility (default 63).
+        correlation_window: Window for rolling cross-asset correlations (default 63).
+        vix_change_window: Window for VIX change feature (default 5).
+        annualization_factor: Trading days per year for volatility annualization (252).
+        minimum_feature_observations: Minimum rows required after warmup removal.
+    """
+
+    short_window: int = 21
+    medium_window: int = 63
+    correlation_window: int = 63
+    vix_change_window: int = 5
+    annualization_factor: int = 252
+    minimum_feature_observations: int = 10
+
+    def max_lookback(self) -> int:
+        """Return the maximum window needed across all features."""
+        return max(
+            self.medium_window,
+            self.correlation_window,
+            self.vix_change_window,
+        )
+
+    def validate(self) -> None:
+        """Raise ValueError if any window parameter is invalid."""
+        for name, val in [
+            ("short_window", self.short_window),
+            ("medium_window", self.medium_window),
+            ("correlation_window", self.correlation_window),
+            ("vix_change_window", self.vix_change_window),
+        ]:
+            if val < 2:
+                raise ValueError(
+                    f"FeatureConfig.{name} must be >= 2 (got {val})."
+                )
+        if self.annualization_factor < 1:
+            raise ValueError(
+                f"FeatureConfig.annualization_factor must be >= 1 (got {self.annualization_factor})."
+            )
+        if self.minimum_feature_observations < 1:
+            raise ValueError(
+                f"FeatureConfig.minimum_feature_observations must be >= 1 "
+                f"(got {self.minimum_feature_observations})."
+            )
+
+
+@dataclass
 class RegimeShiftConfig:
     """
     Configuration parameters for the RegimeShift pipeline.
@@ -299,6 +355,11 @@ class RegimeShiftConfig:
     def core_assets(self) -> List[str]:
         """Return list of mandatory output column names."""
         return [self.equity_col, self.gold_col, self.bond_col]
+
+    @property
+    def feature_config(self) -> "FeatureConfig":
+        """Return FeatureConfig inheriting annualization_factor from this config."""
+        return FeatureConfig(annualization_factor=self.annualization_factor)
 
     @property
     def ticker_to_col(self) -> Dict[str, str]:

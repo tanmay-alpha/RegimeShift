@@ -7,6 +7,7 @@ Designed for IIT Bombay Summer Quant 2026 assignment.
 from regime_shift.config import (
     AssetSpec,
     DataConfig,
+    FeatureConfig,
     RegimeShiftConfig,
     SeriesKind,
     TickerConfig,
@@ -17,17 +18,26 @@ from regime_shift.exceptions import (
     DataDownloadError,
     DataAlignmentError,
     DataValidationError,
+    FeatureEngineeringError,
 )
 from regime_shift.validation import validate_price_data, check_monotonic_index, check_no_duplicates
 from regime_shift.data import download_market_data, load_market_data_csv, save_market_data_csv
+from regime_shift.features import (
+    compute_raw_features,
+    drop_feature_warmup,
+    fit_feature_scaler,
+    transform_features,
+    fit_transform_training_features,
+)
 
-__version__ = "0.3.0-data-pipeline"
+__version__ = "0.4.0-feature-pipeline"
 
 __all__ = [
     # Config
     "RegimeShiftConfig",
     "TickerConfig",
     "DataConfig",
+    "FeatureConfig",
     "AssetSpec",
     "SeriesKind",
     "VIX_FALLBACK",
@@ -36,6 +46,7 @@ __all__ = [
     "DataDownloadError",
     "DataAlignmentError",
     "DataValidationError",
+    "FeatureEngineeringError",
     # Validation
     "validate_price_data",
     "check_monotonic_index",
@@ -44,4 +55,10 @@ __all__ = [
     "download_market_data",
     "load_market_data_csv",
     "save_market_data_csv",
+    # Feature pipeline
+    "compute_raw_features",
+    "drop_feature_warmup",
+    "fit_feature_scaler",
+    "transform_features",
+    "fit_transform_training_features",
 ]
