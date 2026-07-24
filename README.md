@@ -88,8 +88,8 @@ RegimeShift/
 
 ## 5. Implementation Checklist
 
-- [ ] Real multi-asset data loader
-- [ ] Leakage-safe features
+- [x] Real multi-asset data loader
+- [x] Leakage-safe features (data alignment & validation — Phase 1)
 - [ ] Walk-forward HMM
 - [ ] Regime labelling
 - [ ] CVXPY portfolio optimization
