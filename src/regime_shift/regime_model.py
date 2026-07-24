@@ -243,18 +243,21 @@ def predict_current_state(
     # Verify column consistency with training
     _check_column_consistency(raw_features_through_current, raw_training, "raw_features_through_current")
 
-    # Extract the last observation (current date)
-    current_raw = raw_features_through_current.iloc[-1:]
-    current_scaled = transform_features(scaler, current_raw)
+    # Transform the complete sequence through current date using the
+    # already-fitted scaler (scaler was fitted only on training data).
+    # Passing the full sequence allows the HMM to use transition history
+    # from the training period when computing posterior probabilities.
+    scaled_sequence = transform_features(scaler, raw_features_through_current)
 
-    # Posterior probability for the current observation
+    # Posterior probabilities for the complete sequence
     try:
-        posteriors = hmm.predict_proba(current_scaled.values)
+        posteriors = hmm.predict_proba(scaled_sequence.values)
     except Exception as exc:
         raise RegimeDetectionError(
             f"HMM posterior prediction failed: {exc}"
         ) from exc
 
+    # Return only the final observation's posterior (current date t)
     current_posterior = posteriors[-1]
 
     # Verify probabilities
@@ -318,6 +321,43 @@ def predict_current_state(
     )
 
     return solution
+
+
+def predict_current_probabilities(
+    hmm: GaussianHMM,
+    scaler: StandardScaler,
+    raw_features_through_current: pd.DataFrame,
+    raw_training: pd.DataFrame,
+    config: Optional[HMMConfig] = None,
+) -> pd.Series:
+    """
+    Return the posterior probability vector for the current observation.
+
+    This function performs inference only — the HMM and scaler are NOT refitted.
+    The complete scaled feature sequence through the current date is passed to
+    ``hmm.predict_proba`` so that transition history from the training period
+    contributes to the posterior.  Only the final row's probabilities are returned.
+
+    Args:
+        hmm: Fitted GaussianHMM from fit_hmm().
+        scaler: Fitted StandardScaler from fit_feature_scaler().
+        raw_features_through_current: Raw features from training start through
+            the current date (inclusive).  The current date is the last row.
+        raw_training: Raw features used for the original training window.
+            Used for state interpretation and column verification.
+        config: HMMConfig instance.  Defaults to HMMConfig() if None.
+
+    Returns:
+        pd.Series of posterior probabilities indexed by regime label
+        (Bull, Bear, Crisis), sorted alphabetically for deterministic output.
+
+    Raises:
+        RegimeDetectionError: If inputs are invalid or model is not fitted.
+    """
+    solution = predict_current_state(
+        hmm, scaler, raw_features_through_current, raw_training, config
+    )
+    return solution.probabilities
 
 
 # ---------------------------------------------------------------------------
