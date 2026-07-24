@@ -1,32 +1,392 @@
 """
-Data loading and multi-asset ingestion interface for RegimeShift.
+Multi-asset market data pipeline for RegimeShift.
 
-Provides clean interfaces for acquiring and formatting market data (NSE Equity,
-Gold, Sovereign Bonds, India VIX) adhering to validation contracts.
+Provides two ingestion paths:
+
+  1. download_market_data(...)
+       Fetches live price history from Yahoo Finance via yfinance.
+       Requires an internet connection.
+
+  2. load_market_data_csv(path, ...)
+       Reads a locally cached CSV file produced by save_market_data_csv().
+       Fully offline — suitable for unseen-data evaluation.
+
+Both paths return an identical, validated pd.DataFrame:
+
+    Index  : DatetimeIndex — timezone-naive, sorted ascending, unique dates.
+    Columns: ['equity', 'gold', 'bond']        ← always present
+             ['vix']                            ← present only when include_vix=True
+
+Column names are controlled entirely by RegimeShiftConfig; no ticker string
+appears in any function other than _download_single() and the ticker_to_col map.
+
+Missing-data policy
+-------------------
+- Assets that return empty data raise DataDownloadError immediately.
+- After inner-joining on common trading dates, any remaining NaN values in
+  required columns are forward-filled up to config.data.forward_fill_limit days.
+- Residual NaN values after forward-filling raise DataValidationError.
+- Backward-fill is never applied.
+
+Caching
+-------
+save_market_data_csv(df, path) and load_market_data_csv(path) provide a
+round-trippable CSV cache.  No database is used.
 """
 
-from typing import Optional, List
+from __future__ import annotations
+
+import logging
+import os
+import warnings
+from datetime import date
+from pathlib import Path
+from typing import Dict, List, Optional, Tuple
+
 import pandas as pd
+import numpy as np
+
+from regime_shift.config import RegimeShiftConfig
+from regime_shift.exceptions import DataAlignmentError, DataDownloadError, DataValidationError
 from regime_shift.validation import validate_price_data
 
+logger = logging.getLogger(__name__)
 
-def load_market_data(
-    filepath: Optional[str] = None,
-    assets: Optional[List[str]] = None
-) -> pd.DataFrame:
+# Deterministic output column order so consumers can rely on positional indexing.
+_CORE_COLS = ["equity", "gold", "bond"]
+_OPTIONAL_COLS = ["vix"]
+
+
+# ---------------------------------------------------------------------------
+# Internal helpers
+# ---------------------------------------------------------------------------
+
+def _today() -> str:
+    return date.today().isoformat()
+
+
+def _download_single(
+    ticker: str,
+    start: str,
+    end: str,
+    price_field: str = "Close",
+) -> pd.Series:
     """
-    Load and format multi-asset price data from a CSV source or market API.
-
-    Args:
-        filepath: Path to input CSV file.
-        assets: Asset names to load. Defaults to ['equity', 'gold', 'bond'].
-
-    Returns:
-        Validated pd.DataFrame indexed by DatetimeIndex with asset price columns.
+    Download a single ticker from Yahoo Finance and return a named Series.
 
     Raises:
-        NotImplementedError: Multi-asset real data loader will be implemented in the next phase.
+        DataDownloadError: If the download returns empty data or raises an
+            exception (network error, invalid ticker, etc.).
     """
-    raise NotImplementedError(
-        "Real multi-asset market data loader will be implemented in the next development phase."
+    try:
+        import yfinance as yf  # lazy import — not required for offline path
+    except ImportError as exc:
+        raise DataDownloadError(
+            ticker, start, end,
+            "yfinance is not installed. Run: pip install yfinance"
+        ) from exc
+
+    try:
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+            raw = yf.download(
+                ticker,
+                start=start,
+                end=end,
+                auto_adjust=True,
+                progress=False,
+                actions=False,
+            )
+    except Exception as exc:
+        raise DataDownloadError(ticker, start, end, str(exc)) from exc
+
+    if raw is None or raw.empty:
+        raise DataDownloadError(
+            ticker, start, end,
+            "yfinance returned an empty DataFrame. "
+            "Check ticker symbol, date range, or network access."
+        )
+
+    # yfinance may return MultiIndex columns — flatten
+    if isinstance(raw.columns, pd.MultiIndex):
+        raw.columns = [c[0] for c in raw.columns]
+
+    if price_field not in raw.columns:
+        available = raw.columns.tolist()
+        raise DataDownloadError(
+            ticker, start, end,
+            f"Price field '{price_field}' not found in downloaded columns: {available}"
+        )
+
+    series = raw[price_field].copy()
+
+    # Remove timezone info and normalise to date-only index
+    if series.index.tz is not None:
+        series.index = series.index.tz_localize(None)
+    series.index = pd.DatetimeIndex(series.index.normalize())
+
+    # Drop any NaN rows that yfinance sometimes appends at boundaries
+    series = series.dropna()
+
+    if series.empty:
+        raise DataDownloadError(
+            ticker, start, end,
+            f"All rows were NaN after dropping missing values for price field '{price_field}'."
+        )
+
+    return series
+
+
+def _build_aligned_frame(
+    series_map: Dict[str, pd.Series],
+    col_order: List[str],
+    forward_fill_limit: int,
+) -> Tuple[pd.DataFrame, Dict[str, int]]:
+    """
+    Align asset series to common valid trading dates and forward-fill sparingly.
+
+    Policy:
+      - Inner-join on dates where ALL required columns have data.
+      - Forward-fill up to forward_fill_limit days for gaps.
+      - Report the number of dropped dates and NaN observations.
+      - Never backward-fill.
+
+    Args:
+        series_map: mapping of output_col_name → pd.Series.
+        col_order: Desired deterministic column output order.
+        forward_fill_limit: Max consecutive days to forward-fill.
+
+    Returns:
+        (aligned_df, diagnostics_dict)
+    """
+    # Build raw frame — outer join preserves all dates initially
+    raw = pd.DataFrame({col: series_map[col] for col in col_order if col in series_map})
+    total_dates_pre = len(raw)
+
+    # Forward-fill with strict limit BEFORE dropping
+    if forward_fill_limit > 0:
+        filled = raw.ffill(limit=forward_fill_limit)
+        ffill_applied = int((raw.isna() & filled.notna()).sum().sum())
+        logger.info("Forward-filled %d NaN observations (limit=%d days).", ffill_applied, forward_fill_limit)
+    else:
+        filled = raw
+        ffill_applied = 0
+
+    # Drop rows where any required column is still NaN
+    clean = filled.dropna(subset=[c for c in col_order if c in series_map])
+    dropped = total_dates_pre - len(clean)
+    if dropped > 0:
+        logger.info(
+            "Dropped %d dates due to missing values in required columns after "
+            "forward-fill (limit=%d).",
+            dropped, forward_fill_limit,
+        )
+
+    if clean.empty:
+        raise DataAlignmentError(
+            "No common valid trading dates remain after alignment. "
+            "Check that all tickers have overlapping date ranges."
+        )
+
+    diagnostics: Dict[str, int] = {
+        "total_dates_before_alignment": total_dates_pre,
+        "dates_dropped": dropped,
+        "ffill_cells_applied": ffill_applied,
+    }
+
+    return clean, diagnostics
+
+
+def _normalise_index(df: pd.DataFrame) -> pd.DataFrame:
+    """Ensure timezone-naive, date-normalised, sorted, deduplicated index."""
+    idx = df.index
+    if isinstance(idx, pd.DatetimeIndex):
+        if idx.tz is not None:
+            idx = idx.tz_localize(None)
+        idx = idx.normalize()
+    else:
+        idx = pd.DatetimeIndex(idx).normalize()
+
+    df = df.copy()
+    df.index = idx
+    df = df.sort_index()
+    df = df[~df.index.duplicated(keep="first")]
+    return df
+
+
+# ---------------------------------------------------------------------------
+# Public API — Online path
+# ---------------------------------------------------------------------------
+
+def download_market_data(
+    config: Optional[RegimeShiftConfig] = None,
+    start: Optional[str] = None,
+    end: Optional[str] = None,
+    include_vix: bool = False,
+    cache: bool = True,
+) -> pd.DataFrame:
+    """
+    Download multi-asset price history from Yahoo Finance.
+
+    Requires internet access.  For offline / evaluation use, see load_market_data_csv().
+
+    Args:
+        config: RegimeShiftConfig instance (creates default if None).
+        start: Start date (YYYY-MM-DD).  Defaults to config.data.default_start.
+        end: End date (YYYY-MM-DD).  Defaults to today.
+        include_vix: If True, also download the VIX series and include a 'vix' column.
+        cache: If True and config.data.cache_dir is set, save result to cache.
+
+    Returns:
+        Validated pd.DataFrame with columns ['equity','gold','bond'] (+ 'vix' if requested).
+        Index: timezone-naive DatetimeIndex sorted ascending.
+
+    Raises:
+        DataDownloadError: If any required asset fails to download.
+        DataAlignmentError: If aligned DataFrame is empty after common-date join.
+        DataValidationError: If the assembled DataFrame violates data contracts.
+    """
+    cfg = config or RegimeShiftConfig()
+    start = start or cfg.data.default_start
+    end = end or _today()
+    pf = cfg.data.price_field
+
+    logger.info("Downloading market data: %s → %s", start, end)
+
+    # Determine which tickers to download
+    required_tickers = {
+        cfg.equity_col: cfg.tickers.equity_ticker,
+        cfg.gold_col:   cfg.tickers.gold_ticker,
+        cfg.bond_col:   cfg.tickers.bond_ticker,
+    }
+    if include_vix:
+        required_tickers[cfg.vix_col] = cfg.tickers.vix_ticker
+
+    series_map: Dict[str, pd.Series] = {}
+    for col, ticker in required_tickers.items():
+        logger.info("  Downloading %-8s (%s)…", col, ticker)
+        series = _download_single(ticker, start, end, price_field=pf)
+        series.name = col
+        series_map[col] = series
+        logger.info("  %-8s: %d observations  [%s → %s]",
+                    col, len(series), series.index[0].date(), series.index[-1].date())
+
+    # Build deterministic column order
+    col_order = [c for c in _CORE_COLS + _OPTIONAL_COLS if c in series_map]
+
+    aligned, diagnostics = _build_aligned_frame(
+        series_map, col_order, cfg.data.forward_fill_limit
     )
+    aligned = _normalise_index(aligned)
+
+    logger.info(
+        "Alignment complete: %d rows retained, %d dropped, %d ffill cells.",
+        len(aligned), diagnostics["dates_dropped"], diagnostics["ffill_cells_applied"],
+    )
+
+    # Final validation
+    validate_price_data(
+        aligned,
+        required_cols=cfg.core_assets,
+        allow_missing=False,
+        forward_fill_limit=cfg.data.forward_fill_limit,
+    )
+
+    if cache and cfg.data.cache_dir:
+        _write_cache(aligned, cfg.data.cache_dir, start, end, include_vix)
+
+    return aligned
+
+
+# ---------------------------------------------------------------------------
+# Public API — Offline path
+# ---------------------------------------------------------------------------
+
+def load_market_data_csv(
+    path: str,
+    config: Optional[RegimeShiftConfig] = None,
+    forward_fill_limit: Optional[int] = None,
+) -> pd.DataFrame:
+    """
+    Load a market data CSV file produced by save_market_data_csv().
+
+    This function requires NO internet access and is suitable for unseen
+    evaluation runs where a pre-built CSV is supplied.
+
+    Args:
+        path: Absolute or relative path to the CSV file.
+        config: RegimeShiftConfig instance (creates default if None).
+        forward_fill_limit: Override for maximum forward-fill days.
+            Defaults to config.data.forward_fill_limit.
+
+    Returns:
+        Validated pd.DataFrame with required asset columns.
+
+    Raises:
+        FileNotFoundError: If the CSV file does not exist.
+        DataValidationError: If the loaded data violates contracts.
+    """
+    cfg = config or RegimeShiftConfig()
+    ffl = forward_fill_limit if forward_fill_limit is not None else cfg.data.forward_fill_limit
+    p = Path(path)
+    if not p.exists():
+        raise FileNotFoundError(f"Market data CSV not found: {p.resolve()}")
+
+    logger.info("Loading market data from CSV: %s", p)
+    df = pd.read_csv(p, index_col=0, parse_dates=True)
+
+    # Normalise the index (handles tz-aware exports)
+    df = _normalise_index(df)
+
+    # Ensure deterministic column order (only include columns that exist)
+    ordered = [c for c in _CORE_COLS + _OPTIONAL_COLS if c in df.columns]
+    extra = [c for c in df.columns if c not in ordered]
+    df = df[ordered + extra]
+
+    validate_price_data(
+        df,
+        required_cols=cfg.core_assets,
+        allow_missing=False,
+        forward_fill_limit=ffl,
+    )
+
+    logger.info("Loaded %d rows from %s.", len(df), p.name)
+    return df
+
+
+# ---------------------------------------------------------------------------
+# Caching helpers
+# ---------------------------------------------------------------------------
+
+def save_market_data_csv(df: pd.DataFrame, path: str) -> None:
+    """
+    Save a validated market data DataFrame to a CSV file.
+
+    The CSV can be reloaded via load_market_data_csv() for offline runs.
+
+    Args:
+        df: Validated DataFrame (index = DatetimeIndex).
+        path: Destination file path (parent directories created if absent).
+    """
+    p = Path(path)
+    p.parent.mkdir(parents=True, exist_ok=True)
+    df.to_csv(p, date_format="%Y-%m-%d")
+    logger.info("Saved market data to %s (%d rows).", p, len(df))
+
+
+def _write_cache(
+    df: pd.DataFrame,
+    cache_dir: str,
+    start: str,
+    end: str,
+    include_vix: bool,
+) -> None:
+    """Write aligned data to a date-stamped cache CSV (internal use)."""
+    vix_tag = "_vix" if include_vix else ""
+    filename = f"market_data_{start}_{end}{vix_tag}.csv"
+    dest = Path(cache_dir) / filename
+    try:
+        save_market_data_csv(df, str(dest))
+        logger.info("Cached market data → %s", dest)
+    except OSError as exc:
+        logger.warning("Could not write cache file %s: %s", dest, exc)
