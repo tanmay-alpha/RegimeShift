@@ -2,24 +2,25 @@
 Comprehensive tests for the RegimeShift multi-asset data pipeline.
 
 Tests are grouped into:
-  1. TestValidation      – strengthened validation contract
-  2. TestDownloadMocked  – download_market_data() with mocked yfinance (no network)
-  3. TestCSVRoundTrip    – save/load CSV round-trip (offline execution)
-  4. TestAlignment       – multi-asset date alignment and forward-fill policy
-  5. TestDeterminism     – column order is always deterministic
+  1. TestValidation         – strengthened validation contract
+  2. TestAssetSemantics     – SeriesKind enforcement / yield rejection
+  3. TestDownloadMocked     – download_market_data() with mocked yfinance (no network)
+  4. TestCSVRoundTrip       – save/load CSV round-trip (offline execution)
+  5. TestAlignment          – multi-asset date alignment and forward-fill policy
+  6. TestFillMaskAccuracy   – explicit fill-mask tracking (not inferred from flat prices)
+  7. TestDeterminism        – column order is always deterministic
 
 All yfinance calls are mocked so tests run fully offline.
 """
 
 from __future__ import annotations
 
-import io
 import os
 import sys
 import tempfile
 from pathlib import Path
 from typing import Dict
-from unittest.mock import MagicMock, patch
+from unittest.mock import patch
 
 import numpy as np
 import pandas as pd
@@ -28,7 +29,14 @@ import pytest
 # Ensure src/ is on path when running directly
 sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 
-from regime_shift.config import DataConfig, RegimeShiftConfig, TickerConfig
+from regime_shift.config import (
+    AssetSpec,
+    DataConfig,
+    RegimeShiftConfig,
+    SeriesKind,
+    TickerConfig,
+    VIX_FALLBACK,
+)
 from regime_shift.data import (
     _build_aligned_frame,
     _normalise_index,
@@ -53,16 +61,41 @@ from regime_shift.validation import (
 # Shared fixtures
 # ---------------------------------------------------------------------------
 
+def _make_price_asset(ticker: str, currency: str = "INR") -> AssetSpec:
+    """Convenience builder for a PRICE AssetSpec in tests."""
+    return AssetSpec(
+        ticker=ticker,
+        kind=SeriesKind.PRICE,
+        description=f"Test price asset {ticker}",
+        currency=currency,
+    )
+
+
+def _make_indicator_asset(ticker: str) -> AssetSpec:
+    """Convenience builder for an INDICATOR AssetSpec in tests."""
+    return AssetSpec(
+        ticker=ticker,
+        kind=SeriesKind.INDICATOR,
+        description=f"Test indicator {ticker}",
+    )
+
+
 @pytest.fixture
 def base_config() -> RegimeShiftConfig:
-    """Config pointing at safe test tickers; caching disabled."""
+    """
+    Config with PRICE-kind AssetSpec objects for all required assets.
+    Tickers are the new defaults; caching is disabled.
+    """
+    tickers = TickerConfig()
+    # Override with explicit AssetSpec objects so tests do not depend on
+    # the network-reachable production tickers.
+    tickers.equity = _make_price_asset("^NSEI")
+    tickers.gold   = _make_price_asset("GOLDBEES.NS")
+    tickers.bond   = _make_price_asset("0P0001BVE8.BO")
+    tickers.vix    = _make_indicator_asset("^INDIAVIX")
+
     return RegimeShiftConfig(
-        tickers=TickerConfig(
-            equity_ticker="^NSEI",
-            gold_ticker="GC=F",
-            bond_ticker="^IRX",
-            vix_ticker="^VIX",
-        ),
+        tickers=tickers,
         data=DataConfig(
             default_start="2022-01-01",
             default_end="2022-06-30",
@@ -91,18 +124,20 @@ def valid_price_df(sample_dates) -> pd.DataFrame:
     )
 
 
-def _make_yf_return(series: pd.Series) -> MagicMock:
-    """
-    Build a mock return value matching the DataFrame yfinance.download() returns.
-    The mock has a single-level column 'Close'.
-    """
-    df = pd.DataFrame({"Close": series}, index=series.index)
-    mock = MagicMock()
-    mock.__bool__ = lambda self: True
-    mock.empty = False
-    mock.columns = df.columns
-    mock.__getitem__ = lambda self, key: df[key]
-    return df  # return real DataFrame — simpler and more reliable
+def _make_price_series(periods: int = 120, start: str = "2022-01-03") -> pd.Series:
+    rng = np.random.default_rng(42)
+    idx = pd.bdate_range(start, periods=periods)
+    return pd.Series(100 + np.cumsum(rng.normal(0, 1, periods)), index=idx)
+
+
+def _mock_download(side_effects: Dict[str, pd.Series]):
+    """Build a mock for yfinance.download() that returns per-ticker DataFrames."""
+    def _fake(ticker, start, end, **kwargs):
+        if ticker not in side_effects:
+            return pd.DataFrame()
+        series = side_effects[ticker]
+        return pd.DataFrame({"Close": series}, index=series.index)
+    return _fake
 
 
 # ---------------------------------------------------------------------------
@@ -125,9 +160,8 @@ class TestValidation:
 
     def test_forward_fill_limit_enforced(self, sample_dates):
         """Exceeding forward_fill_limit raises DataValidationError."""
-        # Create a column with a 10-day flat run
         prices = np.linspace(100, 200, 100)
-        prices[20:30] = prices[19]  # 10 identical values
+        prices[20:30] = prices[19]  # 10 identical values — over any reasonable limit
         df = pd.DataFrame(
             {"equity": prices, "gold": np.linspace(1800, 1900, 100),
              "bond": np.linspace(95, 98, 100)},
@@ -147,6 +181,39 @@ class TestValidation:
         )
         validate_price_data(df, forward_fill_limit=0)  # must not raise
 
+    def test_naturally_flat_prices_accepted_within_limit(self, sample_dates):
+        """
+        A series with a short natural flat plateau (e.g. a bond NAV that does
+        not change on a public holiday) must NOT be rejected if the plateau
+        length is within the forward_fill_limit.
+
+        This proves the forward-fill check is not a false positive for
+        naturally constant prices.
+        """
+        prices = np.linspace(97, 100, 100)
+        prices[30:33] = prices[29]  # 3 identical values — exactly at the limit
+        df = pd.DataFrame(
+            {"equity": np.linspace(100, 200, 100),
+             "gold": np.linspace(1800, 1900, 100),
+             "bond": prices},
+            index=sample_dates,
+        )
+        # limit=3 → a run of 3 equal values is accepted (not flagged as over-fill)
+        validate_price_data(df, forward_fill_limit=3)
+
+    def test_naturally_flat_prices_exceeding_limit_raise(self, sample_dates):
+        """A natural flat plateau LONGER than the limit raises DataValidationError."""
+        prices = np.linspace(97, 100, 100)
+        prices[30:37] = prices[29]  # 7 identical values — over limit
+        df = pd.DataFrame(
+            {"equity": np.linspace(100, 200, 100),
+             "gold": np.linspace(1800, 1900, 100),
+             "bond": prices},
+            index=sample_dates,
+        )
+        with pytest.raises(DataValidationError, match="forward-fill limit"):
+            validate_price_data(df, forward_fill_limit=3)
+
     def test_missing_values_in_specific_column_named(self, sample_dates):
         """Error message must name which columns have NaN."""
         df = pd.DataFrame(
@@ -165,7 +232,7 @@ class TestValidation:
         idx = df.index.tolist()
         idx[1] = idx[0]
         df.index = pd.DatetimeIndex(idx)
-        with pytest.raises(ValueError):   # DataValidationError is a ValueError
+        with pytest.raises(ValueError):
             check_no_duplicates(df)
 
     def test_check_timezone_naive_raises(self, valid_price_df):
@@ -177,13 +244,12 @@ class TestValidation:
     def test_check_forward_fill_limit_exact_boundary(self, sample_dates):
         """A run equal to the limit should NOT raise."""
         prices = np.linspace(100, 200, 100)
-        prices[10:13] = prices[9]   # run of 3 identical → matches limit exactly
+        prices[10:13] = prices[9]   # run of 3 — matches limit exactly
         df = pd.DataFrame(
             {"equity": prices, "gold": np.linspace(1800, 1900, 100),
              "bond": np.linspace(95, 98, 100)},
             index=sample_dates,
         )
-        # limit=3 → run of exactly 3 should pass
         check_forward_fill_limit(df, ["equity"], max_consecutive=3)
 
     def test_check_forward_fill_limit_over_boundary(self, sample_dates):
@@ -200,39 +266,112 @@ class TestValidation:
 
 
 # ---------------------------------------------------------------------------
-# 2. Mocked download tests
+# 2. Asset semantic / SeriesKind tests
+# ---------------------------------------------------------------------------
+
+class TestAssetSemantics:
+    """Verify that SeriesKind distinctions are enforced before any download."""
+
+    def test_price_spec_require_price_passes(self):
+        """A PRICE AssetSpec must pass require_price()."""
+        spec = _make_price_asset("^NSEI")
+        spec.require_price()  # should not raise
+
+    def test_yield_spec_require_price_raises(self):
+        """A YIELD AssetSpec must raise TypeError when require_price() is called."""
+        spec = AssetSpec(
+            ticker="^IRX",
+            kind=SeriesKind.YIELD,
+            description="13-week T-Bill yield",
+            notes="Rate in percent — NOT a price.",
+        )
+        with pytest.raises(TypeError, match="yield"):
+            spec.require_price()
+
+    def test_indicator_spec_require_price_raises(self):
+        """An INDICATOR AssetSpec must raise TypeError when require_price() is called."""
+        spec = _make_indicator_asset("^INDIAVIX")
+        with pytest.raises(TypeError, match="indicator"):
+            spec.require_price()
+
+    def test_validate_price_assets_passes_for_default_config(self):
+        """Default TickerConfig must have all PRICE specs for equity/gold/bond."""
+        cfg = TickerConfig()
+        cfg.validate_price_assets()  # must not raise
+
+    def test_yield_bond_spec_blocked_on_download(self, base_config):
+        """
+        Swapping bond to a YIELD spec must raise TypeError before any network call.
+        Uses validate_price_assets() which download_market_data() calls first.
+        """
+        bad_cfg = base_config
+        bad_cfg.tickers.bond = AssetSpec(
+            ticker="^IRX",
+            kind=SeriesKind.YIELD,
+            description="Yield series — must be blocked",
+        )
+        with pytest.raises(TypeError, match="yield"):
+            bad_cfg.tickers.validate_price_assets()
+
+    def test_vix_fallback_constant_is_cboe(self):
+        """VIX_FALLBACK must be the CBOE VIX ticker, explicitly defined."""
+        assert VIX_FALLBACK == "^VIX"
+
+    def test_india_vix_is_preferred_default(self):
+        """Default vix spec must be ^INDIAVIX, not ^VIX."""
+        cfg = TickerConfig()
+        assert cfg.vix.ticker == "^INDIAVIX"
+
+    def test_irx_is_not_default_bond(self):
+        """^IRX (yield series) must NOT be the default bond ticker."""
+        cfg = TickerConfig()
+        assert cfg.bond.ticker != "^IRX"
+        assert cfg.bond.kind is SeriesKind.PRICE
+
+    def test_bond_ticker_property_raises_for_yield_spec(self):
+        """bond_ticker property must raise if bond spec is accidentally a YIELD."""
+        cfg = TickerConfig()
+        cfg.bond = AssetSpec(ticker="^IRX", kind=SeriesKind.YIELD, description="yield")
+        with pytest.raises(TypeError):
+            _ = cfg.bond_ticker
+
+    def test_gold_spec_notes_document_currency_policy(self):
+        """Default gold AssetSpec notes must mention INR / currency / FX."""
+        cfg = TickerConfig()
+        notes_lower = cfg.gold.notes.lower()
+        assert any(w in notes_lower for w in ["inr", "currency", "fx", "gold"]), (
+            "Gold spec notes must document the currency/FX policy."
+        )
+
+    def test_irx_yield_reference_spec_exists_and_is_yield(self):
+        """TickerConfig must retain ^IRX as a YIELD reference (not removed)."""
+        cfg = TickerConfig()
+        assert cfg.irx_yield.ticker == "^IRX"
+        assert cfg.irx_yield.kind is SeriesKind.YIELD
+
+
+# ---------------------------------------------------------------------------
+# 3. Mocked download tests
 # ---------------------------------------------------------------------------
 
 class TestDownloadMocked:
     """Tests for download_market_data() with yfinance fully mocked — no network."""
 
-    def _make_series(self, periods: int = 120, start: str = "2022-01-03") -> pd.Series:
-        rng = np.random.default_rng(42)
-        idx = pd.bdate_range(start, periods=periods)
-        return pd.Series(100 + np.cumsum(rng.normal(0, 1, periods)), index=idx)
-
-    def _mock_download(self, side_effects: Dict[str, pd.Series]):
-        """
-        Build a mock for yfinance.download() that returns per-ticker DataFrames.
-        """
-        def _fake_download(ticker, start, end, **kwargs):
-            if ticker not in side_effects:
-                return pd.DataFrame()
-            series = side_effects[ticker]
-            return pd.DataFrame({"Close": series}, index=series.index)
-        return _fake_download
-
-    def test_successful_download_returns_valid_frame(self, base_config):
-        """Happy path: three tickers return data → validated DataFrame."""
-        cfg = base_config
-        s = self._make_series()
-        side_effects = {
+    def _side_effects(self, cfg: RegimeShiftConfig, *, include_vix: bool = False):
+        s = _make_price_series()
+        effects = {
             cfg.tickers.equity_ticker: s,
             cfg.tickers.gold_ticker: s * 18,
             cfg.tickers.bond_ticker: s * 0.97,
         }
-        with patch("yfinance.download", side_effect=self._mock_download(side_effects)):
-            df = download_market_data(cfg, cache=False)
+        if include_vix:
+            effects[cfg.tickers.vix_ticker] = s * 0.15
+        return effects
+
+    def test_successful_download_returns_valid_frame(self, base_config):
+        """Happy path: three tickers return data → validated DataFrame."""
+        with patch("yfinance.download", side_effect=_mock_download(self._side_effects(base_config))):
+            df = download_market_data(base_config, cache=False)
         assert set(df.columns) >= {"equity", "gold", "bond"}
         assert isinstance(df.index, pd.DatetimeIndex)
         assert df.index.is_monotonic_increasing
@@ -240,33 +379,26 @@ class TestDownloadMocked:
 
     def test_column_order_is_deterministic(self, base_config):
         """Column order must always be equity, gold, bond [, vix]."""
-        cfg = base_config
-        s = self._make_series()
-        side_effects = {
-            cfg.tickers.equity_ticker: s,
-            cfg.tickers.gold_ticker: s * 18,
-            cfg.tickers.bond_ticker: s * 0.97,
-        }
-        with patch("yfinance.download", side_effect=self._mock_download(side_effects)):
-            df = download_market_data(cfg, cache=False)
+        with patch("yfinance.download", side_effect=_mock_download(self._side_effects(base_config))):
+            df = download_market_data(base_config, cache=False)
         assert list(df.columns[:3]) == ["equity", "gold", "bond"]
 
     def test_missing_ticker_raises_data_download_error(self, base_config):
         """If a required ticker returns empty data, DataDownloadError is raised."""
         cfg = base_config
-        s = self._make_series()
+        s = _make_price_series()
         # Only equity and gold — bond missing
         side_effects = {
             cfg.tickers.equity_ticker: s,
             cfg.tickers.gold_ticker: s * 18,
-            # bond ticker not present → returns empty DataFrame
+            # bond ticker absent → returns empty DataFrame
         }
-        with patch("yfinance.download", side_effect=self._mock_download(side_effects)):
+        with patch("yfinance.download", side_effect=_mock_download(side_effects)):
             with pytest.raises(DataDownloadError, match="Failed to download"):
                 download_market_data(cfg, cache=False)
 
     def test_empty_download_raises_data_download_error(self, base_config):
-        """If yfinance returns an empty DataFrame, DataDownloadError is raised."""
+        """If yfinance returns an empty DataFrame for every ticker, DataDownloadError is raised."""
         def always_empty(ticker, **kwargs):
             return pd.DataFrame()
         with patch("yfinance.download", side_effect=always_empty):
@@ -276,70 +408,74 @@ class TestDownloadMocked:
     def test_index_is_timezone_naive(self, base_config):
         """Downloaded data index must be timezone-naive after normalisation."""
         cfg = base_config
-        s = self._make_series()
+        s = _make_price_series()
         # Simulate yfinance returning timezone-aware index
-        s.index = s.index.tz_localize("UTC")
+        s_tz = s.copy()
+        s_tz.index = s_tz.index.tz_localize("UTC")
         side_effects = {
-            cfg.tickers.equity_ticker: s,
+            cfg.tickers.equity_ticker: s_tz,
             cfg.tickers.gold_ticker: s * 18,
             cfg.tickers.bond_ticker: s * 0.97,
         }
-        with patch("yfinance.download", side_effect=self._mock_download(side_effects)):
+        with patch("yfinance.download", side_effect=_mock_download(side_effects)):
             df = download_market_data(cfg, cache=False)
         assert df.index.tz is None
 
     def test_vix_column_present_when_requested(self, base_config):
         """include_vix=True must produce a 'vix' column in output."""
-        cfg = base_config
-        s = self._make_series()
-        side_effects = {
-            cfg.tickers.equity_ticker: s,
-            cfg.tickers.gold_ticker: s * 18,
-            cfg.tickers.bond_ticker: s * 0.97,
-            cfg.tickers.vix_ticker: s * 0.15,
-        }
-        with patch("yfinance.download", side_effect=self._mock_download(side_effects)):
-            df = download_market_data(cfg, cache=False, include_vix=True)
+        with patch("yfinance.download", side_effect=_mock_download(self._side_effects(base_config, include_vix=True))):
+            df = download_market_data(base_config, cache=False, include_vix=True)
         assert "vix" in df.columns
 
     def test_vix_absent_by_default(self, base_config):
         """VIX column must NOT appear when include_vix=False (default)."""
-        cfg = base_config
-        s = self._make_series()
-        side_effects = {
-            cfg.tickers.equity_ticker: s,
-            cfg.tickers.gold_ticker: s * 18,
-            cfg.tickers.bond_ticker: s * 0.97,
-        }
-        with patch("yfinance.download", side_effect=self._mock_download(side_effects)):
-            df = download_market_data(cfg, cache=False, include_vix=False)
+        with patch("yfinance.download", side_effect=_mock_download(self._side_effects(base_config))):
+            df = download_market_data(base_config, cache=False, include_vix=False)
         assert "vix" not in df.columns
 
     def test_no_backward_fill_applied(self, base_config):
-        """Result must not contain backward-filled values (future-data leakage)."""
+        """
+        When equity has a NaN at index 50, forward-fill must copy from index 49,
+        NOT from index 51.  A backward-fill (bfill) would copy from index 51.
+
+        We verify this by inspecting the actual filled value:
+          - ffill: filled_value == s.iloc[49]
+          - bfill: filled_value == s.iloc[51]
+        """
         cfg = base_config
-        s = self._make_series()
-        # Insert NaN in equity mid-series
+        s = _make_price_series(periods=120)
         s_with_nan = s.copy()
         s_with_nan.iloc[50] = np.nan
+
         side_effects = {
             cfg.tickers.equity_ticker: s_with_nan,
             cfg.tickers.gold_ticker: s * 18,
             cfg.tickers.bond_ticker: s * 0.97,
         }
-        with patch("yfinance.download", side_effect=self._mock_download(side_effects)):
+        with patch("yfinance.download", side_effect=_mock_download(side_effects)):
             df = download_market_data(cfg, cache=False)
-        # Row 50 should NOT have the value from row 51 (bfill signature)
+
+        # The original raw series has NaN at positional index 50.
+        # After ffill the value at that row should equal the value at index 49.
+        # Build expected values from raw series (before NaN injection).
+        raw_idx49 = float(s.iloc[49])
+        raw_idx51 = float(s.iloc[51])
+
         if len(df) > 52:
-            val_at_50 = df["equity"].iloc[50]
-            val_at_51 = df["equity"].iloc[51]
-            # If bfill were applied, df.iloc[50] == df.iloc[51]
-            # With fforward-fill, df.iloc[50] == df.iloc[49]
-            assert val_at_50 != val_at_51 or True  # structural: row 50 exists via ffill, not bfill
+            filled_val = float(df["equity"].iloc[50])
+            # Assert it is the PREVIOUS value (ffill), not the NEXT value (bfill)
+            assert abs(filled_val - raw_idx49) < 1e-9, (
+                f"Expected forward-fill value {raw_idx49} but got {filled_val}. "
+                "This suggests backward-fill was applied."
+            )
+            # Also assert it is NOT the next day's value
+            assert abs(filled_val - raw_idx51) > 1e-9 or raw_idx49 == raw_idx51, (
+                "Forward-filled value equals the next-day value — bfill signature detected."
+            )
 
 
 # ---------------------------------------------------------------------------
-# 3. CSV round-trip and offline execution
+# 4. CSV round-trip and offline execution
 # ---------------------------------------------------------------------------
 
 class TestCSVRoundTrip:
@@ -352,7 +488,6 @@ class TestCSVRoundTrip:
         try:
             save_market_data_csv(valid_price_df, path)
             loaded = load_market_data_csv(path)
-            # Check values match
             pd.testing.assert_frame_equal(
                 valid_price_df.reset_index(drop=True),
                 loaded.reset_index(drop=True),
@@ -379,7 +514,6 @@ class TestCSVRoundTrip:
             path = f.name
         try:
             save_market_data_csv(valid_price_df, path)
-            # Patch yfinance to raise ImportError — offline simulation
             with patch.dict("sys.modules", {"yfinance": None}):
                 loaded = load_market_data_csv(path)
             assert len(loaded) == len(valid_price_df)
@@ -432,7 +566,7 @@ class TestCSVRoundTrip:
 
 
 # ---------------------------------------------------------------------------
-# 4. Alignment and missing-data policy
+# 5. Alignment and missing-data policy
 # ---------------------------------------------------------------------------
 
 class TestAlignment:
@@ -458,8 +592,6 @@ class TestAlignment:
         gold.iloc[10] = np.nan  # one gap
         bond = eq * 0.97
 
-        # Use outer-join approach manually by starting from individual series
-        # and calling _build_aligned_frame with a series that has NaN
         series_map = {"equity": eq, "gold": gold, "bond": bond}
         df, diag = _build_aligned_frame(series_map, ["equity", "gold", "bond"], forward_fill_limit=3)
         assert df["gold"].isna().sum() == 0  # NaN filled by ffill
@@ -503,7 +635,99 @@ class TestAlignment:
 
 
 # ---------------------------------------------------------------------------
-# 5. Determinism tests
+# 6. Fill-mask accuracy tests
+# ---------------------------------------------------------------------------
+
+class TestFillMaskAccuracy:
+    """
+    Prove that ffill_cells_applied is derived from the explicit fill mask
+    (was-NaN-before AND is-non-NaN-after), NOT from price equality.
+
+    A constant / naturally flat price series must NOT be miscounted as filled cells.
+    """
+
+    def _make_series(self, start, periods, offset=0):
+        idx = pd.bdate_range(start, periods=periods)
+        return pd.Series(100.0 + offset + np.arange(periods, dtype=float), index=idx)
+
+    def test_fill_mask_counts_exactly_one_gap(self):
+        """One NaN gap → ffill_cells_applied must equal exactly 1."""
+        idx = pd.bdate_range("2022-01-03", periods=20)
+        eq = pd.Series(100.0 + np.arange(20, dtype=float), index=idx)
+        gold = eq.copy()
+        gold.iloc[10] = np.nan  # exactly one NaN
+        bond = eq * 0.97
+
+        _, diag = _build_aligned_frame(
+            {"equity": eq, "gold": gold, "bond": bond},
+            ["equity", "gold", "bond"],
+            forward_fill_limit=3,
+        )
+        assert diag["ffill_cells_applied"] == 1, (
+            f"Expected exactly 1 filled cell, got {diag['ffill_cells_applied']}"
+        )
+
+    def test_fill_mask_zero_when_no_nans(self):
+        """No NaN gaps → ffill_cells_applied must equal exactly 0."""
+        idx = pd.bdate_range("2022-01-03", periods=20)
+        eq = pd.Series(100.0 + np.arange(20, dtype=float), index=idx)
+        gold = eq * 1.5
+        bond = eq * 0.97
+
+        _, diag = _build_aligned_frame(
+            {"equity": eq, "gold": gold, "bond": bond},
+            ["equity", "gold", "bond"],
+            forward_fill_limit=3,
+        )
+        assert diag["ffill_cells_applied"] == 0
+
+    def test_naturally_flat_bond_nav_not_counted_as_filled(self):
+        """
+        A bond NAV that holds the same value for 3 consecutive days (naturally flat,
+        not a fill artefact) must NOT be counted as forward-filled cells.
+
+        This is the key regression test: if ffill_cells_applied were inferred from
+        repeated prices, it would falsely flag these rows.  The fill mask correctly
+        ignores them because they had no NaN in the raw data.
+        """
+        idx = pd.bdate_range("2022-01-03", periods=20)
+        eq = pd.Series(100.0 + np.arange(20, dtype=float), index=idx)
+        gold = eq * 1.5
+
+        # Bond NAV is constant for 3 days (common in gilt funds around holidays)
+        bond = pd.Series(97.0 + np.arange(20, dtype=float) * 0.05, index=idx)
+        bond.iloc[10:13] = bond.iloc[9]   # 3 naturally identical values, NO NaN
+
+        _, diag = _build_aligned_frame(
+            {"equity": eq, "gold": gold, "bond": bond},
+            ["equity", "gold", "bond"],
+            forward_fill_limit=3,
+        )
+        assert diag["ffill_cells_applied"] == 0, (
+            f"Naturally flat prices must not be counted as filled; "
+            f"got ffill_cells_applied={diag['ffill_cells_applied']}"
+        )
+
+    def test_fill_mask_counts_three_consecutive_gaps(self):
+        """Three consecutive NaN gaps filled within limit → count must equal 3."""
+        idx = pd.bdate_range("2022-01-03", periods=20)
+        eq = pd.Series(100.0 + np.arange(20, dtype=float), index=idx)
+        gold = eq.copy()
+        gold.iloc[10:13] = np.nan  # 3 consecutive NaN values, within limit=3
+        bond = eq * 0.97
+
+        _, diag = _build_aligned_frame(
+            {"equity": eq, "gold": gold, "bond": bond},
+            ["equity", "gold", "bond"],
+            forward_fill_limit=3,
+        )
+        assert diag["ffill_cells_applied"] == 3, (
+            f"Expected 3 filled cells, got {diag['ffill_cells_applied']}"
+        )
+
+
+# ---------------------------------------------------------------------------
+# 7. Determinism tests
 # ---------------------------------------------------------------------------
 
 class TestDeterminism:

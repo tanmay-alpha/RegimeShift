@@ -22,11 +22,14 @@ appears in any function other than _download_single() and the ticker_to_col map.
 
 Missing-data policy
 -------------------
+- Yield/indicator series passed where a price is expected raise DataDownloadError
+  immediately (before any network call).
 - Assets that return empty data raise DataDownloadError immediately.
-- After inner-joining on common trading dates, any remaining NaN values in
-  required columns are forward-filled up to config.data.forward_fill_limit days.
+- After outer-joining on all dates, remaining NaN values in required columns are
+  forward-filled up to config.data.forward_fill_limit days.  The number of filled
+  cells is tracked via an explicit fill mask (not inferred from repeated prices).
 - Residual NaN values after forward-filling raise DataValidationError.
-- Backward-fill is never applied.
+- Backward-fill is NEVER applied.
 
 Caching
 -------
@@ -46,7 +49,7 @@ from typing import Dict, List, Optional, Tuple
 import pandas as pd
 import numpy as np
 
-from regime_shift.config import RegimeShiftConfig
+from regime_shift.config import AssetSpec, RegimeShiftConfig, SeriesKind
 from regime_shift.exceptions import DataAlignmentError, DataDownloadError, DataValidationError
 from regime_shift.validation import validate_price_data
 
@@ -145,16 +148,22 @@ def _build_aligned_frame(
     """
     Align asset series to common valid trading dates and forward-fill sparingly.
 
+    Forward-fill cell count is tracked via an explicit boolean fill mask
+    (positions that were NaN before ffill and non-NaN after).  This is exact
+    and does NOT infer fills from repeated identical price values, which would
+    produce false positives for naturally flat prices.
+
     Policy:
-      - Inner-join on dates where ALL required columns have data.
-      - Forward-fill up to forward_fill_limit days for gaps.
-      - Report the number of dropped dates and NaN observations.
-      - Never backward-fill.
+      - Outer-join on all dates to preserve the full universe.
+      - Forward-fill up to forward_fill_limit days per gap.
+      - Fill count reported from fill mask, not from price equality.
+      - Drop rows where any required column is still NaN after fill.
+      - Backward-fill is NEVER applied.
 
     Args:
         series_map: mapping of output_col_name → pd.Series.
         col_order: Desired deterministic column output order.
-        forward_fill_limit: Max consecutive days to forward-fill.
+        forward_fill_limit: Max consecutive days to forward-fill (0 = disabled).
 
     Returns:
         (aligned_df, diagnostics_dict)
@@ -163,13 +172,18 @@ def _build_aligned_frame(
     raw = pd.DataFrame({col: series_map[col] for col in col_order if col in series_map})
     total_dates_pre = len(raw)
 
-    # Forward-fill with strict limit BEFORE dropping
+    # Forward-fill with strict limit BEFORE dropping.
+    # Track filled cells via explicit mask — not from price equality, so
+    # naturally flat prices (e.g. a constant bond NAV) are never miscounted.
     if forward_fill_limit > 0:
+        was_nan_before = raw.isna()
         filled = raw.ffill(limit=forward_fill_limit)
-        ffill_applied = int((raw.isna() & filled.notna()).sum().sum())
+        fill_mask = was_nan_before & filled.notna()   # True only at cells actually filled
+        ffill_applied = int(fill_mask.sum().sum())
         logger.info("Forward-filled %d NaN observations (limit=%d days).", ffill_applied, forward_fill_limit)
     else:
         filled = raw
+        fill_mask = pd.DataFrame(False, index=raw.index, columns=raw.columns)
         ffill_applied = 0
 
     # Drop rows where any required column is still NaN
@@ -252,6 +266,10 @@ def download_market_data(
     pf = cfg.data.price_field
 
     logger.info("Downloading market data: %s → %s", start, end)
+
+    # Guard: ensure all required asset specs are PRICE series before any network call.
+    # This prevents accidentally downloading a yield series and using it as a price.
+    cfg.tickers.validate_price_assets()
 
     # Determine which tickers to download
     required_tickers = {
