@@ -384,3 +384,172 @@ class RegimeShiftConfig:
             TypeError: If any required asset spec is not a PRICE series.
         """
         self.tickers.validate_price_assets()
+
+
+# ---------------------------------------------------------------------------
+# HMM configuration
+# ---------------------------------------------------------------------------
+
+@dataclass
+class HMMConfig:
+    """
+    Configuration for the Gaussian HMM regime detection model.
+
+    Uses hmmlearn.hmm.GaussianHMM with diagonal covariance for parameter
+    efficiency and numerical stability.
+
+    State interpretation is deterministic and based on training-period
+    raw feature statistics only — never on out-of-sample performance.
+
+    Attributes:
+        n_components: Number of hidden states (must be 3 for Bull/Bear/Crisis).
+        covariance_type: Covariance matrix type.  'diag' is the default and
+            recommended choice for numerical stability.
+        n_iter: Maximum training iterations.
+        tolerance: Convergence threshold.
+        random_state: Seed for reproducibility.
+        min_covar: Floor on diagonal covariance elements.
+        minimum_training_observations: Minimum rows required before fitting.
+        crisis_volatility_weight: Weight for volatility in crisis scoring.
+        crisis_vix_weight: Weight for VIX level in crisis scoring (when VIX exists).
+        crisis_momentum_weight: Weight for momentum in crisis scoring (negative).
+    """
+
+    n_components: int = 3
+    covariance_type: str = "diag"
+    n_iter: int = 200
+    tolerance: float = 1e-3
+    random_state: int = 42
+    min_covar: float = 1e-6
+    minimum_training_observations: int = 50
+    crisis_volatility_weight: float = 1.0
+    crisis_vix_weight: float = 0.5
+    crisis_momentum_weight: float = -0.3
+
+    def validate(self) -> None:
+        """Raise ValueError if any parameter is invalid."""
+        if self.n_components != 3:
+            raise ValueError(
+                f"HMMConfig.n_components must be 3 (got {self.n_components}). "
+                "The system is designed for exactly Bull, Bear, and Crisis states."
+            )
+        if self.covariance_type not in ("diag",):
+            raise ValueError(
+                f"HMMConfig.covariance_type must be 'diag' (got '{self.covariance_type}')."
+            )
+        if self.n_iter < 1:
+            raise ValueError(
+                f"HMMConfig.n_iter must be >= 1 (got {self.n_iter})."
+            )
+        if self.tolerance <= 0:
+            raise ValueError(
+                f"HMMConfig.tolerance must be > 0 (got {self.tolerance})."
+            )
+        if self.min_covar <= 0:
+            raise ValueError(
+                f"HMMConfig.min_covar must be > 0 (got {self.min_covar})."
+            )
+        if self.minimum_training_observations < 1:
+            raise ValueError(
+                f"HMMConfig.minimum_training_observations must be >= 1 "
+                f"(got {self.minimum_training_observations})."
+            )
+
+
+# ---------------------------------------------------------------------------
+# Portfolio optimization configuration
+# ---------------------------------------------------------------------------
+
+@dataclass
+class BullConstraints:
+    """Regime-specific constraints for Bull market optimization."""
+
+    equity_min: float = 0.45
+    equity_max: float = 0.80
+    gold_max: float = 0.35
+    bond_max: float = 0.45
+    risk_aversion: float = 1.0
+
+
+@dataclass
+class BearConstraints:
+    """Regime-specific constraints for Bear market optimization."""
+
+    equity_max: float = 0.40
+    defensive_min: float = 0.60  # gold + bond minimum
+    return_reward: float = 0.5
+
+
+@dataclass
+class CrisisConstraints:
+    """Regime-specific constraints for Crisis market optimization."""
+
+    equity_max: float = 0.15
+    gold_min: float = 0.25
+    bond_min: float = 0.40
+
+
+@dataclass
+class PortfolioConfig:
+    """
+    Configuration for CVXPY regime-conditioned portfolio optimization.
+
+    Tradable assets are exactly equity, gold, and bond.  VIX is never
+    allocated.  All constraints are long-only with no leverage.
+
+    Attributes:
+        estimation_lookback: Trading days of historical returns used for
+            expected return and covariance estimation.
+        minimum_estimation_observations: Minimum observations required for
+            covariance estimation.
+        covariance_ridge: Diagonal ridge added to covariance matrix for
+            positive semidefinite guarantee.
+        maximum_asset_weight: Maximum weight for any single asset.
+        bull_risk_aversion: Risk aversion parameter in Bull objective.
+        bear_return_reward: Return reward parameter in Bear objective.
+        turnover_penalty: Weight on L1 turnover penalty (0 = disabled).
+        preferred_solvers: Ordered list of CVXPY solvers to try.
+        bull: Bull regime constraints.
+        bear: Bear regime constraints.
+        crisis: Crisis regime constraints.
+    """
+
+    estimation_lookback: int = 252
+    minimum_estimation_observations: int = 60
+    covariance_ridge: float = 1e-6
+    maximum_asset_weight: float = 0.80
+    bull_risk_aversion: float = 1.0
+    bear_return_reward: float = 0.5
+    turnover_penalty: float = 0.0
+    preferred_solvers: tuple = ("CLARABEL", "OSQP", "SCS")
+    bull: BullConstraints = field(default_factory=BullConstraints)
+    bear: BearConstraints = field(default_factory=BearConstraints)
+    crisis: CrisisConstraints = field(default_factory=CrisisConstraints)
+
+    def validate(self) -> None:
+        """Raise ValueError if any parameter is invalid."""
+        if self.estimation_lookback < 1:
+            raise ValueError(
+                f"PortfolioConfig.estimation_lookback must be >= 1 "
+                f"(got {self.estimation_lookback})."
+            )
+        if self.minimum_estimation_observations < 1:
+            raise ValueError(
+                f"PortfolioConfig.minimum_estimation_observations must be >= 1 "
+                f"(got {self.minimum_estimation_observations})."
+            )
+        if self.maximum_asset_weight <= 0 or self.maximum_asset_weight > 1:
+            raise ValueError(
+                f"PortfolioConfig.maximum_asset_weight must be in (0, 1] "
+                f"(got {self.maximum_asset_weight})."
+            )
+        if self.covariance_ridge < 0:
+            raise ValueError(
+                f"PortfolioConfig.covariance_ridge must be >= 0 "
+                f"(got {self.covariance_ridge})."
+            )
+        if self.turnover_penalty < 0:
+            raise ValueError(
+                f"PortfolioConfig.turnover_penalty must be >= 0 "
+                f"(got {self.turnover_penalty})."
+            )

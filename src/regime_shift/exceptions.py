@@ -1,11 +1,4 @@
-"""
-Custom exception hierarchy for the RegimeShift data pipeline.
-
-Raised instead of generic exceptions so callers always receive:
-  - which ticker or asset failed
-  - the date range that was attempted
-  - a human-readable reason for the failure
-"""
+from typing import Optional
 
 
 class RegimeShiftError(Exception):
@@ -75,6 +68,55 @@ class FeatureEngineeringError(RegimeShiftError, ValueError):
     def __init__(self, reason: str) -> None:
         self.reason = reason
         super().__init__(f"Feature engineering failed: {reason}")
+
+
+class RegimeDetectionError(RegimeShiftError, ValueError):
+    """
+    Raised when HMM regime detection encounters an error.
+
+    Inherits from ValueError for compatibility with pytest.raises(ValueError).
+
+    Attributes:
+        reason: Human-readable description of the failure.
+    """
+
+    def __init__(self, reason: str) -> None:
+        self.reason = reason
+        super().__init__(f"Regime detection failed: {reason}")
+
+
+class PortfolioOptimizationError(RegimeShiftError, ValueError):
+    """
+    Raised when portfolio optimization fails or produces invalid weights.
+
+    Inherits from ValueError for compatibility with pytest.raises(ValueError).
+
+    Attributes:
+        reason: Human-readable description of the failure.
+        regime: The regime label that triggered the failure.
+        solver: The solver that was attempted.
+        solver_status: The status returned by the solver.
+    """
+
+    def __init__(
+        self,
+        reason: str,
+        regime: Optional[str] = None,
+        solver: Optional[str] = None,
+        solver_status: Optional[str] = None,
+    ) -> None:
+        self.reason = reason
+        self.regime = regime
+        self.solver = solver
+        self.solver_status = solver_status
+        parts = [f"Portfolio optimization failed: {reason}"]
+        if regime:
+            parts.append(f"Regime: {regime}")
+        if solver:
+            parts.append(f"Solver: {solver}")
+        if solver_status:
+            parts.append(f"Solver status: {solver_status}")
+        super().__init__(" | ".join(parts))
 
 
 
