@@ -50,3 +50,7 @@ Thumbs.db
 results/*.png
 results/*.csv
 !results/.gitkeep
+
+# Data cache (auto-generated; not committed)
+data/cache/
+*.parquet
