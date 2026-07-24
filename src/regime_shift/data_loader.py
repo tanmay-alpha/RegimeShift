@@ -13,6 +13,7 @@ Data validation checks (from quant_skills_and_manual_tasks.md):
 """
 
 import logging
+from typing import Optional, List, Dict, Tuple
 
 import numpy as np
 import pandas as pd
@@ -259,7 +260,8 @@ def compute_features_btc(df: pd.DataFrame, window: int = 20) -> pd.DataFrame:
 # Feature Engineering — Multi-Asset (for simulated data)
 # ─────────────────────────────────────────────────────────────────────────────
 
-def compute_features(returns: pd.DataFrame, tickers: list,
+def compute_features(returns: pd.DataFrame,
+                     tickers: Optional[list] = None,
                      window: int = 252) -> pd.DataFrame:
     """
     Build rolling-statistic features for multi-asset regime detection.
@@ -270,13 +272,15 @@ def compute_features(returns: pd.DataFrame, tickers: list,
     Parameters
     ----------
     returns : DataFrame — daily returns, one column per ticker
-    tickers : list[str]
+    tickers : list[str], optional — asset tickers (defaults to DataFrame columns)
     window : int — rolling window (passed to feature engineer)
 
     Returns
     -------
     DataFrame with standardized features, no NaN.
     """
+    if tickers is None:
+        tickers = returns.columns.tolist()
     try:
         from regime_shift.regime_features import RegimeFeatureEngineer
 

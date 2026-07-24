@@ -98,6 +98,38 @@ def _log_gamma(z: np.ndarray) -> np.ndarray:
     return result
 
 
+def _enforce_psd(cov: np.ndarray) -> np.ndarray:
+    """
+    Ensure a covariance matrix is positive semi-definite.
+
+    Uses eigenvalue decomposition to add minimal jitter to
+    any negative eigenvalues, then enforces diagonal dominance.
+
+    Args:
+        cov: Covariance matrix (d, d)
+
+    Returns:
+        PSD covariance matrix (d, d)
+    """
+    cov = np.asarray(cov, dtype=np.float64)
+    d = cov.shape[0]
+
+    # Symmetrize
+    cov = 0.5 * (cov + cov.T)
+
+    eigvals, eigvecs = np.linalg.eigh(cov)
+    min_eigval = eigvals[0]
+
+    if min_eigval < COV_JITTER:
+        jitter = COV_JITTER - min_eigval
+        cov = cov + jitter * np.eye(d) + COV_JITTER * np.eye(d)
+
+    # Final safety: ensure diagonal dominance
+    cov += 1e-8 * np.eye(d)
+
+    return cov
+
+
 #: Dirichlet prior concentration for self-transitions (regime persistence)
 DIRICHLET_SELF_ALPHA: float = 50.0
 #: Dirichlet prior concentration for cross-transitions
@@ -918,9 +950,9 @@ class RegimeDetector:
                 self.cov_[s] = scale * cov + COV_JITTER * np.eye(d)
 
             # Ensure PSD
-            self._ensure_psd(s)
+            self._enforce_psd(s)
 
-    def _ensure_psd(self, state_idx: int) -> None:
+    def _enforce_psd(self, state_idx: int) -> None:
         """Ensure covariance matrix is positive semi-definite."""
         cov = self.cov_[state_idx]
         d = cov.shape[0]
