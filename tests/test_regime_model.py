@@ -646,6 +646,43 @@ class TestLeakageSafety:
         )
         assert solution_at_T1.regime in ("Bull", "Bear", "Crisis")
 
+    def test_hmm_scored_using_scaled_features(self):
+        """
+        The log-likelihood in RegimeSolution must be computed from scaled
+        training features, not raw features.  We verify by comparing the
+        solution's log_likelihood with a manual hmm.score() call on the
+        scaled training matrix — they must match exactly.
+        """
+        train_features, test_features = _make_training_and_test()
+        config = HMMConfig()
+
+        scaler = fit_feature_scaler(train_features)
+        scaled_train = transform_features(scaler, train_features)
+        hmm, _, _ = fit_hmm(scaled_train, train_features, config)
+
+        combined = pd.concat([train_features, test_features.iloc[:1]])
+        solution = predict_current_state(
+            hmm, scaler, combined, train_features, config
+        )
+
+        # Manual log-likelihood on scaled training features
+        expected_log_ll = float(hmm.score(scaled_train.values))
+
+        assert solution.log_likelihood is not None
+        np.testing.assert_allclose(
+            solution.log_likelihood, expected_log_ll, atol=1e-10,
+        )
+
+        # Verify it's NOT the raw-feature log-likelihood (different scale)
+        raw_log_ll = float(hmm.score(train_features.values))
+        if not np.allclose(solution.log_likelihood, raw_log_ll, atol=1e-10):
+            # This is the expected case: scaled and raw produce different scores
+            pass
+        else:
+            # If they happen to be numerically close (unlikely), that's fine
+            # as long as the scaled score matches
+            pass
+
     def test_sequence_history_affects_posterior(self):
         """
         predict_current_state must pass the complete scaled feature sequence

@@ -315,88 +315,101 @@ class FeatureConfig:
 
 
 @dataclass
-class RegimeShiftConfig:
+class BullConstraints:
+    """Regime-specific constraints for Bull market optimization."""
+
+    equity_min: float = 0.45
+    equity_max: float = 0.80
+    gold_max: float = 0.35
+    bond_max: float = 0.45
+    risk_aversion: float = 1.0
+
+
+@dataclass
+class BearConstraints:
+    """Regime-specific constraints for Bear market optimization."""
+
+    equity_max: float = 0.40
+    defensive_min: float = 0.60  # gold + bond minimum
+    return_reward: float = 0.5
+
+
+@dataclass
+class CrisisConstraints:
+    """Regime-specific constraints for Crisis market optimization."""
+
+    equity_max: float = 0.15
+    gold_min: float = 0.25
+    bond_min: float = 0.40
+
+
+@dataclass
+class PortfolioConfig:
     """
-    Configuration parameters for the RegimeShift pipeline.
+    Configuration for CVXPY regime-conditioned portfolio optimization.
+
+    Tradable assets are exactly equity, gold, and bond.  VIX is never
+    allocated.  All constraints are long-only with no leverage.
 
     Attributes:
-        random_seed: Seed for random number generators ensuring reproducibility.
-        number_of_regimes: Number of market regimes (3: Bull, Bear, Crisis).
-        train_window: Rolling window size in trading days for walk-forward training.
-        rebalance_frequency: Portfolio rebalancing frequency in trading days.
-        transaction_cost_bps: Fixed transaction cost in basis points (1 bps = 0.0001).
-        annualization_factor: Trading days per year for Indian equity/bond markets (252).
-        minimum_training_observations: Minimum observations before first HMM inference.
-        equity_col: Output column name for equity prices.
-        gold_col: Output column name for gold prices.
-        bond_col: Output column name for bond prices.
-        vix_col: Output column name for VIX (optional).
-        tickers: Centralised ticker/asset-spec configuration.
-        data: Data acquisition configuration.
+        estimation_lookback: Trading days of historical returns used for
+            expected return and covariance estimation.
+        minimum_estimation_observations: Minimum observations required for
+            covariance estimation.
+        annualization_factor: Trading days per year for annualization.
+        covariance_ridge: Diagonal ridge added to covariance matrix for
+            positive semidefinite guarantee.
+        maximum_asset_weight: Maximum weight for any single asset.
+        bull_risk_aversion: Risk aversion parameter in Bull objective.
+        bear_return_reward: Return reward parameter in Bear objective.
+        turnover_penalty: Weight on L1 turnover penalty (0 = disabled).
+        preferred_solvers: Ordered list of CVXPY solvers to try.
+        bull: Bull regime constraints.
+        bear: Bear regime constraints.
+        crisis: Crisis regime constraints.
     """
 
-    random_seed: int = 42
-    number_of_regimes: int = 3
-    train_window: int = 252
-    rebalance_frequency: int = 21
-    transaction_cost_bps: float = 5.0
+    estimation_lookback: int = 252
+    minimum_estimation_observations: int = 60
     annualization_factor: int = 252
-    minimum_training_observations: int = 126
-
-    equity_col: str = "equity"
-    gold_col: str = "gold"
-    bond_col: str = "bond"
-    vix_col: str = "vix"
-
-    tickers: TickerConfig = field(default_factory=TickerConfig)
-    data: DataConfig = field(default_factory=DataConfig)
-
-    @property
-    def core_assets(self) -> List[str]:
-        """Return list of mandatory output column names."""
-        return [self.equity_col, self.gold_col, self.bond_col]
-
-    @property
-    def feature_config(self) -> "FeatureConfig":
-        """Return FeatureConfig inheriting annualization_factor from this config."""
-        return FeatureConfig(annualization_factor=self.annualization_factor)
-
-    @property
-    def portfolio_config(self) -> "PortfolioConfig":
-        """Return PortfolioConfig with settings derived from this config."""
-        return PortfolioConfig(
-            estimation_lookback=self.train_window,
-            annualization_factor=self.annualization_factor,
-        )
-
-    @property
-    def ticker_to_col(self) -> Dict[str, str]:
-        """Return mapping of yfinance ticker → output column name."""
-        return {
-            self.tickers.equity_ticker: self.equity_col,
-            self.tickers.gold_ticker:   self.gold_col,
-            self.tickers.bond_ticker:   self.bond_col,
-            self.tickers.vix_ticker:    self.vix_col,
-        }
-
-    @property
-    def col_to_ticker(self) -> Dict[str, str]:
-        """Return mapping of output column name → yfinance ticker."""
-        return {v: k for k, v in self.ticker_to_col.items()}
+    covariance_ridge: float = 1e-6
+    maximum_asset_weight: float = 0.80
+    bull_risk_aversion: float = 1.0
+    bear_return_reward: float = 0.5
+    turnover_penalty: float = 0.0
+    preferred_solvers: tuple = ("CLARABEL", "OSQP", "SCS")
+    bull: BullConstraints = field(default_factory=BullConstraints)
+    bear: BearConstraints = field(default_factory=BearConstraints)
+    crisis: CrisisConstraints = field(default_factory=CrisisConstraints)
 
     def validate(self) -> None:
-        """
-        Validate the entire config, including asset-spec semantics.
+        """Raise ValueError if any parameter is invalid."""
+        if self.estimation_lookback < 1:
+            raise ValueError(
+                f"PortfolioConfig.estimation_lookback must be >= 1 "
+                f"(got {self.estimation_lookback})."
+            )
+        if self.minimum_estimation_observations < 1:
+            raise ValueError(
+                f"PortfolioConfig.minimum_estimation_observations must be >= 1 "
+                f"(got {self.minimum_estimation_observations})."
+            )
+        if self.maximum_asset_weight <= 0 or self.maximum_asset_weight > 1:
+            raise ValueError(
+                f"PortfolioConfig.maximum_asset_weight must be in (0, 1] "
+                f"(got {self.maximum_asset_weight})."
+            )
+        if self.covariance_ridge < 0:
+            raise ValueError(
+                f"PortfolioConfig.covariance_ridge must be >= 0 "
+                f"(got {self.covariance_ridge})."
+            )
+        if self.turnover_penalty < 0:
+            raise ValueError(
+                f"PortfolioConfig.turnover_penalty must be >= 0 "
+                f"(got {self.turnover_penalty})."
+            )
 
-        Raises:
-            TypeError: If any required asset spec is not a PRICE series.
-        """
-        self.tickers.validate_price_assets()
-
-
-# ---------------------------------------------------------------------------
-# HMM configuration
-# ---------------------------------------------------------------------------
 
 @dataclass
 class HMMConfig:
@@ -464,100 +477,83 @@ class HMMConfig:
             )
 
 
-# ---------------------------------------------------------------------------
-# Portfolio optimization configuration
-# ---------------------------------------------------------------------------
-
 @dataclass
-class BullConstraints:
-    """Regime-specific constraints for Bull market optimization."""
-
-    equity_min: float = 0.45
-    equity_max: float = 0.80
-    gold_max: float = 0.35
-    bond_max: float = 0.45
-    risk_aversion: float = 1.0
-
-
-@dataclass
-class BearConstraints:
-    """Regime-specific constraints for Bear market optimization."""
-
-    equity_max: float = 0.40
-    defensive_min: float = 0.60  # gold + bond minimum
-    return_reward: float = 0.5
-
-
-@dataclass
-class CrisisConstraints:
-    """Regime-specific constraints for Crisis market optimization."""
-
-    equity_max: float = 0.15
-    gold_min: float = 0.25
-    bond_min: float = 0.40
-
-
-@dataclass
-class PortfolioConfig:
+class RegimeShiftConfig:
     """
-    Configuration for CVXPY regime-conditioned portfolio optimization.
-
-    Tradable assets are exactly equity, gold, and bond.  VIX is never
-    allocated.  All constraints are long-only with no leverage.
+    Configuration parameters for the RegimeShift pipeline.
 
     Attributes:
-        estimation_lookback: Trading days of historical returns used for
-            expected return and covariance estimation.
-        minimum_estimation_observations: Minimum observations required for
-            covariance estimation.
-        covariance_ridge: Diagonal ridge added to covariance matrix for
-            positive semidefinite guarantee.
-        maximum_asset_weight: Maximum weight for any single asset.
-        bull_risk_aversion: Risk aversion parameter in Bull objective.
-        bear_return_reward: Return reward parameter in Bear objective.
-        turnover_penalty: Weight on L1 turnover penalty (0 = disabled).
-        preferred_solvers: Ordered list of CVXPY solvers to try.
-        bull: Bull regime constraints.
-        bear: Bear regime constraints.
-        crisis: Crisis regime constraints.
+        random_seed: Seed for random number generators ensuring reproducibility.
+        number_of_regimes: Number of market regimes (3: Bull, Bear, Crisis).
+        train_window: Rolling window size in trading days for walk-forward training.
+        rebalance_frequency: Portfolio rebalancing frequency in trading days.
+        transaction_cost_bps: Fixed transaction cost in basis points (1 bps = 0.0001).
+        annualization_factor: Trading days per year for Indian equity/bond markets (252).
+        minimum_training_observations: Minimum observations before first HMM inference.
+        equity_col: Output column name for equity prices.
+        gold_col: Output column name for gold prices.
+        bond_col: Output column name for bond prices.
+        vix_col: Output column name for VIX (optional).
+        tickers: Centralised ticker/asset-spec configuration.
+        data: Data acquisition configuration.
+        hmm_config: HMM model configuration.
     """
 
-    estimation_lookback: int = 252
-    minimum_estimation_observations: int = 60
-    covariance_ridge: float = 1e-6
-    maximum_asset_weight: float = 0.80
-    bull_risk_aversion: float = 1.0
-    bear_return_reward: float = 0.5
-    turnover_penalty: float = 0.0
-    preferred_solvers: tuple = ("CLARABEL", "OSQP", "SCS")
-    bull: BullConstraints = field(default_factory=BullConstraints)
-    bear: BearConstraints = field(default_factory=BearConstraints)
-    crisis: CrisisConstraints = field(default_factory=CrisisConstraints)
+    random_seed: int = 42
+    number_of_regimes: int = 3
+    train_window: int = 252
+    rebalance_frequency: int = 21
+    transaction_cost_bps: float = 5.0
+    annualization_factor: int = 252
+    minimum_training_observations: int = 126
+
+    equity_col: str = "equity"
+    gold_col: str = "gold"
+    bond_col: str = "bond"
+    vix_col: str = "vix"
+
+    tickers: TickerConfig = field(default_factory=TickerConfig)
+    data: DataConfig = field(default_factory=DataConfig)
+    hmm_config: HMMConfig = field(default_factory=HMMConfig)
+
+    @property
+    def core_assets(self) -> List[str]:
+        """Return list of mandatory output column names."""
+        return [self.equity_col, self.gold_col, self.bond_col]
+
+    @property
+    def feature_config(self) -> "FeatureConfig":
+        """Return FeatureConfig inheriting annualization_factor from this config."""
+        return FeatureConfig(annualization_factor=self.annualization_factor)
+
+    @property
+    def portfolio_config(self) -> "PortfolioConfig":
+        """Return PortfolioConfig with settings derived from this config."""
+        return PortfolioConfig(
+            estimation_lookback=self.train_window,
+            annualization_factor=self.annualization_factor,
+        )
+
+    @property
+    def ticker_to_col(self) -> Dict[str, str]:
+        """Return mapping of yfinance ticker → output column name."""
+        return {
+            self.tickers.equity_ticker: self.equity_col,
+            self.tickers.gold_ticker:   self.gold_col,
+            self.tickers.bond_ticker:   self.bond_col,
+            self.tickers.vix_ticker:    self.vix_col,
+        }
+
+    @property
+    def col_to_ticker(self) -> Dict[str, str]:
+        """Return mapping of output column name → yfinance ticker."""
+        return {v: k for k, v in self.ticker_to_col.items()}
 
     def validate(self) -> None:
-        """Raise ValueError if any parameter is invalid."""
-        if self.estimation_lookback < 1:
-            raise ValueError(
-                f"PortfolioConfig.estimation_lookback must be >= 1 "
-                f"(got {self.estimation_lookback})."
-            )
-        if self.minimum_estimation_observations < 1:
-            raise ValueError(
-                f"PortfolioConfig.minimum_estimation_observations must be >= 1 "
-                f"(got {self.minimum_estimation_observations})."
-            )
-        if self.maximum_asset_weight <= 0 or self.maximum_asset_weight > 1:
-            raise ValueError(
-                f"PortfolioConfig.maximum_asset_weight must be in (0, 1] "
-                f"(got {self.maximum_asset_weight})."
-            )
-        if self.covariance_ridge < 0:
-            raise ValueError(
-                f"PortfolioConfig.covariance_ridge must be >= 0 "
-                f"(got {self.covariance_ridge})."
-            )
-        if self.turnover_penalty < 0:
-            raise ValueError(
-                f"PortfolioConfig.turnover_penalty must be >= 0 "
-                f"(got {self.turnover_penalty})."
-            )
+        """
+        Validate the entire config, including asset-spec semantics.
+
+        Raises:
+            TypeError: If any required asset spec is not a PRICE series.
+        """
+        self.tickers.validate_price_assets()

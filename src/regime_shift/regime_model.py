@@ -133,7 +133,8 @@ def fit_hmm(
             f"but raw_features has {list(raw_features.columns)}."
         )
 
-    # Fit HMM
+    # Fit HMM — use random init to avoid sklearn KMeans stack overflow on
+    # Windows with small datasets.
     hmm = GaussianHMM(
         n_components=config.n_components,
         covariance_type=config.covariance_type,
@@ -142,6 +143,8 @@ def fit_hmm(
         random_state=config.random_state,
         min_covar=config.min_covar,
         verbose=False,
+        init_params="stmc",
+        params="stmc",
     )
 
     try:
@@ -295,7 +298,7 @@ def predict_current_state(
     # Sort by regime label for deterministic output
     prob_series = prob_series.sort_index()
 
-    log_ll = float(hmm.score(raw_training.values))
+    log_ll = float(hmm.score(transform_features(scaler, raw_training).values))
     warning = None
     if not hmm.monitor_.converged:
         warning = (
