@@ -21,10 +21,8 @@ Executes the full pipeline:
     Performance metrics + charts
 
 Usage:
-    python run_submission.py                    # default config
-    python run_submission.py --start 2015-01-01 # custom start
-    python run_submission.py --no-vix            # skip VIX
-    python run_submission.py --output results/   # custom output dir
+    python run_submission.py --data-path data/prices.csv   # offline mode
+    python run_submission.py --start 2015-01-01 --end 2024-12-31  # online mode
 """
 
 from __future__ import annotations
@@ -42,7 +40,7 @@ import numpy as np
 import pandas as pd
 
 from regime_shift.config import RegimeShiftConfig
-from regime_shift.data import load_multi_asset_data
+from regime_shift.data import download_market_data, load_market_data_csv
 from regime_shift.features import compute_raw_features, drop_feature_warmup
 from regime_shift.regime_model import fit_hmm, predict_current_state
 from regime_shift.portfolio import optimize_portfolio
@@ -67,6 +65,12 @@ def parse_args() -> argparse.Namespace:
         description="RegimeShift official submission runner (IIT Bombay Summer Quant 2026)"
     )
     parser.add_argument(
+        "--data-path",
+        default=None,
+        help="Path to CSV file with pre-downloaded price data (offline mode). "
+             "When provided, yfinance is never called.",
+    )
+    parser.add_argument(
         "--start",
         default="2010-01-01",
         help="Start date for data download (YYYY-MM-DD). Default: 2010-01-01",
@@ -77,25 +81,25 @@ def parse_args() -> argparse.Namespace:
         help="End date for data download (YYYY-MM-DD). Default: today",
     )
     parser.add_argument(
-        "--no-vix",
+        "--include-vix",
         action="store_true",
-        help="Exclude VIX from features and pipeline.",
+        help="Include VIX in features and pipeline.",
     )
     parser.add_argument(
-        "--output",
-        default="results",
-        help="Output directory for charts and reports. Default: results/",
+        "--no-cache",
+        action="store_true",
+        help="Disable data caching.",
     )
     parser.add_argument(
-        "--cost-bps",
+        "--transaction-cost-bps",
         type=float,
-        default=None,
-        help="Override transaction cost in basis points. Default: from config (5.0 bps).",
+        default=5.0,
+        help="Transaction cost in basis points. Official runs: 5-10 bps. Default: 5.0",
     )
     parser.add_argument(
         "--rebalance-freq",
         type=int,
-        default=None,
+        default=21,
         help="Rebalance frequency in trading days. Default: 21 (monthly).",
     )
     parser.add_argument(
@@ -104,7 +108,22 @@ def parse_args() -> argparse.Namespace:
         default=0.0,
         help="Annualized risk-free rate for Sharpe/Sortino. Default: 0.0.",
     )
+    parser.add_argument(
+        "--output-dir",
+        default="results",
+        help="Output directory for charts and reports. Default: results/",
+    )
     return parser.parse_args()
+
+
+def validate_args(args: argparse.Namespace) -> None:
+    """Validate CLI arguments."""
+    if args.transaction_cost_bps < 5 or args.transaction_cost_bps > 10:
+        logger.warning(
+            "Transaction cost %.1f bps is outside the official range [5, 10] bps. "
+            "Official submissions should use 5-10 bps.",
+            args.transaction_cost_bps,
+        )
 
 
 def main() -> int:
@@ -115,6 +134,7 @@ def main() -> int:
         Exit code (0 = success, 1 = failure).
     """
     args = parse_args()
+    validate_args(args)
 
     logger.info("=" * 60)
     logger.info("IIT Bombay Summer Quant 2026 — RegimeShift")
@@ -122,30 +142,30 @@ def main() -> int:
 
     # ---- Configuration ----
     config = RegimeShiftConfig()
-
-    if args.no_vix:
-        logger.info("VIX excluded per --no-vix flag.")
-        # VIX is optional; pipeline handles absence automatically
-        # We signal absence by not requesting it in data loading
-
-    if args.cost_bps is not None:
-        config = _override(config, transaction_cost_bps=args.cost_bps)
-
-    if args.rebalance_freq is not None:
-        config = _override(config, rebalance_frequency=args.rebalance_freq)
-
+    config.rebalance_frequency = args.rebalance_freq
+    config.transaction_cost_bps = args.transaction_cost_bps
     config.validate()
     logger.info("Configuration validated.")
 
     # ---- Step 1: Load data ----
     logger.info("Loading multi-asset price data...")
     try:
-        prices = load_multi_asset_data(
-            start=args.start,
-            end=args.end,
-            include_vix=not args.no_vix,
-            config=config,
-        )
+        if args.data_path is not None:
+            # Offline mode: load from CSV, never call yfinance
+            logger.info("Offline mode: loading from %s", args.data_path)
+            prices = load_market_data_csv(path=args.data_path, config=config)
+        else:
+            # Online mode: download from yfinance
+            logger.info(
+                "Online mode: downloading %s → %s", args.start, args.end or "today"
+            )
+            prices = download_market_data(
+                config=config,
+                start=args.start,
+                end=args.end,
+                include_vix=args.include_vix,
+                cache=not args.no_cache,
+            )
     except Exception as exc:
         logger.error("Data loading failed: %s", exc)
         return 1
@@ -163,36 +183,44 @@ def main() -> int:
         strategy_result = run_walk_forward_backtest(
             prices=prices,
             config=config,
-            transaction_cost_bps=args.cost_bps,
+            transaction_cost_bps=args.transaction_cost_bps,
             risk_free_rate=args.risk_free_rate,
         )
     except Exception as exc:
         logger.error("Backtest failed: %s", exc, exc_info=True)
         return 1
 
-    logger.info(
-        "Strategy complete. Net CAGR: %.2f%%, Sharpe: %.2f, Max DD: %.2f%%",
-        _pct(strategy_result.metrics.get("CAGR", 0)) if strategy_result.metrics else 0,
-        strategy_result.metrics.get("Sharpe", 0) if strategy_result.metrics else 0,
-        _pct(strategy_result.metrics.get("Maximum Drawdown", 0)) if strategy_result.metrics else 0,
-    )
+    if strategy_result.metrics:
+        logger.info(
+            "Strategy complete. Net CAGR: %.2f%%, Sharpe: %.2f, Max DD: %.2f%%",
+            _pct(strategy_result.metrics.get("CAGR", 0)),
+            strategy_result.metrics.get("Sharpe", 0) or 0,
+            _pct(strategy_result.metrics.get("Maximum Drawdown", 0)),
+        )
 
     # ---- Step 3: Run benchmarks ----
     logger.info("Running benchmarks...")
+
+    # Benchmarks use the strategy's rebalance flags and start date
+    strategy_rb_flags = strategy_result.rebalance_flags
+    strategy_start = strategy_result.net_returns.index[0]
+
     bench_60_40 = run_benchmark(
         prices=prices,
         weights=static_60_40_weights(),
         config=config,
-        transaction_cost_bps=args.cost_bps,
-        rebalance_dates=strategy_result.target_weights.index,
+        transaction_cost_bps=args.transaction_cost_bps,
+        rebalance_flags=strategy_rb_flags,
+        start_date=strategy_start,
     )
 
     bench_eq = run_benchmark(
         prices=prices,
         weights=equal_weight_weights(),
         config=config,
-        transaction_cost_bps=args.cost_bps,
-        rebalance_dates=strategy_result.target_weights.index,
+        transaction_cost_bps=args.transaction_cost_bps,
+        rebalance_flags=strategy_rb_flags,
+        start_date=strategy_start,
     )
 
     benchmarks = {
@@ -206,34 +234,34 @@ def main() -> int:
                 "%s — CAGR: %.2f%%, Sharpe: %.2f, Max DD: %.2f%%",
                 name,
                 _pct(bench.metrics.get("CAGR", 0)),
-                bench.metrics.get("Sharpe", 0),
+                bench.metrics.get("Sharpe", 0) or 0,
                 _pct(bench.metrics.get("Maximum Drawdown", 0)),
             )
 
     # ---- Step 4: Generate charts ----
     logger.info("Generating charts...")
-    os.makedirs(args.output, exist_ok=True)
+    os.makedirs(args.output_dir, exist_ok=True)
     try:
         saved_paths = generate_all_charts(
             result=strategy_result,
             benchmarks=benchmarks,
             prices=prices,
-            output_dir=args.output,
+            output_dir=args.output_dir,
         )
         for p in saved_paths:
             logger.info("Saved chart: %s", p)
     except Exception as exc:
         logger.warning("Chart generation failed: %s", exc)
 
-    # ---- Step 5: Save metrics CSV ----
-    _save_metrics(strategy_result, benchmarks, args.output)
+    # ---- Step 5: Save results ----
+    _save_results(strategy_result, benchmarks, args.output_dir)
 
     # ---- Step 6: Print summary ----
     _print_summary(strategy_result, benchmarks)
 
     logger.info("=" * 60)
     logger.info("RegimeShift pipeline complete.")
-    logger.info("Results saved to: %s", args.output)
+    logger.info("Results saved to: %s", args.output_dir)
     return 0
 
 
@@ -247,35 +275,93 @@ def _override(config: RegimeShiftConfig, **kwargs) -> RegimeShiftConfig:
     return new_config
 
 
-def _pct(value: float) -> float:
+def _pct(value: Optional[float]) -> float:
     """Convert decimal to percentage for logging."""
-    return float(value) * 100.0 if value is not None else 0.0
+    if value is None or (isinstance(value, float) and np.isnan(value)):
+        return 0.0
+    return float(value) * 100.0
 
 
-def _save_metrics(
-    strategy_result,
+def _save_results(
+    strategy_result: "BacktestResult",
     benchmarks: dict,
     output_dir: str,
 ) -> None:
-    """Save performance metrics to CSV."""
-    rows = []
+    """Save all result files to the output directory."""
+    os.makedirs(output_dir, exist_ok=True)
 
-    if strategy_result.metrics:
-        row = {"Strategy": "RegimeShift"}
-        row.update(strategy_result.metrics)
+    # Daily results
+    daily = pd.DataFrame({
+        "gross_return": strategy_result.gross_returns,
+        "net_return": strategy_result.net_returns,
+        "transaction_cost": strategy_result.transaction_costs,
+        "turnover": strategy_result.turnover,
+        "regime": strategy_result.regime_series,
+        "rebalance": strategy_result.rebalance_flags,
+    })
+    daily.to_csv(os.path.join(output_dir, "daily_results.csv"))
+
+    # Weights
+    strategy_result.target_weights.to_csv(os.path.join(output_dir, "weights.csv"))
+
+    # Regimes
+    regime_df = pd.DataFrame({
+        "regime": strategy_result.regime_series,
+        **strategy_result.regime_probabilities.to_dict(),
+    })
+    regime_df.to_csv(os.path.join(output_dir, "regimes.csv"))
+
+    # Transition matrix
+    strategy_result.transition_matrix.to_csv(os.path.join(output_dir, "transition_matrix.csv"))
+
+    # Performance summary (six rows)
+    rows = []
+    for label, is_gross in [
+        ("RegimeShift Gross", True),
+        ("RegimeShift Net", False),
+        ("Static 60/40 Gross", True),
+        ("Static 60/40 Net", False),
+        ("Equal Weight Gross", True),
+        ("Equal Weight Net", False),
+    ]:
+        row = {"Strategy": label}
+        if label.startswith("RegimeShift"):
+            if is_gross:
+                # Compute gross metrics from strategy
+                gross_metrics = compute_performance_metrics(
+                    strategy_result.gross_returns,
+                    turnover=strategy_result.turnover,
+                    risk_free_rate=0.0,
+                )
+                row.update(gross_metrics.to_dict())
+            else:
+                row.update(strategy_result.metrics or {})
+        else:
+            bench_name = label.replace(" Gross", "").replace(" Net", "")
+            bench = benchmarks.get(bench_name)
+            if bench:
+                if is_gross:
+                    gross_metrics = compute_performance_metrics(
+                        bench.gross_returns,
+                        turnover=bench.turnover,
+                        risk_free_rate=0.0,
+                    )
+                    row.update(gross_metrics.to_dict())
+                else:
+                    row.update(bench.metrics or {})
         rows.append(row)
 
-    for name, bench in benchmarks.items():
-        if bench.metrics:
-            row = {"Strategy": name}
-            row.update(bench.metrics)
-            rows.append(row)
+    pd.DataFrame(rows).to_csv(
+        os.path.join(output_dir, "performance_summary.csv"), index=False
+    )
 
-    if rows:
-        df = pd.DataFrame(rows)
-        path = os.path.join(output_dir, "performance_metrics.csv")
-        df.to_csv(path, index=False)
-        logger.info("Saved metrics to %s", path)
+    # Run metadata
+    metadata = strategy_result.config_metadata
+    pd.Series(metadata).to_json(
+        os.path.join(output_dir, "run_metadata.json"), indent=2, default=str
+    )
+
+    logger.info("Saved all results to %s", output_dir)
 
 
 def _print_summary(strategy_result, benchmarks: dict) -> None:
