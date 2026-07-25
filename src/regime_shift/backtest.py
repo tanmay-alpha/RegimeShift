@@ -25,17 +25,13 @@ All information used at decision date d is restricted to data through d-1.
 from __future__ import annotations
 
 import logging
-import os
 from dataclasses import dataclass, field
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, List, Optional
 
 import numpy as np
 import pandas as pd
 
-from regime_shift.config import (
-    RegimeShiftConfig,
-    FeatureConfig,
-)
+from regime_shift.config import RegimeShiftConfig
 from regime_shift.exceptions import (
     RegimeDetectionError,
     PortfolioOptimizationError,
@@ -166,7 +162,9 @@ def run_walk_forward_backtest(
         feature_prices[config.vix_col] = prices[config.vix_col]
 
     raw_features = compute_raw_features(feature_prices, config.feature_config)
-    raw_features = drop_feature_warmup(raw_features, config.feature_config)
+    raw_features = drop_feature_warmup(
+        raw_features, config=config.feature_config
+    )
 
     if len(raw_features) == 0:
         raise ValueError(
@@ -216,18 +214,19 @@ def run_walk_forward_backtest(
     turnover_arr = np.zeros(n_dates)
     rebalance_arr = np.zeros(n_dates, dtype=bool)
 
-    target_weights_list = []
-    drifted_weights_list = []
-    regime_list = []
-    prob_list = []
+    # Pre-build date-to-position map for O(1) lookup
+    date_to_pos = {d: i for i, d in enumerate(dates)}
+
+    # Per-date output storage
+    all_target_w = np.zeros((n_dates, len(core_assets)))
+    all_drifted_w = np.zeros((n_dates, len(core_assets)))
+    all_regimes = np.full(n_dates, "Unknown", dtype=object)
+    all_probs = np.zeros((n_dates, 3))
+    all_probs[:] = np.nan
+
     hmm_diag = []
 
     cost_rate = config.transaction_cost_bps / 10000.0
-
-    # Map dates to positions for efficient lookup
-    date_to_pos = {d: i for i, d in enumerate(dates)}
-
-    # Track the last rebalance position
     last_rebalance_pos = -1
 
     for rebalance_date in rebalance_dates:
@@ -251,7 +250,7 @@ def run_walk_forward_backtest(
                 rebalance_date, len(train_features),
                 config.minimum_training_observations,
             )
-            # Continue with previous weights
+            # Continue with previous weights (drift them)
             for pos in range(last_rebalance_pos + 1, rebalance_pos + 1):
                 if pos >= n_dates:
                     break
@@ -259,15 +258,12 @@ def run_walk_forward_backtest(
                     current_weights, asset_returns.iloc[pos].values
                 )
                 current_weights = current_weights * (1 + asset_returns.iloc[pos].values)
-                current_weights = current_weights / current_weights.sum()
+                s = current_weights.sum()
+                if s > 1e-12:
+                    current_weights = current_weights / s
                 net_returns_arr[pos] = gross_returns_arr[pos]
-                drifted_weights_list.append(
-                    (dates[pos], pd.Series(current_weights, index=core_assets))
-                )
-                regime_list.append((dates[pos], "Unknown"))
-                prob_list.append(
-                    (dates[pos], pd.Series(np.nan, index=["Bull", "Bear", "Crisis"]))
-                )
+                all_drifted_w[pos] = current_weights
+                all_regimes[pos] = "Unknown"
             last_rebalance_pos = rebalance_pos
             continue
 
@@ -313,13 +309,13 @@ def run_walk_forward_backtest(
                     current_weights, asset_returns.iloc[pos].values
                 )
                 current_weights = current_weights * (1 + asset_returns.iloc[pos].values)
-                current_weights = current_weights / current_weights.sum()
+                s = current_weights.sum()
+                if s > 1e-12:
+                    current_weights = current_weights / s
                 net_returns_arr[pos] = gross_returns_arr[pos]
-                drifted_weights_list.append(
-                    (dates[pos], pd.Series(current_weights, index=core_assets))
-                )
-                regime_list.append((dates[pos], regime))
-                prob_list.append((dates[pos], probs))
+                all_drifted_w[pos] = current_weights
+                all_regimes[pos] = regime
+                all_probs[pos] = probs.values
             last_rebalance_pos = rebalance_pos
             continue
 
@@ -329,7 +325,7 @@ def run_walk_forward_backtest(
         try:
             port_solution = optimize_portfolio(
                 regime=regime,
-                returns=returns_for_est,
+                returns_through_date=returns_for_est,
                 previous_weights=prev_w if np.sum(current_weights) > 0 else None,
                 config=config.portfolio_config,
             )
@@ -357,17 +353,14 @@ def run_walk_forward_backtest(
 
         # Update current weights to target * (1 + return)
         current_weights = target_w * (1 + asset_returns.iloc[rebalance_pos].values)
-        current_weights = current_weights / current_weights.sum()
+        s = current_weights.sum()
+        if s > 1e-12:
+            current_weights = current_weights / s
 
-        # Record target weights
-        target_weights_list.append(
-            (rebalance_date, pd.Series(target_w, index=core_assets))
-        )
-        drifted_weights_list.append(
-            (rebalance_date, pd.Series(current_weights.copy(), index=core_assets))
-        )
-        regime_list.append((rebalance_date, regime))
-        prob_list.append((rebalance_date, probs))
+        all_target_w[rebalance_pos] = target_w
+        all_drifted_w[rebalance_pos] = current_weights.copy()
+        all_regimes[rebalance_pos] = regime
+        all_probs[rebalance_pos] = probs.values
 
         # Record diagnostics
         hmm_diag.append({
@@ -394,13 +387,13 @@ def run_walk_forward_backtest(
 
             # Drift weights
             current_weights = current_weights * (1 + asset_returns.iloc[pos].values)
-            current_weights = current_weights / current_weights.sum()
+            s = current_weights.sum()
+            if s > 1e-12:
+                current_weights = current_weights / s
 
-            drifted_weights_list.append(
-                (dates[pos], pd.Series(current_weights.copy(), index=core_assets))
-            )
-            regime_list.append((dates[pos], regime))
-            prob_list.append((dates[pos], probs))
+            all_drifted_w[pos] = current_weights
+            all_regimes[pos] = regime
+            all_probs[pos] = probs.values
 
     # ---- Build result DataFrames ----
     dates_series = pd.DatetimeIndex(dates)
@@ -411,49 +404,12 @@ def run_walk_forward_backtest(
     turnover_s = pd.Series(turnover_arr, index=dates_series, name="turnover")
     rebalance_s = pd.Series(rebalance_arr, index=dates_series, name="rebalance")
 
-    # Target weights (rebalance dates only)
-    if target_weights_list:
-        tw_idx, tw_vals = zip(*target_weights_list)
-        target_weights_df = pd.DataFrame(tw_vals, index=pd.DatetimeIndex(tw_idx))
-        target_weights_df = target_weights_df.reindex(dates_series, method="ffill")
-    else:
-        target_weights_df = pd.DataFrame(
-            np.zeros((n_dates, len(core_assets))),
-            index=dates_series,
-            columns=core_assets,
-        )
-
-    # Drifted weights
-    if drifted_weights_list:
-        dw_idx, dw_vals = zip(*drifted_weights_list)
-        drifted_weights_df = pd.DataFrame(dw_vals, index=pd.DatetimeIndex(dw_idx))
-        drifted_weights_df = drifted_weights_df.reindex(dates_series, method="ffill")
-    else:
-        drifted_weights_df = pd.DataFrame(
-            np.zeros((n_dates, len(core_assets))),
-            index=dates_series,
-            columns=core_assets,
-        )
-
-    # Regime series
-    if regime_list:
-        rg_idx, rg_vals = zip(*regime_list)
-        regime_s = pd.Series(rg_vals, index=pd.DatetimeIndex(rg_idx), name="regime")
-        regime_s = regime_s.reindex(dates_series, method="ffill")
-    else:
-        regime_s = pd.Series(index=dates_series, dtype=str, name="regime")
-
-    # Regime probabilities
-    if prob_list:
-        pb_idx, pb_vals = zip(*prob_list)
-        pb_df = pd.DataFrame(pb_vals.tolist(), index=pd.DatetimeIndex(pb_idx))
-        pb_df = pb_df.reindex(dates_series, method="ffill")
-    else:
-        pb_df = pd.DataFrame(
-            np.zeros((n_dates, 3)),
-            index=dates_series,
-            columns=["Bull", "Bear", "Crisis"],
-        )
+    target_weights_df = pd.DataFrame(all_target_w, index=dates_series, columns=core_assets)
+    drifted_weights_df = pd.DataFrame(all_drifted_w, index=dates_series, columns=core_assets)
+    regime_s = pd.Series(all_regimes, index=dates_series, name="regime")
+    pb_df = pd.DataFrame(
+        all_probs, index=dates_series, columns=["Bull", "Bear", "Crisis"]
+    )
 
     # Equity curves
     gross_equity_s = (1 + gross_returns_s).cumprod()
@@ -467,8 +423,6 @@ def run_walk_forward_backtest(
     )
     if hmm_diag:
         last_diag = hmm_diag[-1]
-        # The transition matrix is stored in the last fit_hmm result
-        # We'll capture it separately
 
     # Compute metrics
     metrics = compute_performance_metrics(
@@ -557,11 +511,15 @@ def run_benchmark(
 
             # Update to target weights then apply return
             current_weights = w * (1 + asset_returns.iloc[pos].values)
-            current_weights = current_weights / current_weights.sum()
+            s = current_weights.sum()
+            if s > 1e-12:
+                current_weights = current_weights / s
         else:
             net_ret = gross_ret
             current_weights = current_weights * (1 + asset_returns.iloc[pos].values)
-            current_weights = current_weights / current_weights.sum()
+            s = current_weights.sum()
+            if s > 1e-12:
+                current_weights = current_weights / s
 
         gross_arr[pos] = gross_ret
         net_arr[pos] = net_ret
@@ -646,10 +604,10 @@ def _build_metadata(
         "train_window": config.train_window,
         "rebalance_frequency": config.rebalance_frequency,
         "hmm_config": {
-            "n_components": config.hmm_config.n_components,
-            "covariance_type": config.hmm_config.covariance_type,
-            "n_iter": config.hmm_config.n_iter,
-            "random_state": config.hmm_config.random_state,
+            "n_components": config.number_of_regimes,
+            "covariance_type": "diag",
+            "n_iter": 200,
+            "random_state": config.random_seed,
         },
         "feature_list": [
             "equity_log_return_1d",
