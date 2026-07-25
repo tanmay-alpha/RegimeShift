@@ -35,6 +35,7 @@ logger = logging.getLogger(__name__)
 
 # Deterministic regime label ordering
 _REGIME_LABELS = ["Bull", "Bear", "Crisis"]
+_REGIME_ORDER = ["Bull", "Bear", "Crisis"]
 
 
 @dataclass
@@ -290,13 +291,14 @@ def predict_current_state(
     best_state = int(np.argmax(current_posterior))
     regime = state_map[best_state]
 
-    # Build probability series with deterministic regime ordering
+    # Build probability series with EXPLICIT regime ordering Bull, Bear, Crisis
+    # Never sort alphabetically — use the fixed _REGIME_ORDER
     prob_series = pd.Series(
         [float(current_posterior[s]) for s in range(len(current_posterior))],
         index=[state_map[s] for s in range(len(current_posterior))],
     )
-    # Sort by regime label for deterministic output
-    prob_series = prob_series.sort_index()
+    # Reindex to deterministic order (not alphabetical sort)
+    prob_series = prob_series.reindex(_REGIME_ORDER)
 
     log_ll = float(hmm.score(transform_features(scaler, raw_training).values))
     warning = None
