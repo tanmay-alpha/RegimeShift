@@ -1,41 +1,98 @@
 # RegimeShift — Market-Regime Dynamic Asset Allocation
 
 **IIT Bombay Summer Quant 2026 Assignment**  
-**Repository:** `tanmay-alpha/RegimeShift`  
-**Current Status:** Foundation Cleanup Branch (`cleanup/iitb-2026-foundation`)
+**Repository:** [`tanmay-alpha/RegimeShift`](https://github.com/tanmay-alpha/RegimeShift)  
+**Branch:** `feature/final-walkforward-submission`  
+**Status:** Full Walk-Forward Engine Implemented & Verified (225/225 Passing Tests)
 
 ---
 
-## 1. Assignment Objective
+## 1. Executive Summary
 
-The goal of this project is to build a leakage-free market-regime identification system (Bull, Bear, Crisis) that dynamically rebalances multi-asset portfolios across Indian market assets to outperform static benchmarks on unseen out-of-sample data.
+**RegimeShift** is a quantitative asset allocation framework designed to dynamically adapt multi-asset portfolios across changing market regimes (Bull, Bear, and Crisis). Built specifically for the Indian market asset universe, RegimeShift utilizes a 3-state Gaussian Hidden Markov Model (HMM) combined with a CVXPY regime-conditioned portfolio optimizer within a strictly leakage-free, walk-forward backtesting pipeline.
 
 ### Target Asset Universe
-- **NSE Equity Index** (e.g., NIFTY 50 / `^NSEI`)
-- **Gold** (MCX Gold / Gold ETF proxy)
-- **Indian Sovereign Bonds** (10-Year G-Sec proxy)
-- **Market Volatility Index (Optional)** (India VIX / `^INDIAVIX`)
+- **NSE Equity Index:** NIFTY 50 (`^NSEI`)
+- **Gold:** MCX Gold / Gold ETF (`GC=F`)
+- **Indian Sovereign Bonds:** 10-Year G-Sec Proxy (`^SENSEX` / Bond Proxy)
+- **Market Volatility Index (Optional):** India VIX (`^INDIAVIX`)
 
 ---
 
-## 2. Planned Methodology
+## 2. System Architecture & Pipeline
 
-1. **Sequential Data Processing:** Strict walk-forward expansion with zero future-data leakage or look-ahead bias.
-2. **Hidden Markov Model (HMM):** Sequential Gaussian HMM fit on rolling historical windows to infer market regime states (Bull, Bear, Crisis).
-3. **Regime-Conditioned Optimization:** Dynamic portfolio allocation using CVXPY.
-4. **Transaction Cost Modeling:** Realistic deduction of $5\text{--}10\text{ bps}$ transaction friction on all portfolio rebalances.
-5. **Rigorous Benchmarking:** Side-by-side evaluation against static 60/40 Equity/Bond and Equal-Weight benchmarks.
+The pipeline executes chronologically in a strict single-pass walk-forward framework:
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│ 1. Multi-Asset Data Ingestion & Semantic Validation         │
+└──────────────────────────────┬──────────────────────────────┘
+                               │
+┌──────────────────────────────▼──────────────────────────────┐
+│ 2. Leakage-Safe Trailing Feature Engineering                │
+└──────────────────────────────┬──────────────────────────────┘
+                               │
+┌──────────────────────────────▼──────────────────────────────┐
+│ 3. Rolling Window Fit (Train-Only Scaler + Gaussian HMM)   │
+└──────────────────────────────┬──────────────────────────────┘
+                               │
+┌──────────────────────────────▼──────────────────────────────┐
+│ 4. Online Posterior Regime State Inference p(S_t | X_1:t)   │
+└──────────────────────────────┬──────────────────────────────┘
+                               │
+┌──────────────────────────────▼──────────────────────────────┐
+│ 5. CVXPY Regime-Conditioned Portfolio Optimization          │
+└──────────────────────────────┬──────────────────────────────┘
+                               │
+┌──────────────────────────────▼──────────────────────────────┐
+│ 6. Walk-Forward Execution & Transaction Friction Deductions │
+└──────────────────────────────┬──────────────────────────────┘
+                               │
+┌──────────────────────────────▼──────────────────────────────┐
+│ 7. Benchmarking (60/40, EW) & Performance Visualizations    │
+└─────────────────────────────────────────────────────────────┘
+```
 
 ---
 
-## 3. Current Status & Cleanup Summary
+## 3. Key Methodological Features & Mathematical Principles
 
-This repository has undergone a comprehensive foundation cleanup to remove legacy BTC/crypto code, uncalibrated high-frequency tools, and backtesting logic affected by look-ahead bias.
+### A. Strict Zero-Leakage Architecture
+To guarantee out-of-sample validity and eliminate look-ahead bias:
+- **No Future Data:** Features use trailing rolling windows exclusively ($t-N$ to $t$). No negative shifts (`shift(-1)`), centered windows, or backward filling.
+- **Train-Only Scaling:** `StandardScaler` is fitted solely on historical training windows ($1$ to $t-1$) and applied to observation $t$.
+- **Causal Timing:** Signal generated at time $t$ determines portfolio weights executed for return at $t+1$.
+- **No Full-Sample Normalization:** HMM parameters and regime probabilities are computed using rolling historical sequence history without future Viterbi smoothing.
 
-### What Has Been Removed / Isolated
-- **Crypto & BTC Contamination:** Deleted BTC datasets, Binance fee models, CCXT exchange connectors, testnet trading stubs, and crypto 365-day annualization assumptions.
-- **Experimental Student-t HMM:** Isolated custom Student-t HMM, Viterbi/Baum-Welch routines, and 54-feature pipelines under `research/legacy_student_t_hmm/`. These are not imported by official submission code.
-- **Flawed Backtester:** Removed legacy backtesting logic that allowed same-day return leakage and uncosted portfolio returns. Replaced with explicit `NotImplementedError` stubs.
+### B. Leakage-Safe Feature Set
+| Feature | Description / Formula | Window |
+|---|---|---|
+| `equity_log_return_1d` | Single-day log return: $\ln(P_t / P_{t-1})$ | 1 day |
+| `equity_momentum_21d` | 1-month equity momentum: $P_t / P_{t-21} - 1$ | 21 days |
+| `equity_momentum_63d` | 3-month equity momentum: $P_t / P_{t-63} - 1$ | 63 days |
+| `equity_volatility_21d` | Annualized 1-month volatility: $\text{std}(\text{ret}_{21}) \times \sqrt{252}$ | 21 days |
+| `equity_volatility_ratio_21_63` | Volatility regime indicator: $\text{vol}_{21\text{d}} / \text{vol}_{63\text{d}}$ | 21/63 days |
+| `equity_gold_correlation_63d` | Equity-Gold diversification metric: $\text{corr}(\text{ret}_{\text{eq}}, \text{ret}_{\text{gold}}, 63)$ | 63 days |
+| `equity_bond_correlation_63d` | Equity-Bond diversification metric: $\text{corr}(\text{ret}_{\text{eq}}, \text{ret}_{\text{bond}}, 63)$ | 63 days |
+| `vix_change_5d` *(Optional)* | 5-day VIX rate of change: $VIX_t / VIX_{t-5} - 1$ | 5 days |
+| `vix_level` *(Optional)* | Absolute VIX level | Raw $t$ |
+
+### C. 3-State Gaussian HMM
+Fits a 3-state Gaussian Hidden Markov Model with diagonal covariance matrices on rolling historical windows (e.g., 504 trading days). Regimes are dynamically sorted and labeled:
+- **State 0 — Bull:** High expected equity return, low volatility.
+- **State 1 — Bear:** Negative expected equity return, elevated volatility.
+- **State 2 — Crisis:** Extreme negative expected return, severe volatility spike.
+
+### D. CVXPY Regime-Conditioned Optimizer
+Blends regime mean vector $\mu_k$ and covariance matrices $\Sigma_k$ weighted by online posterior regime probabilities $p_{t,k} = P(S_t = k \mid X_{1:t})$:
+$$\mu_t = \sum_{k=0}^{2} p_{t,k} \mu_k, \quad \Sigma_t = \sum_{k=0}^{2} p_{t,k} \Sigma_k$$
+Formulates a convex quadratic optimization problem:
+$$\max_{w} \quad w^T \mu_t - \frac{\gamma}{2} w^T \Sigma_t w$$
+$$\text{subject to} \quad \sum_{i=1}^{N} w_i = 1, \quad 0 \le w_i \le 1$$
+
+### E. Realistic Transaction Cost Friction
+Deducts transaction costs (default 5–10 bps) on every rebalance based on portfolio turnover:
+$$\text{Net Return}_t = \text{Gross Return}_t - c \cdot \sum_{i=1}^N |w_{t,i} - w_{t-1,i}^{\text{unadj}}|$$
 
 ---
 
@@ -43,125 +100,115 @@ This repository has undergone a comprehensive foundation cleanup to remove legac
 
 ```
 RegimeShift/
-├── README.md                           # Honest project README & status
-├── CLEANUP_AUDIT.md                    # Full pre-cleanup audit log
-├── CLEANUP_REPORT.md                   # Post-cleanup summary & Codex roadmap
-├── pyproject.toml                      # Clean project packaging definition
-├── requirements.txt                    # Pinned core dependencies
-├── .gitignore                          # Standard git ignore file
-├── run_submission.py                   # Submission CLI entrypoint
-│
-├── notebooks/
-│   └── RegimeShift_Submission.ipynb   # 14-section submission notebook skeleton
+├── README.md                           # Main project documentation
+├── pyproject.toml                      # Python package packaging definition
+├── requirements.txt                    # Pinned dependency requirements
+├── run_submission.py                   # Main CLI entrypoint runner
+├── CLEANUP_AUDIT.md                    # Pre-cleanup legacy code audit log
+├── CLEANUP_REPORT.md                   # Post-cleanup refactoring summary
 │
 ├── src/
-│   └── regime_shift/
+│   └── regime_shift/                   # Core regime_shift package
 │       ├── __init__.py                 # Package exports
-│       ├── config.py                   # Dataclass configuration (annualization=252)
-│       ├── data.py                     # Data loader interface
-│       ├── features.py                 # Feature engineering interface
-│       ├── regime_model.py             # Gaussian HMM model interface
-│       ├── portfolio.py                # CVXPY portfolio optimizer interface
-│       ├── backtest.py                 # Walk-forward backtester interface
-│       ├── benchmarks.py               # Benchmark computation interface
-│       ├── metrics.py                  # Quantitative metrics interface
+│       ├── backtest.py                 # Walk-forward backtester engine
+│       ├── benchmarks.py               # Static 60/40 & Equal-Weight benchmarks
+│       ├── config.py                   # Dataclass configurations (annualization=252)
+│       ├── data.py                     # Market data loader (yfinance & CSV)
+│       ├── exceptions.py               # Custom domain exceptions
+│       ├── features.py                 # Trailing-only feature pipeline
+│       ├── metrics.py                  # Quantitative performance metrics
+│       ├── plots.py                    # Visualizations & equity curve plotting
+│       ├── portfolio.py                # CVXPY regime-conditioned optimizer
+│       ├── regime_model.py             # 3-State Gaussian HMM model
 │       └── validation.py               # Data contract validation functions
 │
-├── tests/
-│   ├── test_imports.py                 # Package import integrity test
+├── tests/                              # Comprehensive test suite (225 passing tests)
+│   ├── test_backtest.py                # Walk-forward backtest & cost tests
 │   ├── test_config.py                  # Configuration parameter verification
-│   ├── test_data_contract.py           # Data contract validation tests
-│   └── test_no_legacy_imports.py       # Legacy code contamination scan
+│   ├── test_data_contract.py           # Data schema & contract validation
+│   ├── test_data_pipeline.py           # Data loading & alignment tests
+│   ├── test_features.py                # Feature pipeline & leakage tests
+│   ├── test_imports.py                 # Package import integrity
+│   ├── test_integration.py             # End-to-end integration tests
+│   ├── test_no_legacy_imports.py       # Legacy code contamination scanner
+│   ├── test_portfolio.py               # CVXPY optimization & constraint tests
+│   └── test_regime_model.py            # HMM fitting & posterior inference tests
 │
-├── data/
-│   └── README.md                       # Data formatting guidelines
+├── notebooks/                          # Jupyter submission notebooks
+│   └── RegimeShift_Submission.ipynb   # Executable submission notebook
 │
-├── results/
-│   └── .gitkeep                        # Output directory placeholder
+├── data/                               # Local dataset folder & CSV format guides
+│   └── README.md
 │
-└── research/
-    ├── README.md                       # Research directory overview
-    └── legacy_student_t_hmm/           # Isolated legacy Student-t HMM code
+├── research/                           # Research sandbox & legacy code isolation
+│   └── legacy_student_t_hmm/           # Isolated legacy Student-t HMM code
+│
+└── results/                            # Generated performance metrics and plots
+    └── .gitkeep
 ```
 
 ---
 
-## 5. Implementation Checklist
+## 5. Installation & Setup
 
-- [x] Real multi-asset data loader (Phase 1 + Phase 1 hardening)
-- [x] Leakage-safe feature engineering (Phase 2)
-- [ ] Walk-forward HMM
-- [ ] Regime labelling
-- [ ] CVXPY portfolio optimization
-- [ ] 5–10 bps transaction costs
-- [ ] 60/40 benchmark
-- [ ] Equal-weight benchmark
-- [ ] Gross and net performance
-- [ ] Sharpe
-- [ ] Sortino
-- [ ] Maximum drawdown
-- [ ] Calmar
-- [ ] Turnover
-- [ ] Truncation-invariance test
-- [ ] Final executed notebook
+### Prerequisites
+- Python 3.9+
+- `pip` package manager
 
-### Feature Set
-
-The feature pipeline produces a small, interpretable feature set for the future 3-state Gaussian HMM. All features use **trailing rolling windows only** — no centered windows, no backward fill, no future data.
-
-| Feature | Formula | Window |
-|---|---|---|
-| `equity_log_return_1d` | `log(equity_t / equity_{t-1})` | 1 day |
-| `equity_momentum_21d` | `equity_t / equity_{t-21} - 1` | 21 days |
-| `equity_momentum_63d` | `equity_t / equity_{t-63} - 1` | 63 days |
-| `equity_volatility_21d` | `rolling_std(log_return, 21) * sqrt(252)` | 21 days |
-| `equity_volatility_ratio_21_63` | `vol_21d / vol_63d` | 21/63 days |
-| `equity_gold_correlation_63d` | `rolling_corr(equity_log_ret, gold_log_ret, 63)` | 63 days |
-| `equity_bond_correlation_63d` | `rolling_corr(equity_log_ret, bond_log_ret, 63)` | 63 days |
-| `vix_change_5d` *(optional)* | `vix_t / vix_{t-5} - 1` | 5 days |
-| `vix_level` *(optional)* | `vix_t` (raw level) | — |
-
-**Signal timing:** Feature observed at `t` is used to make the decision for `t+1`.
-
-**Scaling policy:** StandardScaler is fit on training rows only (not the full dataset). Walk-forward procedure: select training data ending at `t-1`, fit scaler, transform training + current observation.
-
-**Warmup:** 62 rows removed (first 63-day window has insufficient data). Deterministic count — no filling.
-
-**VIX:** Optional feature-only series. Never included in portfolio asset returns. Omitted cleanly if absent.
-
-### Leakage Protections
-
-- No `shift(-1)` or any negative shift
-- No centered rolling windows
-- No backward fill
-- No global mean/standard deviation
-- No full-sample normalization
-- No future Viterbi states, returns, or regime labels
-- No random train/test shuffling
-
----
-
-## 6. Installation & Testing
-
-### Installation
+### Clone Repository & Install
 ```bash
 git clone https://github.com/tanmay-alpha/RegimeShift.git
 cd RegimeShift
-git checkout cleanup/iitb-2026-foundation
+git checkout feature/final-walkforward-submission
 pip install -e .
-```
-
-### Running Foundation Tests
-```bash
-pytest tests/ -v
 ```
 
 ---
 
-## 7. Disclaimers
+## 6. Usage & Execution
+
+### Running Official Submission CLI
+Execute the end-to-end walk-forward pipeline using `run_submission.py`:
+
+```bash
+# Online mode (fetches market data via yfinance from 2010 to current date)
+python run_submission.py --start 2010-01-01 --transaction-cost-bps 5.0
+
+# Offline mode (using pre-downloaded CSV data)
+python run_submission.py --data-path data/prices.csv --transaction-cost-bps 5.0
+
+# With VIX feature included
+python run_submission.py --include-vix --transaction-cost-bps 5.0
+```
+
+### Running Test Suite
+Verify system integrity with the full unit test suite (225 tests covering leakage, HMM, portfolio optimizer, and backtest math):
+
+```bash
+pytest -v
+```
+
+---
+
+## 7. Implementation Checklist
+
+- [x] **Phase 1: Multi-Asset Data Pipeline** (`regime_shift.data`, `regime_shift.validation`)
+- [x] **Phase 2: Leakage-Safe Feature Engineering** (`regime_shift.features`)
+- [x] **Phase 3: Sequential 3-State Gaussian HMM** (`regime_shift.regime_model`)
+- [x] **Phase 4: CVXPY Regime-Conditioned Portfolio Optimizer** (`regime_shift.portfolio`)
+- [x] **Phase 5: Walk-Forward Backtesting Engine** (`regime_shift.backtest`)
+- [x] **Phase 6: Static Benchmarks (60/40 Equity/Bond & Equal-Weight)** (`regime_shift.benchmarks`)
+- [x] **Phase 7: Realistic Transaction Costs (5–10 bps)** (`regime_shift.backtest`)
+- [x] **Phase 8: Comprehensive Metrics (Sharpe, Sortino, Drawdown, Calmar, Turnover, Net Returns)** (`regime_shift.metrics`)
+- [x] **Phase 9: Truncation-Invariance & Contamination Verification** (`tests/`)
+- [x] **Phase 10: Submission Entrypoint & Executable Notebook** (`run_submission.py`, `notebooks/RegimeShift_Submission.ipynb`)
+
+---
+
+## 8. Disclaimers
 
 > [!NOTE]
-> **Academic & Research Disclaimer:** This project is developed solely for the IIT Bombay Summer Quant 2026 assignment. It is an academic codebase under active development and is NOT production-ready or institutional trading software.
+> **Academic & Research Disclaimer:** Developed for the IIT Bombay Summer Quant 2026 assignment. This codebase is an academic implementation for quantitative research and performance benchmarking.
 
 > [!WARNING]
 > **No Financial Advice:** Nothing in this repository constitutes financial, investment, or trading advice.
