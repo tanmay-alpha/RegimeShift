@@ -107,3 +107,75 @@ def test_col_to_ticker_is_inverse_of_ticker_to_col():
     config = RegimeShiftConfig()
     for ticker, col in config.ticker_to_col.items():
         assert config.col_to_ticker[col] == ticker
+
+
+# ---------------------------------------------------------------------------
+# HMM config propagation through the backtest
+# ---------------------------------------------------------------------------
+
+def test_hmm_config_propagates_to_fit_hmm(monkeypatch):
+    """A custom HMMConfig on RegimeShiftConfig must reach fit_hmm."""
+    from regime_shift import backtest as backtest_module
+    from regime_shift.config import HMMConfig
+    from regime_shift.regime_model import RegimeSolution
+    import pandas as pd
+    import numpy as np
+
+    config = RegimeShiftConfig()
+    custom_hmm = HMMConfig(n_iter=17, tolerance=1e-5, random_state=123)
+    config.hmm_config = custom_hmm
+
+    seen_configs = []
+
+    def fake_fit_hmm(scaled, raw, config):
+        seen_configs.append(config)
+        from hmmlearn.hmm import GaussianHMM
+        hmm = GaussianHMM(n_components=3, covariance_type="diag",
+                          n_iter=17, tol=1e-5, random_state=123)
+        hmm.fit(scaled.values)
+        hmm._state_map = {0: "Bull", 1: "Bear", 2: "Crisis"}
+        hmm._state_statistics = []
+        return hmm, np.zeros(len(scaled), dtype=int), pd.DataFrame(
+            np.eye(3),
+            index=["Bull", "Bear", "Crisis"],
+            columns=["Bull", "Bear", "Crisis"],
+        )
+
+    def fake_predict_current_state(hmm, scaler, raw, raw_train, config):
+        seen_configs.append(config)
+        probs = pd.Series([1.0, 0.0, 0.0], index=["Bull", "Bear", "Crisis"])
+        return RegimeSolution(
+            regime="Bull",
+            probabilities=probs,
+            transition_matrix=pd.DataFrame(
+                np.eye(3),
+                index=["Bull", "Bear", "Crisis"],
+                columns=["Bull", "Bear", "Crisis"],
+            ),
+            state_statistics=[],
+            convergence=True,
+            n_iter=17,
+            log_likelihood=0.0,
+        )
+
+    monkeypatch.setattr(backtest_module, "fit_hmm", fake_fit_hmm)
+    monkeypatch.setattr(backtest_module, "predict_current_state", fake_predict_current_state)
+
+    # Build deterministic synthetic prices
+    idx = pd.bdate_range("2015-01-01", periods=600)
+    rng = np.random.default_rng(0)
+    prices = pd.DataFrame({
+        "equity": 100.0 * np.exp(np.cumsum(rng.normal(0.0005, 0.012, 600))),
+        "gold": 1800.0 + np.cumsum(rng.normal(0.0001, 0.006, 600)),
+        "bond": 97.0 + np.cumsum(rng.normal(0.00005, 0.002, 600)),
+    }, index=idx)
+    config.minimum_training_observations = 60
+    backtest_module.run_walk_forward_backtest(prices, config)
+
+    assert seen_configs, "fit_hmm / predict_current_state were not called"
+    for seen in seen_configs:
+        assert seen.n_iter == 17, (
+            f"Custom HMMConfig.n_iter did not propagate: got {seen.n_iter}"
+        )
+        assert seen.tolerance == 1e-5
+        assert seen.random_state == 123
