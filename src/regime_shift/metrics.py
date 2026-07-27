@@ -4,8 +4,14 @@ Performance metrics for portfolio evaluation.
 Computes standard risk-adjusted return and risk metrics (Sharpe ratio, Sortino ratio,
 Maximum Drawdown, Calmar ratio, portfolio turnover, transaction cost drag).
 
-Transaction cost drag definition: gross_equity_final - net_equity_final
-(i.e., the difference between cumulative gross and net equity curves at the end).
+Transaction cost drag definition
+---------------------------------
+    transaction_cost_drag = gross_final - net_final
+where
+    gross_final = (1 + gross_returns).prod()
+    net_final   = (1 + net_returns).prod()
+
+This is the exact compounding-based drag (in wealth terms), not a proxy.
 """
 
 from __future__ import annotations
@@ -19,12 +25,7 @@ import pandas as pd
 
 @dataclass
 class PerformanceMetrics:
-    """
-    Container for portfolio performance metrics.
-
-    All return metrics use daily arithmetic returns.  Annualization uses 252
-    trading days unless overridden.
-    """
+    """Container for portfolio performance metrics."""
 
     # Return metrics
     total_return: Optional[float] = None
@@ -48,7 +49,6 @@ class PerformanceMetrics:
     annualization_factor: int = 252
 
     def to_dict(self) -> Dict[str, Optional[float]]:
-        """Convert metrics to a flat dictionary."""
         return {
             "Total Return": _fmt(self.total_return),
             "CAGR": _fmt(self.cagr),
@@ -64,19 +64,14 @@ class PerformanceMetrics:
 
 
 def _fmt(val: Optional[float]) -> Optional[float]:
-    """Format a metric value: round to 4 decimal places, or None."""
     if val is None or (isinstance(val, float) and np.isnan(val)):
         return None
     return round(float(val), 4)
 
 
-def _annualize_daily_rate(daily_rate: float, annual_factor: int) -> float:
-    """Convert a daily rate to annualized using compounding."""
-    return (1 + daily_rate) ** annual_factor - 1
-
-
 def compute_performance_metrics(
     returns: pd.Series,
+    gross_returns: Optional[pd.Series] = None,
     turnover: Optional[pd.Series] = None,
     transaction_costs: Optional[pd.Series] = None,
     risk_free_rate: float = 0.0,
@@ -86,65 +81,75 @@ def compute_performance_metrics(
     Compute comprehensive portfolio performance metrics.
 
     Args:
-        returns: Daily arithmetic return series (net of transaction costs).
-        turnover: Optional daily turnover series (used for total/ann. turnover).
-        transaction_costs: Optional daily transaction cost series. Used to compute
-            transaction cost drag as gross_equity_final - net_equity_final.
-            If None, cost drag is NaN.
+        returns: Daily arithmetic net return series (after transaction costs).
+        gross_returns: Daily gross return series (before transaction costs).
+            Required for transaction-cost drag computation.  Must be aligned
+            to returns.
+        turnover: Optional daily turnover series aligned to returns.
+        transaction_costs: Optional daily transaction-cost series aligned to
+            returns.
         risk_free_rate: Annualized risk-free rate (default 0.0).
         annualization_factor: Trading days per year (default 252).
 
     Returns:
-        PerformanceMetrics dataclass with all computed metrics.
+        PerformanceMetrics dataclass.
 
     Raises:
-        ValueError: If returns is empty or contains all NaN values.
-        ValueError: If turnover or transaction_costs indices don't align with returns.
+        ValueError: If returns is empty, contains NaN, inf, or returns <= -1.
+        ValueError: If turnover or transaction_costs indices don't align with
+            returns.
+        ValueError: If gross_returns is required but not provided for cost-drag.
     """
-    # Input validation
-    if returns is None or len(returns) == 0:
+    # Convert inputs
+    returns = pd.Series(returns).sort_index()
+
+    if len(returns) == 0:
         raise ValueError("returns series is empty.")
-    returns = pd.Series(returns).dropna()
-    if len(returns) == 0:
-        raise ValueError("returns series contains only NaN values.")
 
-    # Clean and sort
-    returns = returns.sort_index()
-    returns = returns.replace([np.inf, -np.inf], np.nan).dropna()
-    if len(returns) == 0:
-        raise ValueError("returns series contains only infinite values.")
+    # Coerce to numeric so empty/object dtypes don't break np.isfinite below.
+    returns = returns.astype(float)
 
-    # Validate index alignment
-    if turnover is not None:
-        turnover_s = pd.Series(turnover)
-        if not turnover_s.index.equals(returns.index):
-            raise ValueError(
-                "Turnover index does not align with returns index. "
-                "Both must cover the same date range."
-            )
+    if returns.isna().any():
+        raise ValueError(
+            "returns series contains NaN. Clean or drop missing values first."
+        )
 
-    if transaction_costs is not None:
-        tc_s = pd.Series(transaction_costs)
-        if not tc_s.index.equals(returns.index):
-            raise ValueError(
-                "Transaction costs index does not align with returns index."
-            )
+    has_nonfinite = ~np.isfinite(returns.values)
+    if has_nonfinite.any():
+        idx = returns.index[has_nonfinite]
+        raise ValueError(
+            f"returns series contains non-finite values at {list(idx[:5])}. "
+            "Check for infinite or missing returns."
+        )
+
+    if (returns <= -1.0).any():
+        raise ValueError(
+            "returns series contains values <= -1, which would produce "
+            "non-positive portfolio wealth. Check return calculation."
+        )
+
+    # Index alignment checks
+    for name, series in [("turnover", turnover), ("transaction_costs", transaction_costs), ("gross_returns", gross_returns)]:
+        if series is not None:
+            s = pd.Series(series).sort_index()
+            if not s.index.equals(returns.index):
+                raise ValueError(
+                    f"{name} index does not align with returns index. "
+                    "All series must cover the same dates."
+                )
 
     n = len(returns)
     daily_rf = (1 + risk_free_rate) ** (1 / annualization_factor) - 1
     excess = returns - daily_rf
 
-    # Equity curve
+    # Equity curve (always (1+returns).cumprod, never returns.cumprod)
     equity_curve = (1 + returns).cumprod()
 
     # Total return
     total_return = float(equity_curve.iloc[-1] - 1)
 
     # CAGR
-    if total_return <= -1.0:
-        cagr = float("-inf")
-    else:
-        cagr = float(equity_curve.iloc[-1] ** (annualization_factor / n) - 1)
+    cagr = float(equity_curve.iloc[-1] ** (annualization_factor / n) - 1)
 
     # Annualized volatility
     std_dev = float(returns.std(ddof=1))
@@ -153,35 +158,28 @@ def compute_performance_metrics(
     # Sharpe ratio
     mean_excess = float(excess.mean())
     std_excess = float(excess.std(ddof=1))
-    if std_excess > 0:
-        sharpe = mean_excess / std_excess * np.sqrt(annualization_factor)
-    else:
-        sharpe = float("nan")
+    sharpe = (mean_excess / std_excess * np.sqrt(annualization_factor)) if std_excess > 0 else float("nan")
 
-    # Sortino ratio (downside deviation)
-    # Use downside of the EXCESS returns for consistency
+    # Sortino ratio (downside deviation of excess returns)
     downside_excess = excess[excess < 0]
     if len(downside_excess) > 0:
         downside_dev = float(np.sqrt((downside_excess ** 2).mean()))
-        if downside_dev > 0:
-            sortino = mean_excess / downside_dev * np.sqrt(annualization_factor)
-        else:
-            sortino = float("nan")
+        sortino = (mean_excess / downside_dev * np.sqrt(annualization_factor)) if downside_dev > 0 else float("nan")
     else:
         sortino = float("nan")
 
-    # Maximum drawdown (positive 0-1 value)
+    # Maximum drawdown (positive 0–1 value)
     cummax = equity_curve.cummax()
     drawdown = equity_curve / cummax - 1
     max_dd = float(abs(drawdown.min()))
+    max_dd = max(0.0, min(1.0, max_dd))
 
     # Calmar ratio
-    if max_dd > 1e-12:
-        calmar = cagr / max_dd if not np.isinf(cagr) else float("nan")
-    else:
-        calmar = float("inf") if cagr > 0 else 0.0
+    calmar = float("nan")
+    if max_dd > 1e-12 and not np.isinf(cagr):
+        calmar = cagr / max_dd
 
-    # Turnover metrics
+    # Turnover
     total_turnover = float("nan")
     ann_turnover = float("nan")
     if turnover is not None:
@@ -189,23 +187,13 @@ def compute_performance_metrics(
         total_turnover = float(turnover_s.sum())
         ann_turnover = total_turnover * annualization_factor / n
 
-    # Transaction cost drag
-    # Definition: 1 - net_equity_final / gross_equity_final
-    # This equals the proportional loss from transaction costs
+    # Transaction cost drag = gross_final - net_final
     total_cost_drag = float("nan")
-    if transaction_costs is not None:
-        tc_s = pd.Series(transaction_costs).fillna(0.0)
-        # net_equity = gross_equity * product(1 - cost_rate * turnover) but
-        # we don't have cost_rate here. Instead use the definition:
-        # cost_drag = gross_equity_final - net_equity_final
-        # We need gross returns to compute this
-        # For now, use: cost_drag = sum of daily costs compounded
-        # Actually, the simplest correct definition is:
-        # cost_drag = 1 - net_equity_final / gross_equity_final
-        # We'll compute this in the backtest and pass it here via the
-        # transaction_costs parameter as the daily cost values
-        # cost_drag = sum of transaction costs (absolute drag on return)
-        total_cost_drag = float(tc_s.sum())
+    if gross_returns is not None:
+        gross_s = pd.Series(gross_returns).sort_index()
+        gross_final = float((1.0 + gross_s).prod())
+        net_final = float(equity_curve.iloc[-1])
+        total_cost_drag = gross_final - net_final
 
     start_date = returns.index[0] if len(returns) > 0 else None
     end_date = returns.index[-1] if len(returns) > 0 else None
@@ -227,70 +215,3 @@ def compute_performance_metrics(
         risk_free_rate=risk_free_rate,
         annualization_factor=annualization_factor,
     )
-
-
-def compute_benchmark_returns(
-    prices: pd.DataFrame,
-    weights: Dict[str, float],
-    rebalance_frequency: int = 21,
-    transaction_cost_bps: float = 5.0,
-    annualization_factor: int = 252,
-) -> pd.Series:
-    """
-    Compute benchmark returns with periodic rebalancing and transaction costs.
-
-    Args:
-        prices: DataFrame of asset prices with DatetimeIndex.
-        weights: Dict mapping asset column names to target weights.
-        rebalance_frequency: Days between rebalances.
-        transaction_cost_bps: Transaction cost in basis points.
-        annualization_factor: Trading days per year.
-
-    Returns:
-        pd.Series of net daily returns.
-    """
-    assets = list(weights.keys())
-    w = np.array([weights[a] for a in assets])
-    price_subset = prices[assets].copy()
-    returns = price_subset.pct_change().iloc[1:]
-
-    dates = returns.index
-    n = len(dates)
-    current_weights = np.zeros(len(assets))  # start in cash
-    has_allocation = False
-
-    cost_rate = transaction_cost_bps / 10000.0
-    net_returns = np.zeros(n)
-
-    for i in range(n):
-        gross_ret = float(np.dot(current_weights, returns.iloc[i].values))
-
-        if i % rebalance_frequency == 0 and not has_allocation:
-            # Initial allocation from cash
-            target_w = w.copy()
-            turnover = float(np.sum(np.abs(target_w)))
-            cost = turnover * cost_rate
-            net_ret = (1 - cost) * (1 + gross_ret) - 1
-
-            current_weights = target_w * (1 + returns.iloc[i].values)
-            current_weights = current_weights / current_weights.sum()
-            has_allocation = True
-
-        elif i % rebalance_frequency == 0 and has_allocation:
-            # Rebalance
-            target_w = w.copy()
-            turnover = 0.5 * np.sum(np.abs(current_weights - target_w))
-            cost = turnover * cost_rate
-            net_ret = (1 - cost) * (1 + gross_ret) - 1
-
-            current_weights = target_w * (1 + returns.iloc[i].values)
-            current_weights = current_weights / current_weights.sum()
-
-        else:
-            net_ret = gross_ret
-            current_weights = current_weights * (1 + returns.iloc[i].values)
-            current_weights = current_weights / current_weights.sum()
-
-        net_returns[i] = net_ret
-
-    return pd.Series(net_returns, index=dates)

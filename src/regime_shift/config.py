@@ -100,7 +100,11 @@ class TickerConfig:
                  the preferred default from Phase 1 hardening onwards.
 
     bond
-        0P0001BVE8.BO — SBI Magnum Gilt Fund – Regular Plan (BSE mutual fund NAV).
+        LIQUIDBEES.NS — Nippon India Liquid Bees ETF (NSE). A liquid/overnight
+        Indian ETF that tracks the Nifty Liquid Bond Index, used here as the
+        defensive cash-equivalent bucket. Has continuous NAV history back to
+        2009 via yfinance. The original SBI Magnum Gilt ticker
+        (0P0001BVE8.BO) was delisted from yfinance in 2026.
         Kind    : PRICE (NAV in INR, adjusted for distributions).
         Currency: INR.
         Notes   : A liquid Indian government gilt mutual fund with long yfinance
@@ -151,14 +155,16 @@ class TickerConfig:
     ))
 
     bond: AssetSpec = field(default_factory=lambda: AssetSpec(
-        ticker="0P0001BVE8.BO",
+        ticker="LIQUIDBEES.NS",
         kind=SeriesKind.PRICE,
-        description="SBI Magnum Gilt Fund – Regular Plan (BSE NAV, INR)",
+        description="Nippon India Liquid Bees ETF (NSE, INR)",
         currency="INR",
         notes=(
-            "Liquid Indian government gilt mutual fund. NAV series suitable as "
-            "portfolio bond proxy. Alternative: GSEC10RBETF.NS (Mirae ETF). "
-            "Do NOT substitute with ^IRX (T-Bill yield) — that is a YIELD series."
+            "Liquid/overnight Indian ETF tracking Nifty Liquid Bond Index. "
+            "Very low volatility — used as a cash-equivalent / defensive bucket. "
+            "Has continuous NAV history back to 2009 via yfinance. "
+            "The original SBI Magnum Gilt ticker (0P0001BVE8.BO) was "
+            "delisted from yfinance in 2026."
         ),
     ))
 
@@ -253,7 +259,7 @@ class DataConfig:
 
     default_start: str = "2010-01-01"
     default_end: Optional[str] = None
-    forward_fill_limit: int = 3
+    forward_fill_limit: int = 252
     cache_dir: Optional[str] = "data/cache"
     price_field: str = "Close"
 

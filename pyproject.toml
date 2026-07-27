@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "regime_shift"
-version = "0.2.0"
+version = "1.0.0"
 description = "IIT Bombay Summer Quant 2026 Market-Regime Asset Allocation Framework"
 readme = "README.md"
 requires-python = ">=3.9"

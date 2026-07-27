@@ -109,13 +109,23 @@ class BacktestResult:
 
 @dataclass
 class BenchmarkResult:
-    """Benchmark return series and metrics."""
+    """
+    Benchmark return series and metrics.
+
+    All series have identical, aligned DatetimeIndex. Target weights track
+    the configured weights on rebalance dates; daily_drifted_weights track
+    the actual weights after returns drift between rebalances.
+    """
     name: str
     gross_returns: pd.Series = field(default_factory=pd.Series, repr=False)
     net_returns: pd.Series = field(default_factory=pd.Series, repr=False)
     gross_equity: pd.Series = field(default_factory=pd.Series, repr=False)
     net_equity: pd.Series = field(default_factory=pd.Series, repr=False)
     turnover: pd.Series = field(default_factory=pd.Series, repr=False)
+    transaction_costs: pd.Series = field(default_factory=pd.Series, repr=False)
+    rebalance_flags: pd.Series = field(default_factory=pd.Series, repr=False)
+    daily_drifted_weights: pd.DataFrame = field(default_factory=pd.DataFrame, repr=False)
+    target_weights: pd.DataFrame = field(default_factory=pd.DataFrame, repr=False)
     metrics: Optional[Dict] = None
 
 
@@ -270,13 +280,15 @@ def run_walk_forward_backtest(
                 # ---- Fit HMM on scaled training data ----
                 try:
                     hmm, hidden_states, _trans_mat = fit_hmm(
-                        scaled_train, train_features
+                        scaled_train, train_features,
+                        config=config.hmm_config,
                     )
                     # Store the actual transition matrix from the last fit
                     final_trans_mat = predict_current_state(
                         hmm, scaler,
                         raw_features.loc[:info_cutoff],
                         train_features,
+                        config=config.hmm_config,
                     ).transition_matrix.copy()
                 except RegimeDetectionError as exc:
                     logger.error("HMM fitting failed on %s: %s", info_cutoff, exc)
@@ -285,7 +297,8 @@ def run_walk_forward_backtest(
                 # ---- Infer regime at info_cutoff ----
                 features_through_cutoff = raw_features.loc[:info_cutoff]
                 regime_solution = predict_current_state(
-                    hmm, scaler, features_through_cutoff, train_features
+                    hmm, scaler, features_through_cutoff, train_features,
+                    config=config.hmm_config,
                 )
 
                 current_regime = regime_solution.regime
@@ -449,9 +462,14 @@ def run_walk_forward_backtest(
     gross_equity_s = (1 + gross_returns_s).cumprod()
     net_equity_s = (1 + net_returns_s).cumprod()
 
-    # Compute metrics
+    # Compute metrics with gross returns for cost-drag
     metrics = compute_performance_metrics(
-        net_returns_s, turnover=turnover_s, risk_free_rate=risk_free_rate
+        net_returns_s,
+        gross_returns=gross_returns_s,
+        turnover=turnover_s,
+        transaction_costs=costs_s,
+        risk_free_rate=risk_free_rate,
+        annualization_factor=config.annualization_factor,
     )
 
     result = BacktestResult(
@@ -482,127 +500,116 @@ def run_benchmark(
     transaction_cost_bps: Optional[float] = None,
     rebalance_flags: Optional[pd.Series] = None,
     start_date: Optional[pd.Timestamp] = None,
+    risk_free_rate: float = 0.0,
 ) -> BenchmarkResult:
     """
-    Run a benchmark strategy using the same timing and cost conventions.
+    Run a benchmark using the strategy's chronological execution convention.
 
-    Uses the strategy's rebalance flags to determine when to rebalance.
-    The initial allocation from cash has turnover = sum(abs(target_weights)).
-
-    Args:
-        prices: Price DataFrame with equity, gold, bond columns.
-        weights: Target weight dictionary.
-        config: RegimeShiftConfig.
-        transaction_cost_bps: Override transaction cost.
-        rebalance_flags: Boolean Series aligned to price dates indicating
-            rebalance dates. Must match the strategy's rebalance flags.
-        start_date: Start date for the benchmark (must match strategy start).
-
-    Returns:
-        BenchmarkResult with returns and equity curves.
+    On each date, pre-trade weights are first used to calculate turnover.  On
+    rebalance dates the target is installed before calculating that day's gross
+    return, so the return is earned by the post-trade portfolio.  Transaction
+    costs are then deducted multiplicatively and the portfolio is drifted after
+    the return.
     """
     config = config or RegimeShiftConfig()
     if transaction_cost_bps is not None:
         config = _override_transaction_cost(config, transaction_cost_bps)
+    config.validate()
 
     core_assets = config.core_assets
     price_data = prices[core_assets].copy()
     asset_returns = price_data.pct_change().iloc[1:]
-
     dates = asset_returns.index
-    n = len(dates)
 
     if start_date is not None:
-        mask = dates >= start_date
-        dates = dates[mask]
+        dates = dates[dates >= pd.Timestamp(start_date)]
         asset_returns = asset_returns.loc[dates]
 
-    w = np.array([weights[a] for a in core_assets])
-    current_weights = np.zeros(len(core_assets))  # start in cash
-    has_allocation = False
+    if rebalance_flags is not None:
+        rb_flags = rebalance_flags.reindex(dates, fill_value=False).astype(bool)
+    else:
+        rb_flags = pd.Series(False, index=dates, name="rebalance")
+        if len(dates):
+            rb_flags.iloc[0] = True
+            rb_flags.iloc[config.rebalance_frequency::config.rebalance_frequency] = True
+
+    target = np.array([weights[a] for a in core_assets], dtype=float)
+    if not np.isclose(target.sum(), 1.0):
+        raise ValueError("Benchmark target weights must sum to one.")
 
     cost_rate = config.transaction_cost_bps / 10000.0
-    gross_arr = np.zeros(len(dates))
-    net_arr = np.zeros(len(dates))
-    costs_arr = np.zeros(len(dates))
-    turnover_arr = np.zeros(len(dates))
+    n = len(dates)
+    gross_arr = np.zeros(n)
+    net_arr = np.zeros(n)
+    costs_arr = np.zeros(n)
+    turnover_arr = np.zeros(n)
+    drifted_arr = np.zeros((n, len(core_assets)))
+    target_arr = np.zeros((n, len(core_assets)))
 
-    if rebalance_flags is not None:
-        # Align rebalance flags to our dates
-        rb_flags = rebalance_flags.reindex(dates, fill_value=False)
-    else:
-        # Default: rebalance at the configured frequency
-        rebalance_indices = list(
-            range(config.rebalance_frequency, len(dates), config.rebalance_frequency)
-        )
-        rb_flags = pd.Series(False, index=dates)
-        if rebalance_indices:
-            rb_flags.iloc[rebalance_indices] = True
+    current_weights = np.zeros(len(core_assets), dtype=float)
+    has_allocation = False
 
-    for pos in range(len(dates)):
-        day_return = asset_returns.iloc[pos].values
-        gross_ret = float(np.dot(current_weights, day_return))
+    for pos, date in enumerate(dates):
+        day_return = asset_returns.iloc[pos].to_numpy(dtype=float)
+        rebalance_today = bool(rb_flags.iloc[pos])
+        turnover = 0.0
+        cost = 0.0
 
-        if rb_flags.iloc[pos] and not has_allocation:
-            # Initial allocation from cash
-            target_w = w.copy()
-            turnover = float(np.sum(np.abs(target_w)))
+        if rebalance_today:
+            if not has_allocation:
+                turnover = float(np.abs(target).sum())
+            else:
+                turnover = 0.5 * float(np.abs(target - current_weights).sum())
             cost = turnover * cost_rate
-            net_ret = (1 - cost) * (1 + gross_ret) - 1
-
-            current_weights = target_w * (1 + day_return)
-            s = current_weights.sum()
-            if s > 1e-12:
-                current_weights = current_weights / s
-
+            current_weights = target.copy()
             has_allocation = True
+            target_arr[pos] = target
 
-        elif rb_flags.iloc[pos] and has_allocation:
-            # Rebalance to target
-            target_w = w.copy()
-            turnover = 0.5 * float(
-                np.sum(np.abs(target_w - current_weights))
-            )
-            cost = turnover * cost_rate
-            net_ret = (1 - cost) * (1 + gross_ret) - 1
-
-            current_weights = target_w * (1 + day_return)
-            s = current_weights.sum()
-            if s > 1e-12:
-                current_weights = current_weights / s
-
-        else:
-            net_ret = gross_ret
-            current_weights = current_weights * (1 + day_return)
-            s = current_weights.sum()
-            if s > 1e-12:
-                current_weights = current_weights / s
+        # Rebalance-day returns use newly installed targets; non-rebalance days
+        # use the pre-trade drifted weights.
+        gross_ret = float(np.dot(current_weights, day_return))
+        net_ret = (1.0 - cost) * (1.0 + gross_ret) - 1.0 if rebalance_today else gross_ret
 
         gross_arr[pos] = gross_ret
         net_arr[pos] = net_ret
-        costs_arr[pos] = cost if rb_flags.iloc[pos] and has_allocation else 0.0
-        turnover_arr[pos] = (
-            turnover if rb_flags.iloc[pos] and has_allocation else 0.0
-        )
+        costs_arr[pos] = cost
+        turnover_arr[pos] = turnover
+
+        denominator = 1.0 + gross_ret
+        if denominator <= 0.0:
+            raise ValueError(f"Benchmark wealth became non-positive on {date}.")
+        current_weights = current_weights * (1.0 + day_return) / denominator
+        drifted_arr[pos] = current_weights
 
     gross_s = pd.Series(gross_arr, index=dates, name="gross_return")
     net_s = pd.Series(net_arr, index=dates, name="net_return")
     turnover_s = pd.Series(turnover_arr, index=dates, name="turnover")
-    gross_equity = (1 + gross_s).cumprod()
-    net_equity = (1 + net_s).cumprod()
+    costs_s = pd.Series(costs_arr, index=dates, name="transaction_cost")
+    rebalance_s = pd.Series(rb_flags.to_numpy(), index=dates, name="rebalance")
+    drifted_df = pd.DataFrame(drifted_arr, index=dates, columns=core_assets)
+    target_df = pd.DataFrame(target_arr, index=dates, columns=core_assets)
 
     metrics = compute_performance_metrics(
-        net_s, turnover=turnover_s, risk_free_rate=0.0
+        net_s,
+        gross_returns=gross_s,
+        turnover=turnover_s,
+        transaction_costs=costs_s,
+        risk_free_rate=risk_free_rate,
+        annualization_factor=config.annualization_factor,
     )
 
     return BenchmarkResult(
         name="benchmark",
         gross_returns=gross_s,
         net_returns=net_s,
-        gross_equity=gross_equity,
-        net_equity=net_equity,
+        gross_equity=(1.0 + gross_s).cumprod(),
+        net_equity=(1.0 + net_s).cumprod(),
         turnover=turnover_s,
-        metrics=metrics.to_dict() if metrics else None,
+        transaction_costs=costs_s,
+        rebalance_flags=rebalance_s,
+        daily_drifted_weights=drifted_df,
+        target_weights=target_df,
+        metrics=metrics.to_dict(),
     )
 
 
@@ -681,6 +688,6 @@ def _build_metadata(
             "equity_bond_correlation_63d",
         ]
         + (["vix_change_5d", "vix_level"] if has_vix else []),
-        "package_version": "0.5.0-hmm-portfolio",
+        "package_version": "1.0.0",
         "random_seed": config.random_seed,
     }

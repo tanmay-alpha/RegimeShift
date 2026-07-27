@@ -212,6 +212,7 @@ def main() -> int:
         transaction_cost_bps=args.transaction_cost_bps,
         rebalance_flags=strategy_rb_flags,
         start_date=strategy_start,
+        risk_free_rate=args.risk_free_rate,
     )
 
     bench_eq = run_benchmark(
@@ -221,6 +222,7 @@ def main() -> int:
         transaction_cost_bps=args.transaction_cost_bps,
         rebalance_flags=strategy_rb_flags,
         start_date=strategy_start,
+        risk_free_rate=args.risk_free_rate,
     )
 
     benchmarks = {
@@ -251,10 +253,17 @@ def main() -> int:
         for p in saved_paths:
             logger.info("Saved chart: %s", p)
     except Exception as exc:
-        logger.warning("Chart generation failed: %s", exc)
+        logger.error("Chart generation failed: %s", exc, exc_info=True)
+        return 1
 
     # ---- Step 5: Save results ----
-    _save_results(strategy_result, benchmarks, args.output_dir)
+    _save_results(
+        strategy_result=strategy_result,
+        benchmarks=benchmarks,
+        output_dir=args.output_dir,
+        risk_free_rate=args.risk_free_rate,
+        annualization_factor=config.annualization_factor,
+    )
 
     # ---- Step 6: Print summary ----
     _print_summary(strategy_result, benchmarks)
@@ -286,22 +295,38 @@ def _save_results(
     strategy_result: "BacktestResult",
     benchmarks: dict,
     output_dir: str,
+    risk_free_rate: float = 0.0,
+    annualization_factor: int = 252,
 ) -> None:
-    """Save all result files to the output directory."""
+    """Save all result files to the output directory.
+
+    All six performance rows use the same ``risk_free_rate`` and
+    ``annualization_factor`` so the strategy and the benchmarks are
+    directly comparable.
+    """
     os.makedirs(output_dir, exist_ok=True)
 
-    # Daily results
+    # Daily results: include benchmark gross/net columns as required by §9.
     daily = pd.DataFrame({
-        "gross_return": strategy_result.gross_returns,
-        "net_return": strategy_result.net_returns,
-        "transaction_cost": strategy_result.transaction_costs,
-        "turnover": strategy_result.turnover,
-        "regime": strategy_result.regime_series,
-        "rebalance": strategy_result.rebalance_flags,
+        "strategy_gross_return": strategy_result.gross_returns,
+        "strategy_net_return": strategy_result.net_returns,
+        "strategy_transaction_cost": strategy_result.transaction_costs,
+        "strategy_turnover": strategy_result.turnover,
+        "strategy_regime": strategy_result.regime_series,
+        "strategy_rebalance_flag": strategy_result.rebalance_flags,
     })
+    if "Static 60/40" in benchmarks:
+        b = benchmarks["Static 60/40"]
+        daily["static_60_40_gross_return"] = b.gross_returns
+        daily["static_60_40_net_return"] = b.net_returns
+    if "Equal Weight" in benchmarks:
+        b = benchmarks["Equal Weight"]
+        daily["equal_weight_gross_return"] = b.gross_returns
+        daily["equal_weight_net_return"] = b.net_returns
+
     daily.to_csv(os.path.join(output_dir, "daily_results.csv"))
 
-    # Weights
+    # Weights (target weights at rebalance dates)
     strategy_result.target_weights.to_csv(os.path.join(output_dir, "weights.csv"))
 
     # Regimes
@@ -312,9 +337,11 @@ def _save_results(
     regime_df.to_csv(os.path.join(output_dir, "regimes.csv"))
 
     # Transition matrix
-    strategy_result.transition_matrix.to_csv(os.path.join(output_dir, "transition_matrix.csv"))
+    strategy_result.transition_matrix.to_csv(
+        os.path.join(output_dir, "transition_matrix.csv")
+    )
 
-    # Performance summary (six rows)
+    # Performance summary — exactly six rows.
     rows = []
     for label, is_gross in [
         ("RegimeShift Gross", True),
@@ -326,29 +353,40 @@ def _save_results(
     ]:
         row = {"Strategy": label}
         if label.startswith("RegimeShift"):
-            if is_gross:
-                # Compute gross metrics from strategy
-                gross_metrics = compute_performance_metrics(
-                    strategy_result.gross_returns,
-                    turnover=strategy_result.turnover,
-                    risk_free_rate=0.0,
-                )
-                row.update(gross_metrics.to_dict())
-            else:
-                row.update(strategy_result.metrics or {})
+            returns = strategy_result.gross_returns if is_gross else strategy_result.net_returns
+            metrics = compute_performance_metrics(
+                returns,
+                gross_returns=strategy_result.gross_returns,
+                turnover=strategy_result.turnover,
+                transaction_costs=strategy_result.transaction_costs,
+                risk_free_rate=risk_free_rate,
+                annualization_factor=annualization_factor,
+            )
+            row.update(metrics.to_dict())
         else:
             bench_name = label.replace(" Gross", "").replace(" Net", "")
             bench = benchmarks.get(bench_name)
-            if bench:
-                if is_gross:
-                    gross_metrics = compute_performance_metrics(
-                        bench.gross_returns,
-                        turnover=bench.turnover,
-                        risk_free_rate=0.0,
-                    )
-                    row.update(gross_metrics.to_dict())
-                else:
-                    row.update(bench.metrics or {})
+            if bench is not None:
+                returns = bench.gross_returns if is_gross else bench.net_returns
+                metrics = compute_performance_metrics(
+                    returns,
+                    gross_returns=bench.gross_returns,
+                    turnover=bench.turnover,
+                    transaction_costs=bench.transaction_costs,
+                    risk_free_rate=risk_free_rate,
+                    annualization_factor=annualization_factor,
+                )
+                row.update(metrics.to_dict())
+            else:
+                # Empty placeholder row — should not happen in normal flow.
+                row.update({
+                    "Total Return": None, "CAGR": None,
+                    "Annualised Volatility": None, "Sharpe": None,
+                    "Sortino": None, "Maximum Drawdown": None,
+                    "Calmar": None, "Total Turnover": None,
+                    "Annualised Turnover": None,
+                    "Transaction Cost Drag": None,
+                })
         rows.append(row)
 
     pd.DataFrame(rows).to_csv(
@@ -356,10 +394,14 @@ def _save_results(
     )
 
     # Run metadata
-    metadata = strategy_result.config_metadata
-    pd.Series(metadata).to_json(
-        os.path.join(output_dir, "run_metadata.json"), indent=2, default=str
-    )
+    metadata = dict(strategy_result.config_metadata or {})
+    metadata["risk_free_rate"] = float(risk_free_rate)
+    metadata["annualization_factor"] = int(annualization_factor)
+    import json
+    def _json_default(obj):
+        return str(obj)
+    with open(os.path.join(output_dir, "run_metadata.json"), "w", encoding="utf-8") as fh:
+        json.dump(metadata, fh, indent=2, default=_json_default)
 
     logger.info("Saved all results to %s", output_dir)
 
