@@ -1,0 +1,38 @@
+{
+  "date_range": {
+    "start": "2010-10-05 00:00:00",
+    "end": "2026-07-27 00:00:00",
+    "n_observations": 3732,
+    "original_start": "2010-01-04 00:00:00",
+    "original_end": "2026-07-27 00:00:00"
+  },
+  "tickers": {
+    "equity": "^NSEI",
+    "gold": "GOLDBEES.NS",
+    "bond": "LIQUIDBEES.NS",
+    "vix": "omitted"
+  },
+  "vix_included": false,
+  "transaction_cost_bps": 5.0,
+  "train_window": 252,
+  "rebalance_frequency": 21,
+  "hmm_config": {
+    "n_components": 3,
+    "covariance_type": "diag",
+    "n_iter": 200,
+    "random_state": 42
+  },
+  "feature_list": [
+    "equity_log_return_1d",
+    "equity_momentum_21d",
+    "equity_momentum_63d",
+    "equity_volatility_21d",
+    "equity_volatility_ratio_21_63",
+    "equity_gold_correlation_63d",
+    "equity_bond_correlation_63d"
+  ],
+  "package_version": "1.0.0",
+  "random_seed": 42,
+  "risk_free_rate": 0.0,
+  "annualization_factor": 252
+}
