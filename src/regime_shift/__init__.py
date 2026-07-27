@@ -57,7 +57,7 @@ from regime_shift.benchmarks import (
     validate_benchmark_weights,
 )
 
-__version__ = "0.5.0-hmm-portfolio"
+__version__ = "1.0.0"
 
 __all__ = [
     # Config
