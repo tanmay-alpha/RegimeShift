@@ -170,7 +170,7 @@ RegimeShift/
 │       ├── regime_model.py             # 3-State Gaussian HMM
 │       └── validation.py               # Data contract validation
 │
-├── tests/                              # Test suite (256 tests)
+├── tests/                              # Test suite (268 tests)
 │   ├── test_backtest.py                # Backtest engine & benchmark tests
 │   ├── test_cli.py                     # CLI behaviour tests
 │   ├── test_config.py                  # Configuration tests
