@@ -2,7 +2,7 @@
 
 **IIT Bombay Summer Quant 2026 Assignment**
 **Repository:** [`tanmay-alpha/RegimeShift`](https://github.com/tanmay-alpha/RegimeShift)
-**Branch:** `fix/final-submission-audit`
+**Branch:** `polish/final-submission`
 **Status:** Final submission — all code executed and verified
 
 ---
@@ -170,7 +170,7 @@ RegimeShift/
 │       ├── regime_model.py             # 3-State Gaussian HMM
 │       └── validation.py               # Data contract validation
 │
-├── tests/                              # Test suite (268 tests)
+├── tests/                              # Test suite (286 tests)
 │   ├── test_backtest.py                # Backtest engine & benchmark tests
 │   ├── test_cli.py                     # CLI behaviour tests
 │   ├── test_config.py                  # Configuration tests
@@ -203,7 +203,6 @@ RegimeShift/
 ```bash
 git clone https://github.com/tanmay-alpha/RegimeShift.git
 cd RegimeShift
-git checkout fix/final-submission-audit
 pip install -e .
 ```
 
@@ -226,7 +225,7 @@ python run_submission.py --data-path data/submission_market_data.csv --include-v
 ### Running Test Suite
 ```bash
 pytest -v
-# 256 tests covering leakage, HMM, portfolio optimizer, backtest math,
+# 286 tests covering leakage, HMM, portfolio optimizer, backtest math,
 # charts, CLI, and notebook structure
 ```
 
