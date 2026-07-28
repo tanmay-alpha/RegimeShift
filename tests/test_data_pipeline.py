@@ -159,16 +159,25 @@ class TestValidation:
         assert validate_price_data(valid_price_df) is not None
 
     def test_forward_fill_limit_enforced(self, sample_dates):
-        """Exceeding forward_fill_limit raises DataValidationError."""
+        """Exceeding forward_fill_limit raises DataValidationError when an
+        explicit fill mask is provided.  Without a fill mask the identical-
+        value run is NOT classified as a forward-fill (a naturally flat bond
+        NAV would be wrongly rejected)."""
         prices = np.linspace(100, 200, 100)
-        prices[20:30] = prices[19]  # 10 identical values — over any reasonable limit
+        prices[20:30] = prices[19]  # 10 identical values
         df = pd.DataFrame(
             {"equity": prices, "gold": np.linspace(1800, 1900, 100),
              "bond": np.linspace(95, 98, 100)},
             index=sample_dates,
         )
+        # Construct an explicit fill mask that flags a long forward-fill
+        fill_mask = pd.DataFrame(
+            False, index=df.index, columns=df.columns,
+        )
+        fill_mask.iloc[20:30, 0] = True  # 10-day equity fill
         with pytest.raises(DataValidationError, match="forward-fill limit"):
-            validate_price_data(df, forward_fill_limit=5)
+            validate_price_data(df, forward_fill_limit=5,
+                                fill_mask=fill_mask)
 
     def test_forward_fill_limit_disabled(self, sample_dates):
         """forward_fill_limit=0 disables the run-length check."""
@@ -202,7 +211,8 @@ class TestValidation:
         validate_price_data(df, forward_fill_limit=3)
 
     def test_naturally_flat_prices_exceeding_limit_raise(self, sample_dates):
-        """A natural flat plateau LONGER than the limit raises DataValidationError."""
+        """A natural flat plateau WITHOUT a fill mask must NOT raise — the
+        heuristic is unreliable for low-volatility assets like bonds."""
         prices = np.linspace(97, 100, 100)
         prices[30:37] = prices[29]  # 7 identical values — over limit
         df = pd.DataFrame(
@@ -211,8 +221,9 @@ class TestValidation:
              "bond": prices},
             index=sample_dates,
         )
-        with pytest.raises(DataValidationError, match="forward-fill limit"):
-            validate_price_data(df, forward_fill_limit=3)
+        # Without a fill mask, natural flatness is NOT flagged as forward-fill
+        result = validate_price_data(df, forward_fill_limit=3)
+        assert result is not None
 
     def test_missing_values_in_specific_column_named(self, sample_dates):
         """Error message must name which columns have NaN."""
@@ -253,7 +264,8 @@ class TestValidation:
         check_forward_fill_limit(df, ["equity"], max_consecutive=3)
 
     def test_check_forward_fill_limit_over_boundary(self, sample_dates):
-        """A run of limit+1 identical values must raise."""
+        """When an explicit fill mask is supplied, a fill run of limit+1
+        identical values raises DataValidationError."""
         prices = np.linspace(100, 200, 100)
         prices[10:15] = prices[9]  # run of 5
         df = pd.DataFrame(
@@ -261,8 +273,13 @@ class TestValidation:
              "bond": np.linspace(95, 98, 100)},
             index=sample_dates,
         )
+        fill_mask = pd.DataFrame(
+            False, index=df.index, columns=df.columns,
+        )
+        fill_mask.iloc[10:15, 0] = True  # 5-day equity fill
         with pytest.raises(DataValidationError, match="forward-fill limit"):
-            check_forward_fill_limit(df, ["equity"], max_consecutive=3)
+            check_forward_fill_limit(df, ["equity"], max_consecutive=3,
+                                    fill_mask=fill_mask)
 
 
 # ---------------------------------------------------------------------------
