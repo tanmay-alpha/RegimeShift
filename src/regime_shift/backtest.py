@@ -283,23 +283,19 @@ def run_walk_forward_backtest(
                         scaled_train, train_features,
                         config=config.hmm_config,
                     )
-                    # Store the actual transition matrix from the last fit
-                    final_trans_mat = predict_current_state(
-                        hmm, scaler,
-                        raw_features.loc[:info_cutoff],
-                        train_features,
+
+                    # Infer current regime using ONLY the rolling training window
+                    # (features_through_cutoff = train_features).
+                    # This prevents the scaler from seeing future data.
+                    regime_solution = predict_current_state(
+                        hmm, scaler, train_features, train_features,
                         config=config.hmm_config,
-                    ).transition_matrix.copy()
+                    )
+                    # Store the actual transition matrix from the last fit
+                    final_trans_mat = regime_solution.transition_matrix.copy()
                 except RegimeDetectionError as exc:
                     logger.error("HMM fitting failed on %s: %s", info_cutoff, exc)
                     raise
-
-                # ---- Infer regime at info_cutoff ----
-                features_through_cutoff = raw_features.loc[:info_cutoff]
-                regime_solution = predict_current_state(
-                    hmm, scaler, features_through_cutoff, train_features,
-                    config=config.hmm_config,
-                )
 
                 current_regime = regime_solution.regime
                 # Explicitly reindex probabilities to Bull, Bear, Crisis order
@@ -654,6 +650,8 @@ def _build_metadata(
     result_dates: pd.DatetimeIndex,
 ) -> Dict:
     """Build run metadata dictionary."""
+    diag = getattr(prices, "attrs", {}).get("data_diagnostics", {})
+    hmm_conf = config.hmm_config
     return {
         "date_range": {
             "start": str(result_dates[0]),
@@ -663,10 +661,10 @@ def _build_metadata(
             "original_end": str(prices.index[-1]),
         },
         "tickers": {
-            "equity": config.tickers.equity.ticker,
-            "gold": config.tickers.gold.ticker,
-            "bond": config.tickers.bond.ticker,
-            "vix": config.tickers.vix.ticker if has_vix else "omitted",
+            "equity": config.tickers.equity_ticker,
+            "gold": config.tickers.gold_ticker,
+            "bond": config.tickers.bond_ticker,
+            "vix": config.tickers.vix_ticker if has_vix else "omitted",
         },
         "vix_included": has_vix,
         "transaction_cost_bps": config.transaction_cost_bps,
@@ -675,7 +673,7 @@ def _build_metadata(
         "hmm_config": {
             "n_components": config.number_of_regimes,
             "covariance_type": "diag",
-            "n_iter": 200,
+            "n_iter": hmm_conf.n_iter,
             "random_state": config.random_seed,
         },
         "feature_list": [
@@ -690,4 +688,15 @@ def _build_metadata(
         + (["vix_change_5d", "vix_level"] if has_vix else []),
         "package_version": "1.0.0",
         "random_seed": config.random_seed,
+        "risk_free_rate": 0.0,
+        "annualization_factor": config.annualization_factor,
+        # Data diagnostics — populated by data.py
+        "data_file": diag.get("data_path", ""),
+        "data_sha256": diag.get("sha256", ""),
+        "data_tickers": list(config.col_to_ticker.values()),
+        "forward_fill_limit": config.data.forward_fill_limit,
+        "ffill_cells_total": diag.get("ffill_cells_total", 0),
+        "ffill_cells_per_asset": diag.get("ffill_cells_per_asset", {}),
+        "dates_dropped": diag.get("dates_dropped", 0),
+        "rows_after_load": diag.get("rows_after_load", len(result_dates)),
     }

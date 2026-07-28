@@ -14,10 +14,10 @@
 ### Target Asset Universe
 - **NSE Equity Index:** NIFTY 50 (`^NSEI`)
 - **Gold:** GOLDBEES.NS (Nippon India ETF Gold Bees — INR-denominated)
-- **Indian Sovereign Bond:** 0P0001BVE8.BO (SBI Magnum Gilt Fund NAV — INR-denominated)
+- **Defensive Proxy:** LIQUIDBEES.NS (Nippon India Liquid Bees — INR-denominated liquid-bond / cash-equivalent proxy, NOT a sovereign bond or 10-year G-Sec)
 - **Market Volatility Index (Optional):** ^INDIAVIX (NSE India VIX)
 
-**Note:** All three required assets are PRICE/NAV series expressed in INR. No currency conversion is required. The VIX is optional and used only as a feature — it is never allocated as a portfolio position.
+**Note:** LIQUIDBEES.NS tracks the Nifty Liquid Bond Index with very short effective duration — it is used as a defensive / cash-equivalent bucket, not as a duration hedge or inflation-protection instrument. This is a documented limitation. All assets are INR-denominated PRICE/NAV series. No currency conversion is required. The VIX is optional and used only as a feature — it is never allocated as a portfolio position.
 
 ---
 
@@ -137,6 +137,12 @@ Two conventions for turnover:
 
 No transaction cost is deducted on non-rebalance dates.
 
+### F. Transaction-Cost Sensitivity Conclusion
+
+Doubling transaction costs from 5 to 10 bps had a limited effect on Sharpe
+and CAGR in this sample, although cumulative cost drag increased materially.
+This sensitivity result does not guarantee future robustness.
+
 ---
 
 ## 4. Repository Structure
@@ -207,17 +213,14 @@ pip install -e .
 
 ### Running Official Submission CLI
 ```bash
-# Online mode (fetches market data via yfinance from 2010 to today)
-python run_submission.py --start 2010-01-01 --transaction-cost-bps 5.0
-
-# Offline mode (pre-downloaded CSV data)
-python run_submission.py --data-path data/prices.csv --transaction-cost-bps 5.0
-
-# With VIX feature included
-python run_submission.py --include-vix --transaction-cost-bps 5.0
+# Official offline mode — always use the submitted dataset
+python run_submission.py --data-path data/submission_market_data.csv --transaction-cost-bps 5 --output-dir results
 
 # 10 bps sensitivity check
-python run_submission.py --transaction-cost-bps 10.0 --output-dir results_10bps
+python run_submission.py --data-path data/submission_market_data.csv --transaction-cost-bps 10 --output-dir results_10bps
+
+# With VIX feature included (omitted by default)
+python run_submission.py --data-path data/submission_market_data.csv --include-vix --transaction-cost-bps 5
 ```
 
 ### Running Test Suite

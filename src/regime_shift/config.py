@@ -100,19 +100,21 @@ class TickerConfig:
                  the preferred default from Phase 1 hardening onwards.
 
     bond
-        LIQUIDBEES.NS — Nippon India Liquid Bees ETF (NSE). A liquid/overnight
-        Indian ETF that tracks the Nifty Liquid Bond Index, used here as the
-        defensive cash-equivalent bucket. Has continuous NAV history back to
-        2009 via yfinance. The original SBI Magnum Gilt ticker
-        (0P0001BVE8.BO) was delisted from yfinance in 2026.
+        LIQUIDBEES.NS — Nippon India Liquid Bees ETF (NSE).  This is an
+        INR-denominated liquid-bond / cash-equivalent proxy, **not** a sovereign
+        bond or 10-year G-Sec.  It tracks the Nifty Liquid Bond Index and has
+        very short effective duration, so it provides defensive equity-risk
+        reduction without long-term rate exposure.  The original SBI Magnum
+        Gilt ticker (0P0001BVE8.BO) was delisted from yfinance in 2026.
         Kind    : PRICE (NAV in INR, adjusted for distributions).
         Currency: INR.
-        Notes   : A liquid Indian government gilt mutual fund with long yfinance
-                 history.  Alternative government-gilt ETFs: GSEC10RBETF.NS (Mirae),
-                 CPSEETF.NS, or Bharat Bond ETF series.
+        Notes   : Limitation — short duration means this asset does not provide
+                 long-term duration hedge or inflation protection.  Alternative
+                 government-gilt ETFs: GSEC10RBETF.NS (Mirae), CPSEETF.NS, or
+                 Bharat Bond ETF series.
                  ^IRX (13-week T-Bill yield) was used in Phase 1 but is a YIELD
-                 series — it CANNOT be used as a portfolio price.  It is retained in
-                 AssetSpec with kind=YIELD for reference.
+                 series — it CANNOT be used as a portfolio price.  It is retained
+                 in AssetSpec with kind=YIELD for reference.
 
     vix
         ^INDIAVIX — NSE India Volatility Index (India VIX).
@@ -157,12 +159,14 @@ class TickerConfig:
     bond: AssetSpec = field(default_factory=lambda: AssetSpec(
         ticker="LIQUIDBEES.NS",
         kind=SeriesKind.PRICE,
-        description="Nippon India Liquid Bees ETF (NSE, INR)",
+        description="Nippon India Liquid Bees — INR-denominated liquid-bond / cash-equivalent proxy (NSE)",
         currency="INR",
         notes=(
-            "Liquid/overnight Indian ETF tracking Nifty Liquid Bond Index. "
-            "Very low volatility — used as a cash-equivalent / defensive bucket. "
+            "Liquid/overnight Indian ETF tracking the Nifty Liquid Bond Index. "
+            "Very low volatility — used as a defensive / cash-equivalent bucket. "
             "Has continuous NAV history back to 2009 via yfinance. "
+            "Limitation: short duration. NOT a sovereign bond, government gilt, "
+            "or 10-year G-Sec; does not provide long-term duration hedge. "
             "The original SBI Magnum Gilt ticker (0P0001BVE8.BO) was "
             "delisted from yfinance in 2026."
         ),
@@ -248,18 +252,24 @@ class DataConfig:
     """
     Configuration parameters for market data acquisition and validation.
 
+    A naturally constant price is not missing data. Forward-fill is only used
+    to bridge short, accidental gaps — never to manufacture long stretches
+    of data.
+
     Attributes:
         default_start: Default start date string (YYYY-MM-DD) for history downloads.
         default_end: Default end date string or None (uses today).
         forward_fill_limit: Maximum consecutive trading days to forward-fill prices.
-            Set to 0 to disable forward-filling entirely.
+            Strictly capped at 3 in this submission.  Set to 0 to disable.
+            Backward-fill is NEVER applied.  Residual gaps cause rows to be dropped
+            or execution to fail with a clear error.
         cache_dir: Directory for local CSV/Parquet caches. None disables caching.
         price_field: yfinance column to use as the canonical price series.
     """
 
     default_start: str = "2010-01-01"
     default_end: Optional[str] = None
-    forward_fill_limit: int = 252
+    forward_fill_limit: int = 3
     cache_dir: Optional[str] = "data/cache"
     price_field: str = "Close"
 

@@ -1,12 +1,17 @@
 """Cost sensitivity sweep: rerun the full walk-forward backtest at 5 bps and 10 bps.
 
-Loads the cached CSV price data from data/cache/, or downloads fresh if missing.
-Then re-runs the full walk-forward backtest at the two transaction-cost levels.
-Writes a comparison table to results/cost_sensitivity.csv.
+Requires the user to supply the same exact real-market dataset used for the
+official run, via --data-path.  This script never auto-selects files via glob
+or downloads synthetic data.
+
+Usage:
+    python scripts/cost_sensitivity.py --data-path data/submission_market_data.csv
 """
 from __future__ import annotations
 
-import glob
+import argparse
+import hashlib
+import json
 import os
 import sys
 from pathlib import Path
@@ -14,28 +19,54 @@ from pathlib import Path
 import pandas as pd
 
 from regime_shift.config import RegimeShiftConfig
-from regime_shift.data import download_market_data, load_market_data_csv
+from regime_shift.data import load_market_data_csv
 from regime_shift.backtest import run_walk_forward_backtest
 from regime_shift.metrics import compute_performance_metrics
 
 
-def _load_prices(cfg: RegimeShiftConfig) -> pd.DataFrame:
-    # 1. Try cached CSV files in data/cache/
-    cache_dir = Path(cfg.data.cache_dir) if cfg.data.cache_dir else None
-    cached = sorted(glob.glob(str(cache_dir / "market_data_*.csv"))) if cache_dir else []
-    if cached:
-        print(f"Loading cached data from {cached[-1]} ...")
-        return load_market_data_csv(cached[-1], config=cfg)
-    # 2. Fallback: download online
-    print("No cached file found — downloading online ...")
-    return download_market_data(config=cfg, cache=True)
+def parse_args() -> argparse.Namespace:
+    parser = argparse.ArgumentParser(
+        description="Cost sensitivity sweep at 5 and 10 bps"
+    )
+    parser.add_argument(
+        "--data-path",
+        required=True,
+        help="Path to the SAME real-market dataset used for the official run "
+             "(e.g. data/submission_market_data.csv).",
+    )
+    parser.add_argument(
+        "--output-dir",
+        default="results",
+        help="Output directory for the sensitivity table.",
+    )
+    return parser.parse_args()
+
+
+def sha256_of_file(path: str) -> str:
+    h = hashlib.sha256()
+    with open(path, "rb") as fh:
+        while True:
+            chunk = fh.read()
+            if not chunk:
+                break
+            h.update(chunk)
+    return h.hexdigest()
 
 
 def main() -> int:
-    cfg = RegimeShiftConfig()
+    args = parse_args()
 
+    if not Path(args.data_path).exists():
+        print(f"ERROR: data file not found: {args.data_path}", file=sys.stderr)
+        return 1
+
+    sha = sha256_of_file(args.data_path)
+    print(f"Data file: {args.data_path}")
+    print(f"Data SHA-256: {sha}")
+
+    cfg = RegimeShiftConfig()
     print(f"Loading price data ...")
-    prices = _load_prices(cfg)
+    prices = load_market_data_csv(path=args.data_path, config=cfg)
     print(f"Loaded {len(prices)} rows: {prices.index[0].date()} -> {prices.index[-1].date()}")
 
     rows = []
@@ -44,14 +75,15 @@ def main() -> int:
 
         result = run_walk_forward_backtest(
             prices=prices,
+            config=cfg,
             transaction_cost_bps=float(cost_bps),
         )
 
-        # Use Net returns (post-cost) — attribute names are snake_case
         metrics = compute_performance_metrics(
             returns=result.net_returns,
             gross_returns=result.gross_returns,
             turnover=result.turnover,
+            transaction_costs=result.transaction_costs,
         )
 
         rows.append({
@@ -68,16 +100,38 @@ def main() -> int:
             "Cost Drag": round(metrics.total_transaction_cost_drag, 4),
         })
         print(f"  Sharpe={metrics.sharpe_ratio:.3f}  CAGR={metrics.cagr:.4f}  "
-              f"MaxDD={metrics.maximum_drawdown:.4f}  CostDrag={metrics.total_transaction_cost_drag:.4f}")
+              f"MaxDD={metrics.maximum_drawdown:.4f}  "
+              f"CostDrag={metrics.total_transaction_cost_drag:.4f}")
 
     df = pd.DataFrame(rows)
     print("\n=== Cost Sensitivity Summary ===")
     print(df.to_string(index=False))
 
-    out = Path("results/cost_sensitivity.csv")
-    out.parent.mkdir(exist_ok=True)
+    out_dir = Path(args.output_dir)
+    out_dir.mkdir(exist_ok=True)
+    out = out_dir / "cost_sensitivity.csv"
     df.to_csv(out, index=False)
     print(f"\nWrote {out}")
+
+    # Also save a metadata sidecar for auditability
+    sidecar = out_dir / "cost_sensitivity_metadata.json"
+    diag = prices.attrs.get("data_diagnostics", {})
+    meta = {
+        "data_file": args.data_path,
+        "data_sha256": sha,
+        "first_date": str(prices.index[0].date()),
+        "last_date": str(prices.index[-1].date()),
+        "row_count": len(prices),
+        "tickers": list(cfg.col_to_ticker.values()),
+        "vix_included": False,
+        "ffill_cells_per_asset": diag.get("ffill_cells_per_asset", {}),
+        "dates_dropped": diag.get("dates_dropped", 0),
+        "sensitivity_rows": rows,
+    }
+    with open(sidecar, "w", encoding="utf-8") as fh:
+        json.dump(meta, fh, indent=2, default=str)
+    print(f"Wrote {sidecar}")
+
     return 0
 
 
