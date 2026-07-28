@@ -9,7 +9,7 @@ Executes the full pipeline:
     Leakage-safe feature engineering
         ↓
     Train-only StandardScaler
-        ↓
+    ↓
     3-state Gaussian HMM (Bull / Bear / Crisis)
         ↓
     Sequential regime inference
@@ -21,13 +21,14 @@ Executes the full pipeline:
     Performance metrics + charts
 
 Usage:
-    python run_submission.py --data-path data/prices.csv   # offline mode
-    python run_submission.py --start 2015-01-01 --end 2024-12-31  # online mode
+    python run_submission.py --data-path data/submission_market_data.csv --transaction-cost-bps 5 --output-dir results
 """
 
 from __future__ import annotations
 
 import argparse
+import hashlib
+import json
 import logging
 import os
 import sys
@@ -40,10 +41,7 @@ import numpy as np
 import pandas as pd
 
 from regime_shift.config import RegimeShiftConfig
-from regime_shift.data import download_market_data, load_market_data_csv
-from regime_shift.features import compute_raw_features, drop_feature_warmup
-from regime_shift.regime_model import fit_hmm, predict_current_state
-from regime_shift.portfolio import optimize_portfolio
+from regime_shift.data import load_market_data_csv
 from regime_shift.benchmarks import static_60_40_weights, equal_weight_weights
 from regime_shift.backtest import (
     run_walk_forward_backtest,
@@ -66,29 +64,14 @@ def parse_args() -> argparse.Namespace:
     )
     parser.add_argument(
         "--data-path",
-        default=None,
-        help="Path to CSV file with pre-downloaded price data (offline mode). "
-             "When provided, yfinance is never called.",
-    )
-    parser.add_argument(
-        "--start",
-        default="2010-01-01",
-        help="Start date for data download (YYYY-MM-DD). Default: 2010-01-01",
-    )
-    parser.add_argument(
-        "--end",
-        default=None,
-        help="End date for data download (YYYY-MM-DD). Default: today",
+        required=True,
+        help="Path to CSV file with pre-downloaded price data. "
+             "Required for submission runs. Example: data/submission_market_data.csv",
     )
     parser.add_argument(
         "--include-vix",
         action="store_true",
         help="Include VIX in features and pipeline.",
-    )
-    parser.add_argument(
-        "--no-cache",
-        action="store_true",
-        help="Disable data caching.",
     )
     parser.add_argument(
         "--transaction-cost-bps",
@@ -116,29 +99,39 @@ def parse_args() -> argparse.Namespace:
     return parser.parse_args()
 
 
-def validate_args(args: argparse.Namespace) -> None:
-    """Validate CLI arguments."""
-    if args.transaction_cost_bps < 5 or args.transaction_cost_bps > 10:
-        logger.warning(
-            "Transaction cost %.1f bps is outside the official range [5, 10] bps. "
-            "Official submissions should use 5-10 bps.",
-            args.transaction_cost_bps,
-        )
+def sha256_of_file(path: str) -> str:
+    h = hashlib.sha256()
+    with open(path, "rb") as fh:
+        while True:
+            chunk = fh.read()
+            if not chunk:
+                break
+            h.update(chunk)
+    return h.hexdigest()
 
 
 def main() -> int:
-    """
-    Execute the full RegimeShift pipeline.
-
-    Returns:
-        Exit code (0 = success, 1 = failure).
-    """
+    """Execute the full RegimeShift pipeline."""
     args = parse_args()
-    validate_args(args)
+
+    if args.transaction_cost_bps < 5 or args.transaction_cost_bps > 10:
+        logger.warning(
+            "Transaction cost %.1f bps is outside the official range [5, 10] bps.",
+            args.transaction_cost_bps,
+        )
 
     logger.info("=" * 60)
-    logger.info("IIT Bombay Summer Quant 2026 — RegimeShift")
+    logger.info("IIT Bombay Summer Quant 2026 - RegimeShift")
     logger.info("=" * 60)
+
+    data_path = Path(args.data_path)
+    if not data_path.exists():
+        logger.error("Data file not found: %s", data_path.resolve())
+        return 1
+
+    sha = sha256_of_file(str(data_path))
+    logger.info("Data file: %s", data_path.name)
+    logger.info("Data SHA-256: %s", sha)
 
     # ---- Configuration ----
     config = RegimeShiftConfig()
@@ -150,25 +143,15 @@ def main() -> int:
     # ---- Step 1: Load data ----
     logger.info("Loading multi-asset price data...")
     try:
-        if args.data_path is not None:
-            # Offline mode: load from CSV, never call yfinance
-            logger.info("Offline mode: loading from %s", args.data_path)
-            prices = load_market_data_csv(path=args.data_path, config=config)
-        else:
-            # Online mode: download from yfinance
-            logger.info(
-                "Online mode: downloading %s → %s", args.start, args.end or "today"
-            )
-            prices = download_market_data(
-                config=config,
-                start=args.start,
-                end=args.end,
-                include_vix=args.include_vix,
-                cache=not args.no_cache,
-            )
+        prices = load_market_data_csv(path=str(data_path), config=config)
     except Exception as exc:
         logger.error("Data loading failed: %s", exc)
         return 1
+
+    # Annotate diagnostics with SHA-256
+    diag = prices.attrs.get("data_diagnostics", {})
+    diag["sha256"] = sha
+    prices.attrs["data_diagnostics"] = diag
 
     logger.info(
         "Loaded %d rows from %s to %s.",
@@ -200,8 +183,6 @@ def main() -> int:
 
     # ---- Step 3: Run benchmarks ----
     logger.info("Running benchmarks...")
-
-    # Benchmarks use the strategy's rebalance flags and start date
     strategy_rb_flags = strategy_result.rebalance_flags
     strategy_start = strategy_result.net_returns.index[0]
 
@@ -214,7 +195,6 @@ def main() -> int:
         start_date=strategy_start,
         risk_free_rate=args.risk_free_rate,
     )
-
     bench_eq = run_benchmark(
         prices=prices,
         weights=equal_weight_weights(),
@@ -229,16 +209,6 @@ def main() -> int:
         "Static 60/40": bench_60_40,
         "Equal Weight": bench_eq,
     }
-
-    for name, bench in benchmarks.items():
-        if bench.metrics:
-            logger.info(
-                "%s — CAGR: %.2f%%, Sharpe: %.2f, Max DD: %.2f%%",
-                name,
-                _pct(bench.metrics.get("CAGR", 0)),
-                bench.metrics.get("Sharpe", 0) or 0,
-                _pct(bench.metrics.get("Maximum Drawdown", 0)),
-            )
 
     # ---- Step 4: Generate charts ----
     logger.info("Generating charts...")
@@ -263,9 +233,10 @@ def main() -> int:
         output_dir=args.output_dir,
         risk_free_rate=args.risk_free_rate,
         annualization_factor=config.annualization_factor,
+        data_path=str(data_path),
+        data_sha256=sha,
     )
 
-    # ---- Step 6: Print summary ----
     _print_summary(strategy_result, benchmarks)
 
     logger.info("=" * 60)
@@ -274,39 +245,24 @@ def main() -> int:
     return 0
 
 
-def _override(config: RegimeShiftConfig, **kwargs) -> RegimeShiftConfig:
-    """Return a config copy with overridden fields."""
-    import copy
-    new_config = copy.deepcopy(config)
-    for key, value in kwargs.items():
-        if hasattr(new_config, key):
-            setattr(new_config, key, value)
-    return new_config
-
-
-def _pct(value: Optional[float]) -> float:
-    """Convert decimal to percentage for logging."""
+def _pct(value) -> float:
     if value is None or (isinstance(value, float) and np.isnan(value)):
         return 0.0
     return float(value) * 100.0
 
 
 def _save_results(
-    strategy_result: "BacktestResult",
+    strategy_result,
     benchmarks: dict,
     output_dir: str,
     risk_free_rate: float = 0.0,
     annualization_factor: int = 252,
+    data_path: str = "",
+    data_sha256: str = "",
 ) -> None:
-    """Save all result files to the output directory.
-
-    All six performance rows use the same ``risk_free_rate`` and
-    ``annualization_factor`` so the strategy and the benchmarks are
-    directly comparable.
-    """
+    """Save all result files to the output directory."""
     os.makedirs(output_dir, exist_ok=True)
 
-    # Daily results: include benchmark gross/net columns as required by §9.
     daily = pd.DataFrame({
         "strategy_gross_return": strategy_result.gross_returns,
         "strategy_net_return": strategy_result.net_returns,
@@ -323,25 +279,20 @@ def _save_results(
         b = benchmarks["Equal Weight"]
         daily["equal_weight_gross_return"] = b.gross_returns
         daily["equal_weight_net_return"] = b.net_returns
-
     daily.to_csv(os.path.join(output_dir, "daily_results.csv"))
 
-    # Weights (target weights at rebalance dates)
     strategy_result.target_weights.to_csv(os.path.join(output_dir, "weights.csv"))
 
-    # Regimes
     regime_df = pd.DataFrame({
         "regime": strategy_result.regime_series,
         **strategy_result.regime_probabilities.to_dict(),
     })
     regime_df.to_csv(os.path.join(output_dir, "regimes.csv"))
 
-    # Transition matrix
     strategy_result.transition_matrix.to_csv(
         os.path.join(output_dir, "transition_matrix.csv")
     )
 
-    # Performance summary — exactly six rows.
     rows = []
     for label, is_gross in [
         ("RegimeShift Gross", True),
@@ -377,29 +328,25 @@ def _save_results(
                     annualization_factor=annualization_factor,
                 )
                 row.update(metrics.to_dict())
-            else:
-                # Empty placeholder row — should not happen in normal flow.
-                row.update({
-                    "Total Return": None, "CAGR": None,
-                    "Annualised Volatility": None, "Sharpe": None,
-                    "Sortino": None, "Maximum Drawdown": None,
-                    "Calmar": None, "Total Turnover": None,
-                    "Annualised Turnover": None,
-                    "Transaction Cost Drag": None,
-                })
         rows.append(row)
 
     pd.DataFrame(rows).to_csv(
         os.path.join(output_dir, "performance_summary.csv"), index=False
     )
 
-    # Run metadata
     metadata = dict(strategy_result.config_metadata or {})
     metadata["risk_free_rate"] = float(risk_free_rate)
     metadata["annualization_factor"] = int(annualization_factor)
-    import json
+    metadata["data_file"] = data_path
+    metadata["data_sha256"] = data_sha256
+    metadata["rebalance_count"] = int(strategy_result.rebalance_flags.sum())
+    metadata["regime_counts"] = (
+        strategy_result.regime_series.value_counts().to_dict()
+    )
+
     def _json_default(obj):
         return str(obj)
+
     with open(os.path.join(output_dir, "run_metadata.json"), "w", encoding="utf-8") as fh:
         json.dump(metadata, fh, indent=2, default=_json_default)
 
@@ -407,7 +354,6 @@ def _save_results(
 
 
 def _print_summary(strategy_result, benchmarks: dict) -> None:
-    """Print a formatted summary table."""
     print("\n" + "=" * 70)
     print("PERFORMANCE SUMMARY")
     print("=" * 70)

@@ -206,6 +206,7 @@ def _build_aligned_frame(
         "total_dates_before_alignment": total_dates_pre,
         "dates_dropped": dropped,
         "ffill_cells_applied": ffill_applied,
+        "ffill_mask": fill_mask,
     }
 
     return clean, diagnostics
@@ -308,10 +309,21 @@ def download_market_data(
         required_cols=cfg.core_assets,
         allow_missing=False,
         forward_fill_limit=cfg.data.forward_fill_limit,
+        fill_mask=diagnostics.get("ffill_mask"),
     )
 
     if cache and cfg.data.cache_dir:
         _write_cache(aligned, cfg.data.cache_dir, start, end, include_vix)
+
+    # Store diagnostics on DataFrame attrs so run_metadata can pick them up.
+    mask = diagnostics.get("ffill_mask")
+    per_asset = {c: int(mask[c].sum()) for c in mask.columns} if mask is not None else {}
+    aligned.attrs["data_diagnostics"] = {
+        "ffill_cells_total": diagnostics.get("ffill_cells_applied", 0),
+        "ffill_cells_per_asset": per_asset,
+        "dates_dropped": diagnostics.get("dates_dropped", 0),
+        "rows_after_load": len(aligned),
+    }
 
     return aligned
 
@@ -338,7 +350,9 @@ def load_market_data_csv(
             Defaults to config.data.forward_fill_limit.
 
     Returns:
-        Validated pd.DataFrame with required asset columns.
+        Validated pd.DataFrame with required asset columns and a
+        ``data_diagnostics`` attr containing fill counts per asset and
+        dates dropped.
 
     Raises:
         FileNotFoundError: If the CSV file does not exist.
@@ -356,6 +370,28 @@ def load_market_data_csv(
     # Normalise the index (handles tz-aware exports)
     df = _normalise_index(df)
 
+    # Re-apply the canonical forward-fill of up to ffl days so that a CSV
+    # recorded with raw NaNs is still bridged conservatively and the cell-
+    # count diagnostic reflects the same policy the runtime uses.
+    raw_len = len(df)
+    if ffl > 0:
+        was_nan_before = df.isna()
+        filled = df.ffill(limit=ffl)
+        fill_mask = was_nan_before & filled.notna()
+        ffill_cells = int(fill_mask.sum().sum())
+        # per-asset fill counts
+        per_asset = {c: int(fill_mask[c].sum()) for c in df.columns}
+        # Drop residual NaNs in required columns
+        aligned = filled.dropna(subset=[c for c in _CORE_COLS if c in filled.columns])
+        dropped = raw_len - len(aligned)
+    else:
+        ffill_cells = 0
+        per_asset = {c: 0 for c in df.columns}
+        aligned = df
+        dropped = 0
+
+    df = aligned
+
     # Ensure deterministic column order (only include columns that exist)
     ordered = [c for c in _CORE_COLS + _OPTIONAL_COLS if c in df.columns]
     extra = [c for c in df.columns if c not in ordered]
@@ -366,7 +402,18 @@ def load_market_data_csv(
         required_cols=cfg.core_assets,
         allow_missing=False,
         forward_fill_limit=ffl,
+        fill_mask=fill_mask if ffl > 0 else None,
     )
+
+    # Diagnostics for run_metadata.json
+    df.attrs["data_diagnostics"] = {
+        "data_path": str(p.resolve()),
+        "ffill_limit": ffl,
+        "ffill_cells_total": ffill_cells,
+        "ffill_cells_per_asset": per_asset,
+        "dates_dropped": dropped,
+        "rows_after_load": len(df),
+    }
 
     logger.info("Loaded %d rows from %s.", len(df), p.name)
     return df

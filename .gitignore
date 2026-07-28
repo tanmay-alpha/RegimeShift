@@ -35,8 +35,6 @@ htmlcov/
 
 # Jupyter Notebooks
 .ipynb_checkpoints/
-
-# Notebook outputs (regenerated on commit)
 notebooks/results/
 
 # IDEs & Editors
@@ -49,18 +47,10 @@ notebooks/results/
 Thumbs.db
 *.log
 
-# Results outputs
-results/*.png
-results/*.csv
-!results/.gitkeep
-!results/equity_curves.png
-!results/drawdowns.png
-!results/regime_price_chart.png
-!results/regime_probabilities.png
-!results/transition_matrix.png
-!results/portfolio_weights.png
-!results/cost_sensitivity.csv
-
-# Data cache (auto-generated; not committed)
+# Submission data (the single source of truth CSV)
+!data/submission_market_data.csv
+# Cache is auto-generated — not committed
 data/cache/
-*.parquet
+
+# All submission result artifacts are tracked:
+# results/*.csv, results/*.png, results/*.json

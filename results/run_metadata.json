@@ -34,5 +34,28 @@
   "package_version": "1.0.0",
   "random_seed": 42,
   "risk_free_rate": 0.0,
-  "annualization_factor": 252
+  "annualization_factor": 252,
+  "data_file": "data\\submission_market_data.csv",
+  "data_sha256": "bab5a877c16b189640504d150d2c37b805c8f17a2426e588c9a71b03e15391b7",
+  "data_tickers": [
+    "^NSEI",
+    "GOLDBEES.NS",
+    "LIQUIDBEES.NS",
+    "^INDIAVIX"
+  ],
+  "forward_fill_limit": 3,
+  "ffill_cells_total": 0,
+  "ffill_cells_per_asset": {
+    "equity": 0,
+    "gold": 0,
+    "bond": 0
+  },
+  "dates_dropped": 0,
+  "rows_after_load": 4090,
+  "rebalance_count": 178,
+  "regime_counts": {
+    "Bull": 1464,
+    "Bear": 1218,
+    "Crisis": 1050
+  }
 }
