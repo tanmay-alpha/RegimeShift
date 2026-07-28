@@ -45,6 +45,13 @@ def _all_cell_sources(nb: dict) -> list:
             out.append("".join(src))
         else:
             out.append(str(src))
+        # Include output text so artifact filenames in print statements are captured
+        for o in cell.get("outputs", []):
+            ot = o.get("text", "")
+            if isinstance(ot, list):
+                out.append("".join(ot))
+            elif isinstance(ot, str):
+                out.append(ot)
     return out
 
 
@@ -105,3 +112,64 @@ def test_required_code_cells_have_execution_count():
             "A code cell has null execution_count — notebook has not been "
             "executed end-to-end."
         )
+
+
+def test_code_cells_have_outputs():
+    """End-to-end executed notebooks produce output for every code cell.
+
+    A code cell that executed and produced nothing would have an empty
+    ``outputs`` list.  We require at least one output per cell to ensure
+    that the notebook was genuinely run (not just filled in by hand).
+    """
+    nb = _load_notebook()
+    code_cells = [c for c in nb["cells"] if c.get("cell_type") == "code"]
+    no_output = [
+        i for i, c in enumerate(code_cells)
+        if not c.get("outputs")
+    ]
+    assert not no_output, (
+        f"Code cells at positions {no_output} have no outputs — "
+        f"notebook may not have been executed end-to-end."
+    )
+
+
+def test_notebook_references_submission_artifacts():
+    """Notebook must produce or reference all required submission artifacts.
+
+    Checks that the notebook source code references every artifact that is
+    part of the official submission (either by writing or by displaying).
+    """
+    nb = _load_notebook()
+    full_text = "\n".join(_all_cell_sources(nb))
+    required_refs = [
+        "performance_summary.csv",     # summary metrics written by cell-24
+        # The 6 chart PNGs written by generate_all_charts
+        "regime_price_chart.png",
+        "transition_matrix.png",
+        "equity_curves.png",
+        "drawdowns.png",
+        "portfolio_weights.png",
+        "regime_probabilities.png",
+    ]
+    missing = [r for r in required_refs if r not in full_text]
+    assert not missing, (
+        f"Notebook does not reference submission artifacts: {missing}"
+    )
+
+
+def test_notebook_references_results_charts():
+    """Notebook must embed the six reference charts produced by ``generate_all_charts()``."""
+    nb = _load_notebook()
+    full_text = "\n".join(_all_cell_sources(nb))
+    required_charts = [
+        "regime_price_chart.png",
+        "transition_matrix.png",
+        "equity_curves.png",
+        "drawdowns.png",
+        "portfolio_weights.png",
+        "regime_probabilities.png",
+    ]
+    missing = [c for c in required_charts if c not in full_text]
+    assert not missing, (
+        f"Notebook does not reference results charts: {missing}"
+    )

@@ -41,6 +41,7 @@ notebooks/results/
 .vscode/
 .idea/
 *.swp
+.claude/
 
 # OS generated
 .DS_Store

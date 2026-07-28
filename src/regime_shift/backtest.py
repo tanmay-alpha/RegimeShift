@@ -652,6 +652,10 @@ def _build_metadata(
     """Build run metadata dictionary."""
     diag = getattr(prices, "attrs", {}).get("data_diagnostics", {})
     hmm_conf = config.hmm_config
+    # ``result_dates`` is the backtest horizon (may be shorter than the
+    # full price history due to warmup / pre-roll).  ``rows_after_load``
+    # captures the raw row count of the loaded CSV; both are reported
+    # explicitly so downstream consumers can distinguish them.
     return {
         "date_range": {
             "start": str(result_dates[0]),
@@ -659,6 +663,10 @@ def _build_metadata(
             "n_observations": len(result_dates),
             "original_start": str(prices.index[0]),
             "original_end": str(prices.index[-1]),
+        },
+        "row_counts": {
+            "backtest_observations": len(result_dates),
+            "rows_after_load": diag.get("rows_after_load", len(prices)),
         },
         "tickers": {
             "equity": config.tickers.equity_ticker,
@@ -698,5 +706,4 @@ def _build_metadata(
         "ffill_cells_total": diag.get("ffill_cells_total", 0),
         "ffill_cells_per_asset": diag.get("ffill_cells_per_asset", {}),
         "dates_dropped": diag.get("dates_dropped", 0),
-        "rows_after_load": diag.get("rows_after_load", len(result_dates)),
     }
