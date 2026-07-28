@@ -128,6 +128,7 @@ def _notebook_json(
     ffill_total = diag.get("ffill_cells_total", 0)
     ffill_per_asset = diag.get("ffill_cells_per_asset", {})
     dates_dropped = diag.get("dates_dropped", 0)
+    ffill_per_asset_str = str(ffill_per_asset)
     data_path_short = "data/submission_market_data.csv"
 
     cells.append(_md(
@@ -159,7 +160,7 @@ def _notebook_json(
         f'display(prices.describe())\n'
         '\n'
         f'print(f"Forward-filled cells: {ffill_total}")\n'
-        f'print(f"Per-asset fill counts: {ffill_per_asset}")\n'
+        f'print("Per-asset fill counts:", {ffill_per_asset_str})\n'
         f'print(f"Dates dropped: {dates_dropped}")\n'
         f'print(f"Data file SHA-256: {sha256}")\n'
     ))
@@ -368,6 +369,7 @@ def _notebook_json(
     ))
     cells.append(_code(
         'from regime_shift.metrics import compute_performance_metrics\n'
+        'import pandas as pd\n'
         '\n'
         'def _metrics_for(label, returns, gross_returns, turnover, costs, rf=0.0):\n'
         '    m = compute_performance_metrics(\n'
@@ -434,19 +436,36 @@ def _notebook_json(
         '    print(f"  {p}")\n'
     ))
 
-    # ---- 14. Robustness ----
+    # ---- 14. Conclusions and Limitations ----
     cells.append(_md(
-        "### 14. Robustness Checks\n\n"
-        f"**5 bps vs 10 bps sensitivity** (real data):\n\n"
-        f"| Cost | Sharpe | CAGR | Max DD | Cost Drag |\n"
-        f"|---|---|---|---|---|\n"
+        "### 14. Conclusions and Limitations\n\n"
+        "**Strengths:**\n"
+        "- Fully leakage-safe walk-forward pipeline\n"
+        "- Deterministic regime mapping based on training-period statistics\n"
+        "- CVXPY regime-specific convex optimization\n"
+        "- Exact transaction-cost drag definition\n"
+        "- Automated test suite covering timing, metrics, charts, CLI, and notebook\n\n"
+        "**Limitations:**\n"
+        f"- Bond proxy: {bond_desc}. "
+        "Short duration means no long-term rate hedge.\n"
+        "- Gaussian HMM assumes continuous Gaussian emissions — Student-t "
+        "distributions may better capture fat tails.\n"
+        f"- VIX is {'included' if vix_included else 'omitted'}; without it, "
+        "Crisis detection relies solely on volatility and momentum.\n"
+        "- Three assets only; broader diversification requires expanding core_assets.\n"
+        "- No FX conversion — all assets are INR-denominated.\n"
+        "- The 5 bps results are the official submission figures; "
+        "the 10 bps sensitivity is a robustness check, not a second submission.\n\n"
+        "**Sensitivity (5 bps vs 10 bps) — real data:**\n\n"
+        "| Cost | Sharpe | CAGR | Max DD | Cost Drag |\n"
+        "|---|---|---|---|---|\n"
         f"| 5 bps | {sensitivity_5['Sharpe']:.3f} | {sensitivity_5['CAGR']:.4f} | "
         f"{sensitivity_5['Max Drawdown']:.4f} | {sensitivity_5['Cost Drag']:.4f} |\n"
         f"| 10 bps | {sensitivity_10['Sharpe']:.3f} | {sensitivity_10['CAGR']:.4f} | "
         f"{sensitivity_10['Max Drawdown']:.4f} | {sensitivity_10['Cost Drag']:.4f} |\n\n"
-        f"Doubling transaction costs from 5 to 10 bps had a limited effect on Sharpe "
-        f"and CAGR in this sample, although cumulative cost drag increased materially. "
-        f"This sensitivity result does not guarantee future robustness.\n\n"
+        "Doubling transaction costs from 5 to 10 bps had a limited effect on Sharpe "
+        "and CAGR in this sample, although cumulative cost drag increased materially. "
+        "This sensitivity result does not guarantee future robustness.\n\n"
         "**Transition matrix sanity:** The matrix is a valid stochastic matrix "
         "(rows sum to 1, no identity placeholder).\n\n"
         "**Drawdown math:** Drawdowns are computed from (1+r).cumprod() / "
@@ -466,31 +485,9 @@ def _notebook_json(
         f'print("5 bps vs 10 bps — real data results shown in the table above.")\n'
         f'print(f"Forward-fill limit: {config.data.forward_fill_limit} days")\n'
         f'print(f"Total forward-filled cells: {ffill_total}")\n'
-        f'print(f"Per-asset fill counts: {ffill_per_asset}")\n'
+        f'print("Per-asset fill counts:", {ffill_per_asset_str})\n'
         f'print(f"Dates dropped (residual NaNs): {dates_dropped}")\n'
         f'print(f"HMM uses rolling training window only (not full dataset)")\n'
-    ))
-
-    # ---- 15. Conclusions ----
-    cells.append(_md(
-        "### 15. Conclusions and Limitations\n\n"
-        "**Strengths:**\n"
-        "- Fully leakage-safe walk-forward pipeline\n"
-        "- Deterministic regime mapping based on training-period statistics\n"
-        "- CVXPY regime-specific convex optimization\n"
-        "- Exact transaction-cost drag definition\n"
-        "- Automated test suite covering timing, metrics, charts, CLI, and notebook\n\n"
-        "**Limitations:**\n"
-        f"- Bond proxy: {bond_desc}. "
-        "Short duration means no long-term rate hedge.\n"
-        "- Gaussian HMM assumes continuous Gaussian emissions — Student-t "
-        "distributions may better capture fat tails.\n"
-        f"- VIX is {'included' if vix_included else 'omitted'}; without it, "
-        "Crisis detection relies solely on volatility and momentum.\n"
-        "- Three assets only; broader diversification requires expanding core_assets.\n"
-        "- No FX conversion — all assets are INR-denominated.\n"
-        "- The 5 bps results are the official submission figures; "
-        "the 10 bps sensitivity is a robustness check, not a second submission."
     ))
 
     nb = {
