@@ -361,8 +361,20 @@ def load_market_data_csv(
     cfg = config or RegimeShiftConfig()
     ffl = forward_fill_limit if forward_fill_limit is not None else cfg.data.forward_fill_limit
     p = Path(path)
-    if not p.exists():
-        raise FileNotFoundError(f"Market data CSV not found: {p.resolve()}")
+    # If the path does not exist as-is (e.g. notebook CWD is notebooks/),
+    # also try ../<path> and ../../<path> so that "data/foo.csv" works
+    # from notebooks/, scripts/, and the project root.
+    candidates = [p]
+    if not p.is_absolute():
+        candidates += [Path("..") / p, Path("../..") / p]
+    resolved = next((c for c in candidates if c.exists()), None)
+    if resolved is None:
+        tried = ", ".join(str(c.resolve()) for c in candidates)
+        raise FileNotFoundError(
+            f"Market data CSV not found: {path} "
+            f"(tried: {tried})"
+        )
+    p = resolved
 
     logger.info("Loading market data from CSV: %s", p)
     df = pd.read_csv(p, index_col=0, parse_dates=True)
