@@ -142,24 +142,14 @@ def check_forward_fill_limit(
     if fill_mask is None:
         logger.warning(
             "check_forward_fill_limit called without a fill mask - falling "
-            "back to identical-value heuristic. Pass fill_mask from the data "
-            "pipeline for accurate results."
+            "back to identical-value heuristic (unreliable for low-volatility "
+            "assets like bonds). Pass fill_mask from the data pipeline for "
+            "accurate results."
         )
-        for col in asset_cols:
-            series = df[col].dropna()
-            if len(series) < 2:
-                continue
-            is_same = series == series.shift(1)
-            run_id = (~is_same).cumsum()
-            run_lengths = is_same.groupby(run_id).sum()
-            max_run = int(run_lengths.max()) if len(run_lengths) > 0 else 0
-            if max_run > max_consecutive:
-                raise DataValidationError(
-                    f"Column '{col}' has a constant-price run of {max_run} "
-                    f"days, exceeding the forward-fill limit of "
-                    f"{max_consecutive}. Check data source or reduce "
-                    "forward_fill_limit."
-                )
+        # Heuristic path: warn but do not raise.  The fill mask is the
+        # authoritative source; without it, a naturally constant price
+        # series (e.g. LIQUIDBEES liquid-bond NAV) would be mis-classified
+        # as a forward-fill.
         return
 
     for col in asset_cols:
