@@ -170,7 +170,7 @@ RegimeShift/
 │       ├── regime_model.py             # 3-State Gaussian HMM
 │       └── validation.py               # Data contract validation
 │
-├── tests/                              # Test suite (286 tests)
+├── tests/                              # Test suite (271 tests)
 │   ├── test_backtest.py                # Backtest engine & benchmark tests
 │   ├── test_cli.py                     # CLI behaviour tests
 │   ├── test_config.py                  # Configuration tests
@@ -203,6 +203,7 @@ RegimeShift/
 ```bash
 git clone https://github.com/tanmay-alpha/RegimeShift.git
 cd RegimeShift
+git checkout polish/final-submission
 pip install -e .
 ```
 
@@ -225,7 +226,7 @@ python run_submission.py --data-path data/submission_market_data.csv --include-v
 ### Running Test Suite
 ```bash
 pytest -v
-# 286 tests covering leakage, HMM, portfolio optimizer, backtest math,
+# 271 tests covering leakage, HMM, portfolio optimizer, backtest math,
 # charts, CLI, and notebook structure
 ```
 
