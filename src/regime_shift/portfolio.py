@@ -26,8 +26,6 @@ from regime_shift.exceptions import PortfolioOptimizationError
 
 logger = logging.getLogger(__name__)
 
-logger = logging.getLogger(__name__)
-
 # Tradable asset names in deterministic order
 _ASSET_ORDER = ["equity", "gold", "bond"]
 
