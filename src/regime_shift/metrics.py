@@ -60,6 +60,9 @@ class PerformanceMetrics:
             "Total Turnover": _fmt(self.total_turnover),
             "Annualised Turnover": _fmt(self.annualized_turnover),
             "Transaction Cost Drag": _fmt(self.total_transaction_cost_drag),
+            "n_observations": _fmt_value(self.n_observations),
+            "risk_free_rate": _fmt_value(self.risk_free_rate),
+            "annualization_factor": _fmt_value(self.annualization_factor),
         }
 
 
@@ -67,6 +70,19 @@ def _fmt(val: Optional[float]) -> Optional[float]:
     if val is None or (isinstance(val, float) and np.isnan(val)):
         return None
     return round(float(val), 4)
+
+
+def _fmt_value(val) -> object:
+    """Round floats; preserve ints and other types unchanged."""
+    if val is None:
+        return None
+    if isinstance(val, float) and np.isnan(val):
+        return None
+    if isinstance(val, (int, np.integer)):
+        return int(val)
+    if isinstance(val, float):
+        return round(float(val), 4)
+    return val
 
 
 def compute_performance_metrics(
@@ -158,7 +174,7 @@ def compute_performance_metrics(
     # Sharpe ratio
     mean_excess = float(excess.mean())
     std_excess = float(excess.std(ddof=1))
-    sharpe = (mean_excess / std_excess * np.sqrt(annualization_factor)) if std_excess > 0 else float("nan")
+    sharpe = (mean_excess / std_excess * np.sqrt(annualization_factor)) if std_excess > 0 else 0.0
 
     # Sortino ratio (downside deviation of excess returns)
     downside_excess = excess[excess < 0]
@@ -168,7 +184,7 @@ def compute_performance_metrics(
     else:
         sortino = float("nan")
 
-    # Maximum drawdown (positive 0–1 value)
+    # Maximum drawdown (positive 0â€“1 value)
     cummax = equity_curve.cummax()
     drawdown = equity_curve / cummax - 1
     max_dd = float(abs(drawdown.min()))

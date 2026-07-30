@@ -4,19 +4,19 @@ Leakage-safe walk-forward backtesting engine.
 Implements the complete RegimeShift backtest pipeline:
 
     Real prices + optional VIX
-        ↓
+        â†“
     Leakage-safe features
-        ↓
+        â†“
     Train-only scaling
-    ↓
+    â†“
     3-state Gaussian HMM
-        ↓
+        â†“
     Regime inference
-        ↓
+        â†“
     CVXPY portfolio optimization
-        ↓
+        â†“
     Weight drift + transaction costs
-        ↓
+        â†“
     Net returns
 
 All information used at decision date d is restricted to data through d-1.
@@ -225,7 +225,7 @@ def run_walk_forward_backtest(
 
     cost_rate = config.transaction_cost_bps / 10000.0
 
-    # Output arrays — sized to full date range
+    # Output arrays â€” sized to full date range
     # We'll trim to the first successful allocation date later
     gross_returns_arr = np.zeros(n_dates)
     net_returns_arr = np.zeros(n_dates)
@@ -483,7 +483,7 @@ def run_walk_forward_backtest(
         rebalance_flags=rebalance_s,
         metrics=metrics.to_dict() if metrics else None,
         hmm_diagnostics=hmm_diag,
-        config_metadata=_build_metadata(config, prices, has_vix, dates_series),
+        config_metadata=_build_metadata(config, prices, has_vix, dates_series, risk_free_rate),
     )
 
     return result
@@ -648,6 +648,7 @@ def _build_metadata(
     prices: pd.DataFrame,
     has_vix: bool,
     result_dates: pd.DatetimeIndex,
+    risk_free_rate: float = 0.0,
 ) -> Dict:
     """Build run metadata dictionary."""
     diag = getattr(prices, "attrs", {}).get("data_diagnostics", {})
@@ -656,6 +657,35 @@ def _build_metadata(
     # full price history due to warmup / pre-roll).  ``rows_after_load``
     # captures the raw row count of the loaded CSV; both are reported
     # explicitly so downstream consumers can distinguish them.
+    # Compute actual feature list used in this run
+    features_used = [
+        "equity_log_return_1d",
+        "equity_momentum_21d",
+        "equity_momentum_63d",
+        "equity_volatility_21d",
+        "equity_volatility_ratio_21_63",
+        "equity_gold_correlation_63d",
+        "equity_bond_correlation_63d",
+    ]
+    if has_vix:
+        features_used += ["vix_change_5d", "vix_level"]
+
+    # Tickers actually present in the dataset (filter by column presence)
+    configured_tickers = {
+        "equity": config.tickers.equity_ticker,
+        "gold": config.tickers.gold_ticker,
+        "bond": config.tickers.bond_ticker,
+        "optional_vix": config.tickers.vix_ticker,
+    }
+    dataset_tickers = {
+        col: tk for col, tk in zip(
+            [config.equity_col, config.gold_col, config.bond_col, config.vix_col],
+            [config.tickers.equity_ticker, config.tickers.gold_ticker,
+             config.tickers.bond_ticker, config.tickers.vix_ticker],
+        )
+        if col in prices.columns
+    }
+
     return {
         "date_range": {
             "start": str(result_dates[0]),
@@ -668,12 +698,8 @@ def _build_metadata(
             "backtest_observations": len(result_dates),
             "rows_after_load": diag.get("rows_after_load", len(prices)),
         },
-        "tickers": {
-            "equity": config.tickers.equity_ticker,
-            "gold": config.tickers.gold_ticker,
-            "bond": config.tickers.bond_ticker,
-            "vix": config.tickers.vix_ticker if has_vix else "omitted",
-        },
+        "configured_tickers": configured_tickers,
+        "dataset_tickers": dataset_tickers,
         "vix_included": has_vix,
         "transaction_cost_bps": config.transaction_cost_bps,
         "train_window": config.train_window,
@@ -684,24 +710,14 @@ def _build_metadata(
             "n_iter": hmm_conf.n_iter,
             "random_state": config.random_seed,
         },
-        "feature_list": [
-            "equity_log_return_1d",
-            "equity_momentum_21d",
-            "equity_momentum_63d",
-            "equity_volatility_21d",
-            "equity_volatility_ratio_21_63",
-            "equity_gold_correlation_63d",
-            "equity_bond_correlation_63d",
-        ]
-        + (["vix_change_5d", "vix_level"] if has_vix else []),
+        "features_used": features_used,
         "package_version": "1.0.0",
         "random_seed": config.random_seed,
-        "risk_free_rate": 0.0,
+        "risk_free_rate": risk_free_rate,
         "annualization_factor": config.annualization_factor,
         # Data diagnostics — populated by data.py
         "data_file": diag.get("data_path", ""),
         "data_sha256": diag.get("sha256", ""),
-        "data_tickers": list(config.col_to_ticker.values()),
         "forward_fill_limit": config.data.forward_fill_limit,
         "ffill_cells_total": diag.get("ffill_cells_total", 0),
         "ffill_cells_per_asset": diag.get("ffill_cells_per_asset", {}),
