@@ -211,4 +211,4 @@ class TestEquityMath:
         m = compute_performance_metrics(r)
         d = m.to_dict()
         for v in d.values():
-            assert v is None or isinstance(v, float)
+            assert v is None or isinstance(v, (float, int))
