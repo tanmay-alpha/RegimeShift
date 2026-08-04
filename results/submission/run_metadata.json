@@ -25,17 +25,23 @@
     "bond": "LIQUIDBEES.NS"
   },
   "vix_included": false,
-  "transaction_cost_bps": 5.0,
   "train_window": 252,
   "rebalance_frequency": 21,
   "hmm_n_restarts": 3,
-  "data_file": "data\\submission_market_data.csv",
   "random_seed": 42,
   "risk_free_rate": 0.0,
   "annualization_factor": 252,
   "dataset_path": "data/submission_market_data.csv",
   "dataset_sha256_canonical": "290c783af9fb803334388090c3b72df7a31f5fd580de62bb7a905250777226e7",
   "dataset_hash_policy": "CRLF and LF normalized to LF before hashing",
+  "cost_input_mode": "scenario",
+  "cost_scenario": "base",
+  "flat_cost_override_bps": null,
+  "effective_asset_cost_bps": {
+    "equity": 10.0,
+    "gold": 10.0,
+    "bond": 10.0
+  },
   "rebalance_count": 178,
   "regime_counts": {
     "Bull": 1428,
