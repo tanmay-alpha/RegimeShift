@@ -13,8 +13,18 @@ from typing import Any, Mapping
 
 
 def sha256_file(path: str | Path) -> str:
+    """Hash a dataset identically on Windows and Unix checkouts.
+
+    CSV source files are text artefacts and Git may normalize their line endings.
+    Canonicalizing only CSV line endings prevents an otherwise identical dataset
+    from invalidating a release manifest on CI.
+    """
     digest = hashlib.sha256()
-    with Path(path).open("rb") as handle:
+    target = Path(path)
+    with target.open("rb") as handle:
+        if target.suffix.lower() == ".csv":
+            digest.update(handle.read().replace(b"\r\n", b"\n"))
+            return digest.hexdigest()
         for chunk in iter(lambda: handle.read(1 << 20), b""):
             digest.update(chunk)
     return digest.hexdigest()

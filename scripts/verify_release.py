@@ -17,6 +17,9 @@ RESULTS = ROOT / "results" / "submission"
 def _sha256(path: Path) -> str:
     digest = hashlib.sha256()
     with path.open("rb") as handle:
+        if path.suffix.lower() == ".csv":
+            digest.update(handle.read().replace(b"\r\n", b"\n"))
+            return digest.hexdigest()
         for block in iter(lambda: handle.read(1 << 20), b""):
             digest.update(block)
     return digest.hexdigest()
