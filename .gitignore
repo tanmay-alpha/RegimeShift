@@ -55,3 +55,4 @@ data/cache/
 
 # All submission result artifacts are tracked:
 # results/*.csv, results/*.png, results/*.json
+/results_baseline/
