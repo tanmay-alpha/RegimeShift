@@ -32,8 +32,14 @@ def main() -> int:
         raise SystemExit(f"Missing release inputs: dataset={DATA.is_file()}, results={missing}")
     manifest = json.loads((RESULTS / "experiment_manifest.json").read_text(encoding="utf-8"))
     metadata = json.loads((RESULTS / "run_metadata.json").read_text(encoding="utf-8"))
-    if manifest["dataset_sha256"] != _sha256(DATA):
+    if manifest.get("dataset_sha256_canonical") != _sha256(DATA):
         raise SystemExit("Dataset hash does not match experiment manifest.")
+    if metadata.get("dataset_sha256_canonical") != manifest.get("dataset_sha256_canonical"):
+        raise SystemExit("Metadata and manifest dataset hashes disagree.")
+    if metadata.get("dataset_hash_policy") != manifest.get("dataset_hash_policy"):
+        raise SystemExit("Metadata and manifest hash policies disagree.")
+    if Path(manifest.get("dataset_path", "")).is_absolute() or "\\" in manifest.get("dataset_path", ""):
+        raise SystemExit("Manifest dataset path must be repository-relative and portable.")
     if metadata.get("execution_model") != "NEXT_CLOSE":
         raise SystemExit("Official results must use NEXT_CLOSE.")
     if "same-close" in (ROOT / "README.md").read_text(encoding="utf-8").lower() and "baseline_legacy" not in (ROOT / "README.md").read_text(encoding="utf-8"):
@@ -45,6 +51,11 @@ def main() -> int:
         raise SystemExit("Final results must not be empty.")
     if not len(daily) == len(timeline):
         raise SystemExit("Daily results and execution timeline must align.")
+    if summary["n_observations"].nunique() != 1:
+        raise SystemExit("All performance rows must share a common evaluation horizon.")
+    benchmark_columns = ["static_60_40_net_return", "equal_weight_net_return"]
+    if daily[benchmark_columns].isna().any().any():
+        raise SystemExit("Benchmark returns contain missing values on the strategy index.")
     if not {"signal_date", "execution_date", "return_date", "rebalance_flag"}.issubset(timeline.columns):
         raise SystemExit("Execution timeline does not expose causal event fields.")
     if (timeline.loc[timeline["rebalance_flag"], "execution_date"] != timeline.loc[timeline["rebalance_flag"], "return_date"]).any():

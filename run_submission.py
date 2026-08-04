@@ -50,7 +50,7 @@ from regime_shift.backtest import (
 from regime_shift.plots import generate_all_charts
 from regime_shift.metrics import compute_performance_metrics
 from regime_shift.execution import ExecutionCostModel
-from regime_shift.experiment import write_manifest
+from regime_shift.experiment import sha256_file, write_manifest
 
 logging.basicConfig(
     level=logging.INFO,
@@ -75,13 +75,12 @@ def parse_args() -> argparse.Namespace:
         action="store_true",
         help="Include VIX in features and pipeline.",
     )
-    parser.add_argument(
-        "--transaction-cost-bps",
-        type=float,
-        default=5.0,
-        help="Transaction cost in basis points. Official runs: 5-10 bps. Default: 5.0",
+    cost_group = parser.add_mutually_exclusive_group()
+    cost_group.add_argument(
+        "--transaction-cost-bps", type=float, default=None,
+        help="Flat per-asset one-way cost override in basis points.",
     )
-    parser.add_argument(
+    cost_group.add_argument(
         "--cost-scenario",
         choices=["optimistic", "base", "stressed"],
         default=None,
@@ -108,23 +107,17 @@ def parse_args() -> argparse.Namespace:
 
 
 def sha256_of_file(path: str) -> str:
-    h = hashlib.sha256()
-    with open(path, "rb") as fh:
-        while True:
-            chunk = fh.read()
-            if not chunk:
-                break
-            h.update(chunk)
-    return h.hexdigest()
+    """Backward-compatible alias for the canonical manifest hash policy."""
+    return sha256_file(path)
 
 
 def main() -> int:
     """Execute the full RegimeShift pipeline."""
     args = parse_args()
 
-    if args.transaction_cost_bps < 5 or args.transaction_cost_bps > 10:
+    if args.transaction_cost_bps is not None and args.transaction_cost_bps < 0:
         logger.warning(
-            "Transaction cost %.1f bps is outside the official range [5, 10] bps.",
+            "Transaction cost %.1f bps is negative.",
             args.transaction_cost_bps,
         )
 
@@ -144,12 +137,15 @@ def main() -> int:
     # ---- Configuration ----
     config = RegimeShiftConfig()
     config.rebalance_frequency = args.rebalance_freq
-    config.transaction_cost_bps = args.transaction_cost_bps
-    if args.cost_scenario:
-        config.cost_scenario = args.cost_scenario
+    cost_override = args.transaction_cost_bps
+    scenario = args.cost_scenario or "base"
+    if cost_override is None:
+        config.cost_scenario = scenario
         config.execution_cost_model = ExecutionCostModel.scenario(
-            args.cost_scenario, config.core_assets
+            scenario, config.core_assets
         )
+    else:
+        config.transaction_cost_bps = cost_override
     config.validate()
     logger.info("Configuration validated.")
 
@@ -184,7 +180,7 @@ def main() -> int:
         strategy_result = run_walk_forward_backtest(
             prices=prices,
             config=config,
-            transaction_cost_bps=args.transaction_cost_bps,
+            transaction_cost_bps=cost_override,
             risk_free_rate=args.risk_free_rate,
         )
     except Exception as exc:
@@ -208,7 +204,7 @@ def main() -> int:
         prices=prices,
         weights=static_60_40_weights(),
         config=config,
-        transaction_cost_bps=args.transaction_cost_bps,
+        transaction_cost_bps=cost_override,
         rebalance_flags=strategy_rb_flags,
         start_date=strategy_start,
         risk_free_rate=args.risk_free_rate,
@@ -217,7 +213,7 @@ def main() -> int:
         prices=prices,
         weights=equal_weight_weights(),
         config=config,
-        transaction_cost_bps=args.transaction_cost_bps,
+        transaction_cost_bps=cost_override,
         rebalance_flags=strategy_rb_flags,
         start_date=strategy_start,
         risk_free_rate=args.risk_free_rate,
@@ -227,6 +223,19 @@ def main() -> int:
         "Static 60/40": bench_60_40,
         "Equal Weight": bench_eq,
     }
+    # The common strategy horizon is the sole evaluation horizon.  A benchmark
+    # must never be allowed to pick up an extra pre-allocation history.
+    strategy_index = strategy_result.net_returns.index
+    for benchmark in benchmarks.values():
+        for attr in ("gross_returns", "net_returns", "transaction_costs", "turnover", "rebalance_flags"):
+            series = getattr(benchmark, attr).reindex(strategy_index)
+            if series.isna().any():
+                raise ValueError(f"Benchmark {attr} has missing observations on the strategy evaluation index.")
+            setattr(benchmark, attr, series)
+        benchmark.gross_equity = (1.0 + benchmark.gross_returns).cumprod()
+        benchmark.net_equity = (1.0 + benchmark.net_returns).cumprod()
+    assert strategy_index.equals(bench_60_40.net_returns.index)
+    assert strategy_index.equals(bench_eq.net_returns.index)
 
     # ---- Step 4: Generate charts ----
     logger.info("Generating charts...")
@@ -359,7 +368,10 @@ def _save_results(
     metadata["risk_free_rate"] = float(risk_free_rate)
     metadata["annualization_factor"] = int(annualization_factor)
     metadata["data_file"] = data_path
-    metadata["data_sha256"] = data_sha256
+    metadata["dataset_path"] = str(Path(data_path).as_posix())
+    metadata["dataset_sha256_canonical"] = data_sha256
+    metadata["dataset_hash_policy"] = "CRLF and LF normalized to LF before hashing"
+    metadata.pop("data_sha256", None)
     metadata["rebalance_count"] = int(strategy_result.rebalance_flags.sum())
     metadata["regime_counts"] = (
         strategy_result.regime_series.value_counts().to_dict()
