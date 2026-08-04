@@ -92,31 +92,6 @@ def check_numeric_positive(df: pd.DataFrame, asset_cols: List[str]) -> None:
             )
 
 
-def check_no_backward_fill(df: pd.DataFrame, asset_cols: List[str]) -> None:
-    """
-    Heuristically detect suspicious backward-fill patterns.
-
-    A backward-fill creates *increasing* identical runs from the future.
-    We detect columns where NaN positions in the raw data appear after
-    non-NaN values that could only be filled from the future. Since we
-    cannot observe the pre-fill state, we instead flag any column where
-    more than 20 % of observations are exact duplicates of the *next*
-    observation (which is what bfill produces).
-    """
-    for col in asset_cols:
-        series = df[col].dropna()
-        if len(series) < 2:
-            continue
-        bfill_like = (series == series.shift(-1)).sum()
-        frac = bfill_like / len(series)
-        if frac > 0.20:
-            logger.warning(
-                "Column '%s' has %.0f%% values equal to their successor - "
-                "possible backward-fill detected. Verify raw data source.",
-                col, frac * 100,
-            )
-
-
 def check_forward_fill_limit(
     df: pd.DataFrame,
     asset_cols: List[str],
@@ -233,8 +208,9 @@ def validate_price_data(
             f"Price DataFrame contains missing (NaN) values in columns: {nan_cols}"
         )
 
-    if check_bfill:
-        check_no_backward_fill(df, required_cols)
+    # Fill provenance is captured before forward filling in data.py.  Naturally
+    # flat NAV/ETF prices cannot prove a future fill, so no price-pattern
+    # heuristic is used here.
 
     if forward_fill_limit > 0:
         check_forward_fill_limit(
