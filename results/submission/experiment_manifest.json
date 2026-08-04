@@ -1,25 +1,38 @@
 {
   "configuration": {
+    "cost_input_mode": "scenario",
     "cost_model": {
       "assets": {
         "bond": 10.0,
         "equity": 10.0,
         "gold": 10.0
       },
-      "name": "cli_override",
+      "name": "base",
       "units": "one-way assumed bps"
     },
+    "cost_scenario": "base",
+    "effective_asset_cost_bps": {
+      "bond": 10.0,
+      "equity": 10.0,
+      "gold": 10.0
+    },
     "execution_model": "NEXT_CLOSE",
+    "flat_cost_override_bps": null,
     "rebalance_frequency": 21,
     "risk_free_rate": 0.0,
-    "train_window": 252,
-    "transaction_cost_bps": 10.0
+    "train_window": 252
   },
-  "configuration_sha256": "1ae7be8d5e77421ffd83f3b66775f6bef2d7a4ec948e9a5a4359544fbe06435a",
-  "dataset_path": "D:\\RegimeShift\\data\\submission_market_data.csv",
-  "dataset_sha256": "290c783af9fb803334388090c3b72df7a31f5fd580de62bb7a905250777226e7",
-  "experiment_id": "20260804T172114Z-fed439d2",
-  "git_commit": "fed439d23c52b86760e57a93c4f7c5bc0d63b5b9",
+  "configuration_sha256": "1ab64e4bb38b63c9ad01af76dcde8d8598cf28761a404487dc018c43a7a90593",
+  "dataset_hash_policy": "CRLF and LF normalized to LF before hashing",
+  "dataset_path": "data/submission_market_data.csv",
+  "dataset_sha256_canonical": "290c783af9fb803334388090c3b72df7a31f5fd580de62bb7a905250777226e7",
+  "experiment_id": "20260804T182217Z-1a47908a",
+  "generated_from_commit": "1a47908a9495c376acde7de29e9a009101016ced",
+  "ignored_generation_paths": [
+    "results/submission",
+    "results/research",
+    "reports/build"
+  ],
   "metadata": {
     "annualization_factor": 252,
     "configured_tickers": {
@@ -27,17 +40,20 @@
       "equity": "^NSEI",
       "gold": "GOLDBEES.NS"
     },
+    "cost_input_mode": "scenario",
     "cost_model": {
       "assets": {
         "bond": 10.0,
         "equity": 10.0,
         "gold": 10.0
       },
-      "name": "cli_override",
+      "name": "base",
       "units": "one-way assumed bps"
     },
-    "data_file": "data\\submission_market_data.csv",
-    "data_sha256": "bab5a877c16b189640504d150d2c37b805c8f17a2426e588c9a71b03e15391b7",
+    "cost_scenario": "base",
+    "dataset_hash_policy": "CRLF and LF normalized to LF before hashing",
+    "dataset_path": "data/submission_market_data.csv",
+    "dataset_sha256_canonical": "290c783af9fb803334388090c3b72df7a31f5fd580de62bb7a905250777226e7",
     "date_range": {
       "end": "2026-07-27 00:00:00",
       "n_observations": 3732,
@@ -45,8 +61,14 @@
       "original_start": "2010-01-04 00:00:00",
       "start": "2010-10-05 00:00:00"
     },
+    "effective_asset_cost_bps": {
+      "bond": 10.0,
+      "equity": 10.0,
+      "gold": 10.0
+    },
     "execution_model": "NEXT_CLOSE",
     "execution_timing": "Return t-1-to-t accrues before close-t signal, execution, and cost; close-t target first earns t-to-t+1.",
+    "flat_cost_override_bps": null,
     "hmm_n_restarts": 3,
     "market_impact_and_capacity": "Not modeled because executable volume/ADV data is not included.",
     "random_seed": 42,
@@ -60,20 +82,19 @@
     "risk_free_rate": 0.0,
     "tradability_label": "Index-level allocation simulation: equity uses ^NSEI, which is a signal/benchmark series and not a guaranteed executable fill.",
     "train_window": 252,
-    "transaction_cost_bps": 10.0,
     "vix_included": false
   },
   "result_file_sha256": {
     "daily_results.csv": "b59f98ae33f441c8b5310bd1c79ac95d076980797775e9b226e9db8f39b2db37",
-    "drawdowns.png": "5b07d5751990de94ab94a35acfbd75d51ea9198ec8b8229a4462044c87a415ed",
-    "equity_curves.png": "6fec89f02539da0f7b950714613e6ed9fba320015ebdf98fbc80f9d6f7d0af4d",
-    "execution_timeline.csv": "e2120f5c67e40e6ace50604d2dea539520d87494ebce6c122c94630596c29e5a",
-    "performance_summary.csv": "fa263c65216779420d8aa049817494bc9151690fbfb3ca912cea052a63f0b06a",
-    "portfolio_weights.png": "191782a11cc6c74c53fafa77a5ec74aaeada2afdb7252e47cbbd4decef736ae2",
+    "drawdowns.png": "250e8f2f95e908d72f71ee7a814a7e3c45ce007c573960276d467a0b1e64ece5",
+    "equity_curves.png": "f99b74eb374ebed4b8c8d9f4995faa0cbfa15484021d5fda196d009d08fc36cd",
+    "execution_timeline.csv": "51d0297b343b4212f6f186ed14dd77a7a567e8a422260a41406dd9d1ccd073e2",
+    "performance_summary.csv": "7da00522d8adfdcd7c829d3c1bdca1790ee68b339e9131e64cf21b2563e826a2",
+    "portfolio_weights.png": "601db5952c4a063cf48eab8c9f006942bdb599c5b067d12fe1e0c448cae09cc7",
     "regime_price_chart.png": "16129a0b559ab1540b9d0c1cfdb89da5428c0fb0404b3cc27788bb0b10ac1f9f",
     "regime_probabilities.png": "93c9676e2668df8bbfeb58e453df946252667ff7a93bf2ef2d3fd76820844a76",
     "regimes.csv": "3d0ec40fc262ebc62fb6fa981d80520e9edef07b8c19d6619a639702a05fd26d",
-    "run_metadata.json": "fda5b4fb7eaef291bafc0a1d3bdf60b93793655a2541a29a9e46ecac9c72bac9",
+    "run_metadata.json": "f5c73866c12df23a215087d94755a02e1ebdf51c317c67fe7a187477775823a7",
     "transition_matrix.csv": "a0cebb2c1808ee6ba4e044c373215b461e30c6870432c2d063f25910daf1fa58",
     "transition_matrix.png": "096eb449fcd571385f5aa8962096068077c721f7b25ae5ffe7ea4a2e5c739bec",
     "weights.csv": "50b5afe63604aa07fc15d9675cf316ff002d859ce517848b9d1323cf423263fe"
@@ -82,5 +103,6 @@
     "platform": "Windows-10-10.0.26200-SP0",
     "python": "3.11.9"
   },
-  "timestamp_utc": "2026-08-04T17:21:14.804050+00:00"
+  "source_tree_dirty_before_generation": false,
+  "timestamp_utc": "2026-08-04T18:22:17.589890+00:00"
 }
