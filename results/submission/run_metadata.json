@@ -1,0 +1,43 @@
+{
+  "execution_model": "NEXT_CLOSE",
+  "execution_timing": "Return t-1-to-t accrues before close-t signal, execution, and cost; close-t target first earns t-to-t+1.",
+  "tradability_label": "Index-level allocation simulation: equity uses ^NSEI, which is a signal/benchmark series and not a guaranteed executable fill.",
+  "market_impact_and_capacity": "Not modeled because executable volume/ADV data is not included.",
+  "cost_model": {
+    "name": "cli_override",
+    "assets": {
+      "equity": 10.0,
+      "gold": 10.0,
+      "bond": 10.0
+    },
+    "units": "one-way assumed bps"
+  },
+  "date_range": {
+    "start": "2010-10-05 00:00:00",
+    "end": "2026-07-27 00:00:00",
+    "n_observations": 3732,
+    "original_start": "2010-01-04 00:00:00",
+    "original_end": "2026-07-27 00:00:00"
+  },
+  "configured_tickers": {
+    "equity": "^NSEI",
+    "gold": "GOLDBEES.NS",
+    "bond": "LIQUIDBEES.NS"
+  },
+  "vix_included": false,
+  "transaction_cost_bps": 10.0,
+  "train_window": 252,
+  "rebalance_frequency": 21,
+  "hmm_n_restarts": 3,
+  "data_file": "data\\submission_market_data.csv",
+  "data_sha256": "bab5a877c16b189640504d150d2c37b805c8f17a2426e588c9a71b03e15391b7",
+  "random_seed": 42,
+  "risk_free_rate": 0.0,
+  "annualization_factor": 252,
+  "rebalance_count": 178,
+  "regime_counts": {
+    "Bull": 1428,
+    "Bear": 1233,
+    "Crisis": 1071
+  }
+}

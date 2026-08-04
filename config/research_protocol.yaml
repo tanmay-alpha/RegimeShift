@@ -1,0 +1,30 @@
+protocol_version: 1
+objective: "Evaluate whether regime-conditioned allocation improves risk-adjusted outcomes under causal close-only execution."
+hypothesis: "HMM regime information may improve risk control; it is not assumed to create alpha."
+data_history_disclosure: "The full historical sample was inspected before this protocol. No historical segment is a pristine holdout."
+asset_universe:
+  equity: "^NSEI signal and benchmark series; index-level simulation, not a guaranteed executable fill"
+  gold: "GOLDBEES.NS"
+  defensive: "LIQUIDBEES.NS"
+execution:
+  model: NEXT_CLOSE
+  sequence: "At close t current weights earn t-1-to-t, then data through t is fit, target is traded and costs paid, then target earns t-to-t+1."
+cost_scenarios:
+  optimistic: 5
+  base: 10
+  stressed: 20
+  units: "one-way assumed bps per asset trade; not measured spreads"
+  excluded: "Market impact and capacity are excluded because volume/ADV data is absent."
+splits:
+  development: ["2010-01-01", "2018-12-31"]
+  validation: ["2019-01-01", "2021-12-31"]
+  retrospective_evaluation: ["2022-01-01", "2026-12-31"]
+  label: "Retrospective evaluation period; not a pristine holdout because full-sample results were inspected during earlier development."
+hmm:
+  states: 3
+  covariance_type: diag
+  restarts: 3
+  selection: "highest converged training-window log likelihood"
+parameter_policy: "Parameters are frozen from development/validation. No performance-driven changes using retrospective results."
+benchmarks: ["Static 60/40", "Equal Weight"]
+future_lockbox: "Data after the committed dataset end date; evaluate only frozen, versioned configuration without parameter changes."
