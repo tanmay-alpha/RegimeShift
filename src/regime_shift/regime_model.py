@@ -148,15 +148,23 @@ def fit_hmm(
         try:
             candidate.fit(scaled_features.values)
             log_likelihood = float(candidate.score(scaled_features.values))
-            restart_diagnostics.append({"seed": seed, "converged": bool(candidate.monitor_.converged), "n_iter": int(candidate.monitor_.n_iter), "log_likelihood": log_likelihood})
+            restart_diagnostics.append({"seed": seed, "converged": bool(candidate.monitor_.converged), "n_iter": int(candidate.monitor_.n_iter), "log_likelihood": log_likelihood, "selected": False})
             if np.isfinite(log_likelihood):
                 candidates.append((log_likelihood, candidate))
         except Exception as exc:
-            restart_diagnostics.append({"seed": seed, "converged": False, "n_iter": 0, "log_likelihood": float("nan"), "error": str(exc)})
+            restart_diagnostics.append({"seed": seed, "converged": False, "n_iter": 0, "log_likelihood": float("nan"), "selected": False, "error": str(exc)})
     if not candidates:
         raise RegimeDetectionError("All deterministic HMM restarts failed.")
-    # Model selection uses train-window likelihood only; it never sees future P&L.
-    _, hmm = max(candidates, key=lambda candidate: candidate[0])
+    converged = [item for item in candidates if item[1].monitor_.converged]
+    fallback_used = not bool(converged)
+    pool = converged or candidates
+    # Model selection uses training likelihood only; it never sees future P&L.
+    _, hmm = max(pool, key=lambda candidate: candidate[0])
+    for row in restart_diagnostics:
+        row["selected"] = row["seed"] == hmm.random_state
+        row["fallback_used"] = fallback_used
+    if fallback_used:
+        logger.warning("No HMM restart converged; using the highest finite in-window likelihood as a fallback.")
 
     # Check convergence
     if not hmm.monitor_.converged:

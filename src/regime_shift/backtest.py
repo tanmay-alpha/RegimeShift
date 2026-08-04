@@ -36,6 +36,9 @@ class BacktestResult:
     turnover: pd.Series = field(default_factory=pd.Series, repr=False)
     target_weights: pd.DataFrame = field(default_factory=pd.DataFrame, repr=False)
     daily_drifted_weights: pd.DataFrame = field(default_factory=pd.DataFrame, repr=False)
+    pre_return_weights: pd.DataFrame = field(default_factory=pd.DataFrame, repr=False)
+    post_return_pre_trade_weights: pd.DataFrame = field(default_factory=pd.DataFrame, repr=False)
+    end_of_day_post_trade_weights: pd.DataFrame = field(default_factory=pd.DataFrame, repr=False)
     regime_series: pd.Series = field(default_factory=pd.Series, repr=False)
     regime_probabilities: pd.DataFrame = field(default_factory=pd.DataFrame, repr=False)
     transition_matrix: pd.DataFrame = field(default_factory=pd.DataFrame, repr=False)
@@ -89,7 +92,7 @@ def _event_row(date: pd.Timestamp, rebalance: bool, pre_trade: np.ndarray, targe
         "return_date": date,
         "rebalance_flag": bool(rebalance),
     }
-    for prefix, values in (("pre_trade", pre_trade), ("target", target), ("post_trade", post_trade), ("post_return_drifted", post_return)):
+    for prefix, values in (("pre_return", pre_trade), ("post_return_pre_trade", post_return), ("target", target), ("end_of_day_post_trade", post_trade)):
         for asset, value in zip(_ASSET_ORDER, values):
             row[f"{prefix}_{asset}_weight"] = float(value)
     return row
@@ -132,6 +135,8 @@ def run_walk_forward_backtest(
     flags: List[bool] = []
     targets: List[np.ndarray] = []
     drifts: List[np.ndarray] = []
+    pre_returns: List[np.ndarray] = []
+    end_of_days: List[np.ndarray] = []
     regimes: List[str] = []
     probs: List[np.ndarray] = []
     rows: List[Dict] = []
@@ -190,6 +195,7 @@ def run_walk_forward_backtest(
         net_return = (1.0 + gross_return) * (1.0 - cost) - 1.0
         gross.append(gross_return); net.append(net_return); costs.append(cost); turns.append(turnover); flags.append(rebalance)
         targets.append(target); drifts.append(post_return); regimes.append(regime); probs.append(probability.copy())
+        pre_returns.append(pre_trade); end_of_days.append(post_trade)
         rows.append(_event_row(date, rebalance, pre_trade, target, post_trade, post_return))
 
     if first_allocation is None:
@@ -199,11 +205,15 @@ def run_walk_forward_backtest(
     def series(values: List[float], name: str) -> pd.Series: return pd.Series(values[start:], index=index, name=name)
     target_df = pd.DataFrame(targets[start:], index=index, columns=assets)
     drifted_df = pd.DataFrame(drifts[start:], index=index, columns=assets)
+    pre_return_df = pd.DataFrame(pre_returns[start:], index=index, columns=assets)
+    end_of_day_df = pd.DataFrame(end_of_days[start:], index=index, columns=assets)
     gross_s, net_s = series(gross, "gross_return"), series(net, "net_return")
     costs_s, turns_s, flags_s = series(costs, "transaction_cost"), series(turns, "turnover"), pd.Series(flags[start:], index=index, name="rebalance")
     result = BacktestResult(
         gross_returns=gross_s, net_returns=net_s, transaction_costs=costs_s, turnover=turns_s,
-        target_weights=target_df, daily_drifted_weights=drifted_df,
+        target_weights=target_df, daily_drifted_weights=end_of_day_df,
+        pre_return_weights=pre_return_df, post_return_pre_trade_weights=drifted_df,
+        end_of_day_post_trade_weights=end_of_day_df,
         regime_series=pd.Series(regimes[start:], index=index, name="regime"),
         regime_probabilities=pd.DataFrame(probs[start:], index=index, columns=_REGIME_ORDER),
         transition_matrix=transition, gross_equity=(1 + gross_s).cumprod(), net_equity=(1 + net_s).cumprod(),

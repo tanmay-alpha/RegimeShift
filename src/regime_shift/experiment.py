@@ -46,12 +46,24 @@ def write_manifest(output_dir: str | Path, *, dataset_path: str, config: Mapping
         if path.is_file() and path.name != "experiment_manifest.json"
     }
     encoded_config = json.dumps(config, sort_keys=True, default=str).encode("utf-8")
+    root = Path.cwd()
+    dataset = Path(dataset_path)
+    try:
+        relative_dataset = str(dataset.resolve().relative_to(root.resolve())).replace("\\", "/")
+    except ValueError:
+        # Offline tests and ad-hoc research can supply external data.  Preserve
+        # a portable logical identifier rather than leaking a local absolute path.
+        relative_dataset = f"external/{dataset.name}"
+    dirty = bool(subprocess.run(["git", "status", "--porcelain"], capture_output=True, text=True, check=False).stdout.strip())
+    canonical_hash = sha256_file(dataset)
     manifest = {
         "experiment_id": f"{datetime.now(timezone.utc):%Y%m%dT%H%M%SZ}-{git_commit()[:8]}",
         "timestamp_utc": datetime.now(timezone.utc).isoformat(),
-        "git_commit": git_commit(),
-        "dataset_path": str(Path(dataset_path).resolve()),
-        "dataset_sha256": sha256_file(dataset_path),
+        "generated_from_commit": git_commit(),
+        "repository_dirty_at_generation": dirty,
+        "dataset_path": relative_dataset,
+        "dataset_sha256_canonical": canonical_hash,
+        "dataset_hash_policy": "CRLF and LF normalized to LF before hashing",
         "configuration": config,
         "configuration_sha256": hashlib.sha256(encoded_config).hexdigest(),
         "software": {"python": sys.version.split()[0], "platform": platform.platform()},
