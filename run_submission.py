@@ -49,6 +49,8 @@ from regime_shift.backtest import (
 )
 from regime_shift.plots import generate_all_charts
 from regime_shift.metrics import compute_performance_metrics
+from regime_shift.execution import ExecutionCostModel
+from regime_shift.experiment import write_manifest
 
 logging.basicConfig(
     level=logging.INFO,
@@ -78,6 +80,12 @@ def parse_args() -> argparse.Namespace:
         type=float,
         default=5.0,
         help="Transaction cost in basis points. Official runs: 5-10 bps. Default: 5.0",
+    )
+    parser.add_argument(
+        "--cost-scenario",
+        choices=["optimistic", "base", "stressed"],
+        default=None,
+        help="Named one-way asset-level assumption: 5, 10, or 20 bps.",
     )
     parser.add_argument(
         "--rebalance-freq",
@@ -137,6 +145,11 @@ def main() -> int:
     config = RegimeShiftConfig()
     config.rebalance_frequency = args.rebalance_freq
     config.transaction_cost_bps = args.transaction_cost_bps
+    if args.cost_scenario:
+        config.cost_scenario = args.cost_scenario
+        config.execution_cost_model = ExecutionCostModel.scenario(
+            args.cost_scenario, config.core_assets
+        )
     config.validate()
     logger.info("Configuration validated.")
 
@@ -147,6 +160,11 @@ def main() -> int:
     except Exception as exc:
         logger.error("Data loading failed: %s", exc)
         return 1
+    if args.include_vix and config.vix_col not in prices.columns:
+        logger.error("--include-vix requires a valid 'vix' column in the supplied data.")
+        return 1
+    if not args.include_vix and config.vix_col in prices.columns:
+        prices = prices.drop(columns=[config.vix_col])
 
     # Annotate diagnostics with SHA-256
     diag = prices.attrs.get("data_diagnostics", {})
@@ -280,6 +298,9 @@ def _save_results(
         daily["equal_weight_gross_return"] = b.gross_returns
         daily["equal_weight_net_return"] = b.net_returns
     daily.to_csv(os.path.join(output_dir, "daily_results.csv"))
+    strategy_result.event_log.to_csv(
+        os.path.join(output_dir, "execution_timeline.csv")
+    )
 
     strategy_result.target_weights.to_csv(os.path.join(output_dir, "weights.csv"))
 
@@ -349,6 +370,20 @@ def _save_results(
 
     with open(os.path.join(output_dir, "run_metadata.json"), "w", encoding="utf-8") as fh:
         json.dump(metadata, fh, indent=2, default=_json_default)
+
+    write_manifest(
+        output_dir,
+        dataset_path=data_path,
+        config={
+            "execution_model": metadata.get("execution_model"),
+            "transaction_cost_bps": metadata.get("transaction_cost_bps"),
+            "cost_model": metadata.get("cost_model"),
+            "train_window": metadata.get("train_window"),
+            "rebalance_frequency": metadata.get("rebalance_frequency"),
+            "risk_free_rate": risk_free_rate,
+        },
+        metadata=metadata,
+    )
 
     logger.info("Saved all results to %s", output_dir)
 

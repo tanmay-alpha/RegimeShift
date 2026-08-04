@@ -9,6 +9,8 @@ from dataclasses import dataclass, field
 from enum import Enum, auto
 from typing import Dict, List, Optional, Set
 
+from regime_shift.execution import ExecutionCostModel, ExecutionModel
+
 
 class SeriesKind(str, Enum):
     """
@@ -457,6 +459,7 @@ class HMMConfig:
     n_iter: int = 200
     tolerance: float = 1e-3
     random_state: int = 42
+    n_restarts: int = 3
     min_covar: float = 1e-6
     minimum_training_observations: int = 50
     crisis_volatility_weight: float = 1.0
@@ -486,6 +489,8 @@ class HMMConfig:
             raise ValueError(
                 f"HMMConfig.min_covar must be > 0 (got {self.min_covar})."
             )
+        if self.n_restarts < 1:
+            raise ValueError(f"HMMConfig.n_restarts must be >= 1 (got {self.n_restarts}).")
         if self.minimum_training_observations < 1:
             raise ValueError(
                 f"HMMConfig.minimum_training_observations must be >= 1 "
@@ -520,6 +525,9 @@ class RegimeShiftConfig:
     train_window: int = 252
     rebalance_frequency: int = 21
     transaction_cost_bps: float = 5.0
+    execution_model: ExecutionModel = ExecutionModel.NEXT_CLOSE
+    cost_scenario: str = "base"
+    execution_cost_model: Optional[ExecutionCostModel] = None
     annualization_factor: int = 252
     minimum_training_observations: int = 126
 
@@ -573,3 +581,10 @@ class RegimeShiftConfig:
             TypeError: If any required asset spec is not a PRICE series.
         """
         self.tickers.validate_price_assets()
+        if self.execution_model is not ExecutionModel.NEXT_CLOSE:
+            raise ValueError(
+                "NEXT_OPEN requires reliable open prices and is not available for the close-only dataset. "
+                "Use NEXT_CLOSE."
+            )
+        if self.execution_cost_model is not None:
+            self.execution_cost_model.validate(self.core_assets)

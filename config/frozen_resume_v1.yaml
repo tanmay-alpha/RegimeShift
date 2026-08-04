@@ -1,0 +1,17 @@
+version: frozen_resume_v1
+execution_model: NEXT_CLOSE
+train_window: 252
+rebalance_frequency: 21
+hmm:
+  n_components: 3
+  covariance_type: diag
+  n_restarts: 3
+  random_seed: 42
+portfolio:
+  estimator: sample_mean_and_ridge_covariance_baseline
+cost_scenario: base
+asset_roles:
+  equity: "^NSEI index-level research series"
+  gold: GOLDBEES.NS
+  defensive: LIQUIDBEES.NS
+lockbox_rule: "No changes after this configuration is committed; new data is evaluated only with this hash."

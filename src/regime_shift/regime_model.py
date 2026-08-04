@@ -136,24 +136,27 @@ def fit_hmm(
 
     # Fit HMM — use random init to avoid sklearn KMeans stack overflow on
     # Windows with small datasets.
-    hmm = GaussianHMM(
-        n_components=config.n_components,
-        covariance_type=config.covariance_type,
-        n_iter=config.n_iter,
-        tol=config.tolerance,
-        random_state=config.random_state,
-        min_covar=config.min_covar,
-        verbose=False,
-        init_params="stmc",
-        params="stmc",
-    )
-
-    try:
-        hmm.fit(scaled_features.values)
-    except Exception as exc:
-        raise RegimeDetectionError(
-            f"HMM fitting failed: {exc}"
-        ) from exc
+    candidates = []
+    restart_diagnostics = []
+    for restart in range(config.n_restarts):
+        seed = config.random_state + restart
+        candidate = GaussianHMM(
+            n_components=config.n_components, covariance_type=config.covariance_type,
+            n_iter=config.n_iter, tol=config.tolerance, random_state=seed,
+            min_covar=config.min_covar, verbose=False, init_params="stmc", params="stmc",
+        )
+        try:
+            candidate.fit(scaled_features.values)
+            log_likelihood = float(candidate.score(scaled_features.values))
+            restart_diagnostics.append({"seed": seed, "converged": bool(candidate.monitor_.converged), "n_iter": int(candidate.monitor_.n_iter), "log_likelihood": log_likelihood})
+            if np.isfinite(log_likelihood):
+                candidates.append((log_likelihood, candidate))
+        except Exception as exc:
+            restart_diagnostics.append({"seed": seed, "converged": False, "n_iter": 0, "log_likelihood": float("nan"), "error": str(exc)})
+    if not candidates:
+        raise RegimeDetectionError("All deterministic HMM restarts failed.")
+    # Model selection uses train-window likelihood only; it never sees future P&L.
+    _, hmm = max(candidates, key=lambda candidate: candidate[0])
 
     # Check convergence
     if not hmm.monitor_.converged:
@@ -189,6 +192,7 @@ def fit_hmm(
     # Store state interpretation on the model for later inference
     hmm._state_map = state_map  # type: ignore[attr-defined]
     hmm._state_statistics = state_stats  # type: ignore[attr-defined]
+    hmm._restart_diagnostics = restart_diagnostics  # type: ignore[attr-defined]
 
     log_ll = float(hmm.score(scaled_features.values))
     logger.info(
