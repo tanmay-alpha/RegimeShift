@@ -1,0 +1,18 @@
+{
+  "execution_model": "NEXT_CLOSE",
+  "cost_scenario": "base",
+  "effective_asset_cost_bps": 10,
+  "n_observations": 3732,
+  "start": "2010-10-05",
+  "end": "2026-07-27",
+  "variants": [
+    "RegimeShift",
+    "No-regime optimizer",
+    "Volatility rule",
+    "HMM fixed allocations",
+    "Minimum variance",
+    "Static 60/40",
+    "Equal Weight"
+  ],
+  "return_accounting": "Shared run_walk_forward_backtest / run_benchmark engine"
+}

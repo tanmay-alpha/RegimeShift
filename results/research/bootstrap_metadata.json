@@ -1,0 +1,8 @@
+{
+  "method": "paired moving-block bootstrap",
+  "block_length_trading_days": 21,
+  "samples": 2000,
+  "seed": 42,
+  "confidence_level": 0.95,
+  "same_resampled_positions_for_all_strategies": true
+}
