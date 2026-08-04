@@ -1,0 +1,7 @@
+Strategy,Total Return,CAGR,Annualised Volatility,Sharpe,Sortino,Maximum Drawdown,Calmar,Total Turnover,Annualised Turnover,Transaction Cost Drag,n_observations,risk_free_rate,annualization_factor
+RegimeShift Gross,1.8635,0.0736,0.1861,0.4689,0.5373,0.3601,0.2044,56.2845,3.8006,0.0,3732,0.0,252
+RegimeShift Net,1.784,0.0716,0.1861,0.4587,0.526,0.3606,0.1985,56.2845,3.8006,0.0795,3732,0.0,252
+Static 60/40 Gross,1.9405,0.0722,0.0977,0.7621,0.7342,0.233,0.3097,2.574,0.1663,0.0,3901,0.0,252
+Static 60/40 Net,1.9367,0.0721,0.0977,0.7613,0.7333,0.233,0.3093,2.574,0.1663,0.0038,3901,0.0,252
+Equal Weight Gross,2.7874,0.0898,0.1679,0.5912,0.6786,0.3288,0.2732,3.0619,0.1978,0.0,3901,0.0,252
+Equal Weight Net,2.7816,0.0897,0.1679,0.5906,0.6779,0.3288,0.2729,3.0619,0.1978,0.0058,3901,0.0,252

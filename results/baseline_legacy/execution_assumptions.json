@@ -1,0 +1,7 @@
+{
+  "label": "Legacy same-bar execution assumption - retained only for comparison and not used as the final resume result.",
+  "execution_model": "LEGACY_SAME_CLOSE",
+  "known_bias": "A target calculated at close t was applied to the close(t-1)-to-close(t) return.",
+  "transaction_cost_bps": 5.0,
+  "dataset_sha256": "bab5a877c16b189640504d150d2c37b805c8f17a2426e588c9a71b03e15391b7"
+}
