@@ -37,6 +37,13 @@ def git_commit() -> str:
         return "unavailable"
 
 
+def source_tree_dirty() -> bool:
+    """Check source inputs only, intentionally excluding generated artefacts."""
+    paths = ["src", "tests", "scripts", "config", "run_submission.py", "pyproject.toml", "requirements.txt"]
+    result = subprocess.run(["git", "status", "--porcelain", "--", *paths], capture_output=True, text=True, check=False)
+    return bool(result.stdout.strip())
+
+
 def write_manifest(output_dir: str | Path, *, dataset_path: str, config: Mapping[str, Any], metadata: Mapping[str, Any]) -> Path:
     """Write a result manifest after outputs exist, including their hashes."""
     destination = Path(output_dir)
@@ -54,13 +61,13 @@ def write_manifest(output_dir: str | Path, *, dataset_path: str, config: Mapping
         # Offline tests and ad-hoc research can supply external data.  Preserve
         # a portable logical identifier rather than leaking a local absolute path.
         relative_dataset = f"external/{dataset.name}"
-    dirty = bool(subprocess.run(["git", "status", "--porcelain"], capture_output=True, text=True, check=False).stdout.strip())
     canonical_hash = sha256_file(dataset)
     manifest = {
         "experiment_id": f"{datetime.now(timezone.utc):%Y%m%dT%H%M%SZ}-{git_commit()[:8]}",
         "timestamp_utc": datetime.now(timezone.utc).isoformat(),
         "generated_from_commit": git_commit(),
-        "repository_dirty_at_generation": dirty,
+        "source_tree_dirty_before_generation": source_tree_dirty(),
+        "ignored_generation_paths": ["results/submission", "results/research", "reports/build"],
         "dataset_path": relative_dataset,
         "dataset_sha256_canonical": canonical_hash,
         "dataset_hash_policy": "CRLF and LF normalized to LF before hashing",

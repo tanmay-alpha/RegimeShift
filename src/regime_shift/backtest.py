@@ -273,7 +273,7 @@ def _build_metadata(config: RegimeShiftConfig, prices: pd.DataFrame, has_vix: bo
         "cost_model": {"name": costs.name, "assets": {asset: cost.total_bps for asset, cost in costs.assets.items()}, "units": "one-way assumed bps"},
         "date_range": {"start": str(result_dates[0]), "end": str(result_dates[-1]), "n_observations": len(result_dates), "original_start": str(prices.index[0]), "original_end": str(prices.index[-1])},
         "configured_tickers": {"equity": config.tickers.equity_ticker, "gold": config.tickers.gold_ticker, "bond": config.tickers.bond_ticker},
-        "vix_included": has_vix, "transaction_cost_bps": config.transaction_cost_bps, "train_window": config.train_window,
+        "vix_included": has_vix, "train_window": config.train_window,
         "rebalance_frequency": config.rebalance_frequency, "hmm_n_restarts": config.hmm_config.n_restarts,
         "data_file": diagnostics.get("data_path", ""), "data_sha256": diagnostics.get("sha256", ""), "random_seed": config.random_seed,
         "risk_free_rate": risk_free_rate, "annualization_factor": config.annualization_factor,

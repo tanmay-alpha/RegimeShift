@@ -262,6 +262,9 @@ def main() -> int:
         annualization_factor=config.annualization_factor,
         data_path=str(data_path),
         data_sha256=sha,
+        cost_input_mode="flat_override" if cost_override is not None else "scenario",
+        cost_scenario=None if cost_override is not None else scenario,
+        flat_cost_override_bps=cost_override,
     )
 
     _print_summary(strategy_result, benchmarks)
@@ -286,6 +289,9 @@ def _save_results(
     annualization_factor: int = 252,
     data_path: str = "",
     data_sha256: str = "",
+    cost_input_mode: str = "scenario",
+    cost_scenario: str | None = None,
+    flat_cost_override_bps: float | None = None,
 ) -> None:
     """Save all result files to the output directory."""
     os.makedirs(output_dir, exist_ok=True)
@@ -372,6 +378,12 @@ def _save_results(
     metadata["dataset_sha256_canonical"] = data_sha256
     metadata["dataset_hash_policy"] = "CRLF and LF normalized to LF before hashing"
     metadata.pop("data_sha256", None)
+    metadata.pop("data_file", None)
+    metadata.pop("transaction_cost_bps", None)
+    metadata["cost_input_mode"] = cost_input_mode
+    metadata["cost_scenario"] = cost_scenario
+    metadata["flat_cost_override_bps"] = flat_cost_override_bps
+    metadata["effective_asset_cost_bps"] = dict(metadata["cost_model"]["assets"])
     metadata["rebalance_count"] = int(strategy_result.rebalance_flags.sum())
     metadata["regime_counts"] = (
         strategy_result.regime_series.value_counts().to_dict()
@@ -388,8 +400,11 @@ def _save_results(
         dataset_path=data_path,
         config={
             "execution_model": metadata.get("execution_model"),
-            "transaction_cost_bps": metadata.get("transaction_cost_bps"),
             "cost_model": metadata.get("cost_model"),
+            "cost_input_mode": cost_input_mode,
+            "cost_scenario": cost_scenario,
+            "flat_cost_override_bps": flat_cost_override_bps,
+            "effective_asset_cost_bps": metadata.get("effective_asset_cost_bps"),
             "train_window": metadata.get("train_window"),
             "rebalance_frequency": metadata.get("rebalance_frequency"),
             "risk_free_rate": risk_free_rate,

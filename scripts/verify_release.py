@@ -40,6 +40,21 @@ def main() -> int:
         raise SystemExit("Metadata and manifest hash policies disagree.")
     if Path(manifest.get("dataset_path", "")).is_absolute() or "\\" in manifest.get("dataset_path", ""):
         raise SystemExit("Manifest dataset path must be repository-relative and portable.")
+    for key in ("cost_input_mode", "cost_scenario", "flat_cost_override_bps", "effective_asset_cost_bps"):
+        if metadata.get(key) != manifest.get("metadata", {}).get(key):
+            raise SystemExit(f"Metadata and manifest disagree on {key}.")
+    costs = metadata.get("effective_asset_cost_bps", {})
+    if set(costs) != {"equity", "gold", "bond"} or len(set(costs.values())) != 1:
+        raise SystemExit("Effective asset costs must be identical and explicit for all official assets.")
+    scenario_bps = {"optimistic": 5.0, "base": 10.0, "stressed": 20.0}
+    if metadata.get("cost_input_mode") == "scenario":
+        if metadata.get("flat_cost_override_bps") is not None or costs["equity"] != scenario_bps.get(metadata.get("cost_scenario")):
+            raise SystemExit("Scenario cost metadata is contradictory.")
+    elif metadata.get("cost_input_mode") == "flat_override":
+        if metadata.get("cost_scenario") is not None or costs["equity"] != metadata.get("flat_cost_override_bps"):
+            raise SystemExit("Flat cost override metadata is contradictory.")
+    else:
+        raise SystemExit("Unknown cost input mode.")
     if metadata.get("execution_model") != "NEXT_CLOSE":
         raise SystemExit("Official results must use NEXT_CLOSE.")
     if "same-close" in (ROOT / "README.md").read_text(encoding="utf-8").lower() and "baseline_legacy" not in (ROOT / "README.md").read_text(encoding="utf-8"):
