@@ -171,18 +171,28 @@ def compute_performance_metrics(
     std_dev = float(returns.std(ddof=1))
     ann_vol = std_dev * np.sqrt(annualization_factor)
 
-    # Sharpe ratio
+    # Sharpe ratio.  A constant positive excess-return sequence does not have
+    # a defined ratio; returning zero would silently misstate it as no reward.
+    epsilon = 1e-12
     mean_excess = float(excess.mean())
     std_excess = float(excess.std(ddof=1))
-    sharpe = (mean_excess / std_excess * np.sqrt(annualization_factor)) if std_excess > 0 else 0.0
+    if not np.isfinite(std_excess):
+        sharpe = float("nan")
+    elif abs(std_excess) <= epsilon:
+        sharpe = 0.0 if abs(mean_excess) <= epsilon else float("nan")
+    else:
+        sharpe = mean_excess / std_excess * np.sqrt(annualization_factor)
 
     # Sortino ratio (downside deviation of excess returns)
     downside_excess = excess[excess < 0]
     if len(downside_excess) > 0:
         downside_dev = float(np.sqrt((downside_excess ** 2).mean()))
-        sortino = (mean_excess / downside_dev * np.sqrt(annualization_factor)) if downside_dev > 0 else float("nan")
+        if downside_dev <= epsilon:
+            sortino = 0.0 if abs(mean_excess) <= epsilon else float("nan")
+        else:
+            sortino = mean_excess / downside_dev * np.sqrt(annualization_factor)
     else:
-        sortino = float("nan")
+        sortino = 0.0 if abs(mean_excess) <= epsilon else float("nan")
 
     # Maximum drawdown (positive 0â€“1 value)
     cummax = equity_curve.cummax()
