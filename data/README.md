@@ -1,80 +1,15 @@
-# Data Directory
+# RegimeShift data contract
 
-This directory holds multi-asset market datasets used by the RegimeShift pipeline.
+`submission_market_data.csv` is the canonical offline dataset for the frozen research run. It contains 4,090 source rows from 2010-01-04 through 2026-07-27. The causal common evaluation horizon begins 2010-10-05 after feature and training warm-up.
 
-## Standard Asset Universe
+| Column | Series | Role and tradability |
+|---|---|---|
+| `equity` | NIFTY 50 Index (`^NSEI`) | Index-level return and signal series; not directly executable. |
+| `gold` | Nippon India ETF Gold Bees (`GOLDBEES.NS`) | INR-denominated gold ETF proxy. |
+| `bond` | Nippon India Liquid Bees (`LIQUIDBEES.NS`) | Short-duration liquid-bond/cash-equivalent proxy; not a sovereign bond, gilt fund, or 10-year government security. |
 
-| Column | Asset | Default Ticker | Kind | Currency | Notes |
-| :----- | :---- | :------------- | :--- | :------- | :---- |
-| `equity` | NSE NIFTY 50 Index | `^NSEI` | PRICE | INR | Canonical NSE large-cap benchmark |
-| `gold` | Nippon India ETF Gold Bees | `GOLDBEES.NS` | PRICE | INR | INR-denominated gold ETF (NSE); avoids USD/INR FX mismatch |
-| `bond` | SBI Magnum Gilt Fund – Regular Plan | `0P0001BVE8.BO` | PRICE | INR | Indian government gilt fund NAV; genuine bond price series |
-| `vix` | India VIX (preferred) | `^INDIAVIX` | INDICATOR | — | NSE implied volatility; preferred over CBOE `^VIX` |
+`^INDIAVIX` is an optional feature-only series and is omitted from the official dataset. No gilt-fund series is part of the active universe.
 
-> **Gold currency policy**: `GOLDBEES.NS` is INR-denominated and avoids USD/INR FX conversion.
-> If `GC=F` (USD) is substituted, an explicit INR/USD FX adjustment is required before computing
-> returns — this is NOT yet implemented in the feature-engineering phase.
->
-> **VIX fallback**: `^INDIAVIX` is the preferred default. The CBOE `^VIX` (`VIX_FALLBACK` constant)
-> must be set **explicitly** by overriding `TickerConfig.vix`. There is NO silent automatic fallback.
+The canonical SHA-256 is `290c783af9fb803334388090c3b72df7a31f5fd580de62bb7a905250777226e7`. CSV hashing normalizes CRLF and LF to LF before hashing, so manifests remain portable across operating systems.
 
-> **Yield series rejected**: `^IRX` (13-week T-Bill yield) is documented in `TickerConfig.irx_yield`
-> as a reference-only `YIELD` kind spec. It cannot be used as a portfolio price; attempting to do so
-> raises `TypeError` via `AssetSpec.require_price()`.
-
-## Data Format
-
-Files placed or cached in this directory must satisfy the contract enforced by  
-[`src/regime_shift/validation.py`](../src/regime_shift/validation.py):
-
-| Rule | Requirement |
-| :--- | :---------- |
-| Index type | `pd.DatetimeIndex` |
-| Index order | Monotonically ascending |
-| Duplicates | None |
-| Timezone | Timezone-naive (UTC-normalised) |
-| Required columns | `equity`, `gold`, `bond` |
-| Prices | Strictly positive, finite, numeric |
-| Missing values | None in required columns |
-| Backward fill | **Never applied** |
-| Forward fill | Configurable limit (default 3 days) |
-
-## Workflow
-
-### Online (live download)
-```python
-from regime_shift.config import RegimeShiftConfig
-from regime_shift.data import download_market_data
-
-cfg = RegimeShiftConfig()
-prices = download_market_data(cfg, start="2015-01-01", include_vix=False)
-```
-
-### Offline (pre-built CSV)
-```python
-from regime_shift.data import load_market_data_csv
-
-prices = load_market_data_csv("data/cache/market_data_2015-01-01_2024-12-31.csv")
-```
-
-### Saving a cache
-```python
-from regime_shift.data import save_market_data_csv
-
-save_market_data_csv(prices, "data/cache/market_data_2015-01-01_2024-12-31.csv")
-```
-
-## Cache Directory
-
-Auto-downloaded data is cached to `data/cache/` as `market_data_<start>_<end>[_vix].csv`.  
-Cache files are excluded from git (see `.gitignore`).  
-No database is used.
-
-## Column Order
-
-Output columns are **always** in the following deterministic order, regardless of
-download or ingestion sequence:
-
-```
-equity  →  gold  →  bond  [→  vix]
-```
+The committed data is included for academic reproducibility only. It remains subject to the relevant market-data provider, exchange, and instrument terms; the MIT license does not license third-party market data. See [`../DATA_LICENSE_NOTICE.md`](../DATA_LICENSE_NOTICE.md).

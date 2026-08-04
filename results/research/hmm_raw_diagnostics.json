@@ -1,0 +1,6234 @@
+{
+  "diagnostics": [
+    {
+      "date": "2010-10-05 00:00:00",
+      "regime": "Bull",
+      "converged": true,
+      "n_iter": 200,
+      "log_likelihood": -788.6350166126431,
+      "turnover": 1.0000000000981288,
+      "cost": 0.0010000000000981288,
+      "restarts": [
+        {
+          "seed": 42,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -819.8369811154299,
+          "selected": false,
+          "fallback_used": false
+        },
+        {
+          "seed": 43,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -814.2930410273912,
+          "selected": false,
+          "fallback_used": false
+        },
+        {
+          "seed": 44,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -788.6350166126431,
+          "selected": true,
+          "fallback_used": false
+        }
+      ]
+    },
+    {
+      "date": "2010-11-03 00:00:00",
+      "regime": "Bull",
+      "converged": true,
+      "n_iter": 200,
+      "log_likelihood": -954.8161765087842,
+      "turnover": 0.0039359122953197545,
+      "cost": 7.87182459063951e-06,
+      "restarts": [
+        {
+          "seed": 42,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -1223.69759352289,
+          "selected": false,
+          "fallback_used": false
+        },
+        {
+          "seed": 43,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -998.4106844763461,
+          "selected": false,
+          "fallback_used": false
+        },
+        {
+          "seed": 44,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -954.8161765087842,
+          "selected": true,
+          "fallback_used": false
+        }
+      ]
+    },
+    {
+      "date": "2010-12-06 00:00:00",
+      "regime": "Crisis",
+      "converged": true,
+      "n_iter": 200,
+      "log_likelihood": -1161.4213502320697,
+      "turnover": 0.7091382835525495,
+      "cost": 0.0014182765671050988,
+      "restarts": [
+        {
+          "seed": 42,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -1434.3976698735396,
+          "selected": false,
+          "fallback_used": false
+        },
+        {
+          "seed": 43,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -1161.4213502320697,
+          "selected": true,
+          "fallback_used": false
+        },
+        {
+          "seed": 44,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -1181.859888969362,
+          "selected": false,
+          "fallback_used": false
+        }
+      ]
+    },
+    {
+      "date": "2011-01-05 00:00:00",
+      "regime": "Bear",
+      "converged": true,
+      "n_iter": 200,
+      "log_likelihood": -1329.6679310771594,
+      "turnover": 0.7114365525264665,
+      "cost": 0.0014228731050529332,
+      "restarts": [
+        {
+          "seed": 42,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -1329.667973868906,
+          "selected": false,
+          "fallback_used": false
+        },
+        {
+          "seed": 43,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -1329.6679310771594,
+          "selected": true,
+          "fallback_used": false
+        },
+        {
+          "seed": 44,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -1371.7614878709903,
+          "selected": false,
+          "fallback_used": false
+        }
+      ]
+    },
+    {
+      "date": "2011-02-04 00:00:00",
+      "regime": "Crisis",
+      "converged": true,
+      "n_iter": 200,
+      "log_likelihood": -1512.9290535216278,
+      "turnover": 0.7266200598061907,
+      "cost": 0.0014532401196123814,
+      "restarts": [
+        {
+          "seed": 42,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -1527.5450629714542,
+          "selected": false,
+          "fallback_used": false
+        },
+        {
+          "seed": 43,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -1521.6010958627885,
+          "selected": false,
+          "fallback_used": false
+        },
+        {
+          "seed": 44,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -1512.9290535216278,
+          "selected": true,
+          "fallback_used": false
+        }
+      ]
+    },
+    {
+      "date": "2011-03-08 00:00:00",
+      "regime": "Crisis",
+      "converged": true,
+      "n_iter": 200,
+      "log_likelihood": -1693.5218961274052,
+      "turnover": 0.007935676316885918,
+      "cost": 1.5871352633771837e-05,
+      "restarts": [
+        {
+          "seed": 42,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -1976.6822676282136,
+          "selected": false,
+          "fallback_used": false
+        },
+        {
+          "seed": 43,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -1694.7039532469257,
+          "selected": false,
+          "fallback_used": false
+        },
+        {
+          "seed": 44,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -1693.5218961274052,
+          "selected": true,
+          "fallback_used": false
+        }
+      ]
+    },
+    {
+      "date": "2011-04-06 00:00:00",
+      "regime": "Bear",
+      "converged": true,
+      "n_iter": 200,
+      "log_likelihood": -1886.9104336997436,
+      "turnover": 0.7220541219801322,
+      "cost": 0.0014441082439602643,
+      "restarts": [
+        {
+          "seed": 42,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -2183.5001337596595,
+          "selected": false,
+          "fallback_used": false
+        },
+        {
+          "seed": 43,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -1886.9104336997436,
+          "selected": true,
+          "fallback_used": false
+        },
+        {
+          "seed": 44,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -1886.9104618666497,
+          "selected": false,
+          "fallback_used": false
+        }
+      ]
+    },
+    {
+      "date": "2011-05-10 00:00:00",
+      "regime": "Bear",
+      "converged": true,
+      "n_iter": 200,
+      "log_likelihood": -1888.190985339341,
+      "turnover": 0.017093948132308863,
+      "cost": 3.418789626461772e-05,
+      "restarts": [
+        {
+          "seed": 42,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -2165.429546483713,
+          "selected": false,
+          "fallback_used": false
+        },
+        {
+          "seed": 43,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -1888.190985339341,
+          "selected": true,
+          "fallback_used": false
+        },
+        {
+          "seed": 44,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -1920.2243006709184,
+          "selected": false,
+          "fallback_used": false
+        }
+      ]
+    },
+    {
+      "date": "2011-06-08 00:00:00",
+      "regime": "Bear",
+      "converged": true,
+      "n_iter": 200,
+      "log_likelihood": -1916.628556290576,
+      "turnover": 0.002141161451303828,
+      "cost": 4.282322902607656e-06,
+      "restarts": [
+        {
+          "seed": 42,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -2191.5383068214655,
+          "selected": false,
+          "fallback_used": false
+        },
+        {
+          "seed": 43,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -1916.628556290576,
+          "selected": true,
+          "fallback_used": false
+        },
+        {
+          "seed": 44,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -1962.6456954066268,
+          "selected": false,
+          "fallback_used": false
+        }
+      ]
+    },
+    {
+      "date": "2011-07-07 00:00:00",
+      "regime": "Bear",
+      "converged": true,
+      "n_iter": 200,
+      "log_likelihood": -1894.1581751935687,
+      "turnover": 0.00772648500529237,
+      "cost": 1.545297001058474e-05,
+      "restarts": [
+        {
+          "seed": 42,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -2138.4692703660726,
+          "selected": false,
+          "fallback_used": false
+        },
+        {
+          "seed": 43,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -1894.1582124479532,
+          "selected": false,
+          "fallback_used": false
+        },
+        {
+          "seed": 44,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -1894.1581751935687,
+          "selected": true,
+          "fallback_used": false
+        }
+      ]
+    },
+    {
+      "date": "2011-08-05 00:00:00",
+      "regime": "Bear",
+      "converged": true,
+      "n_iter": 200,
+      "log_likelihood": -1937.4127944771237,
+      "turnover": 0.19999973537247662,
+      "cost": 0.00039999947074495317,
+      "restarts": [
+        {
+          "seed": 42,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -2234.94644396263,
+          "selected": false,
+          "fallback_used": false
+        },
+        {
+          "seed": 43,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -1937.4127944771237,
+          "selected": true,
+          "fallback_used": false
+        },
+        {
+          "seed": 44,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -1937.4127983795859,
+          "selected": false,
+          "fallback_used": false
+        }
+      ]
+    },
+    {
+      "date": "2011-09-08 00:00:00",
+      "regime": "Crisis",
+      "converged": true,
+      "n_iter": 200,
+      "log_likelihood": -1884.8497380472065,
+      "turnover": 0.569234043891244,
+      "cost": 0.001138468087782488,
+      "restarts": [
+        {
+          "seed": 42,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -2189.220215271777,
+          "selected": false,
+          "fallback_used": false
+        },
+        {
+          "seed": 43,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -1884.8497380472065,
+          "selected": true,
+          "fallback_used": false
+        },
+        {
+          "seed": 44,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -1885.7053828447808,
+          "selected": false,
+          "fallback_used": false
+        }
+      ]
+    },
+    {
+      "date": "2011-10-10 00:00:00",
+      "regime": "Crisis",
+      "converged": true,
+      "n_iter": 200,
+      "log_likelihood": -1870.4113637782748,
+      "turnover": 0.008711557583789019,
+      "cost": 1.742311516757804e-05,
+      "restarts": [
+        {
+          "seed": 42,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -2234.3793762642044,
+          "selected": false,
+          "fallback_used": false
+        },
+        {
+          "seed": 43,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -1870.4132605959132,
+          "selected": false,
+          "fallback_used": false
+        },
+        {
+          "seed": 44,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -1870.4113637782748,
+          "selected": true,
+          "fallback_used": false
+        }
+      ]
+    },
+    {
+      "date": "2011-11-14 00:00:00",
+      "regime": "Crisis",
+      "converged": true,
+      "n_iter": 200,
+      "log_likelihood": -1811.4696916822643,
+      "turnover": 0.01653035568954994,
+      "cost": 3.3060711379099885e-05,
+      "restarts": [
+        {
+          "seed": 42,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -2220.0039639824195,
+          "selected": false,
+          "fallback_used": false
+        },
+        {
+          "seed": 43,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -1819.6326193934983,
+          "selected": false,
+          "fallback_used": false
+        },
+        {
+          "seed": 44,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -1811.4696916822643,
+          "selected": true,
+          "fallback_used": false
+        }
+      ]
+    },
+    {
+      "date": "2011-12-14 00:00:00",
+      "regime": "Bear",
+      "converged": true,
+      "n_iter": 200,
+      "log_likelihood": -1873.8636548930292,
+      "turnover": 0.552475872981674,
+      "cost": 0.001104951745963348,
+      "restarts": [
+        {
+          "seed": 42,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -1873.8636548930292,
+          "selected": true,
+          "fallback_used": false
+        },
+        {
+          "seed": 43,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -1878.6383911340945,
+          "selected": false,
+          "fallback_used": false
+        },
+        {
+          "seed": 44,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -1935.1445931756273,
+          "selected": false,
+          "fallback_used": false
+        }
+      ]
+    },
+    {
+      "date": "2012-01-12 00:00:00",
+      "regime": "Bear",
+      "converged": true,
+      "n_iter": 200,
+      "log_likelihood": -1861.591665616029,
+      "turnover": 0.004881155921910615,
+      "cost": 9.76231184382123e-06,
+      "restarts": [
+        {
+          "seed": 42,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -1932.0842859065872,
+          "selected": false,
+          "fallback_used": false
+        },
+        {
+          "seed": 43,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -1861.591665616029,
+          "selected": true,
+          "fallback_used": false
+        },
+        {
+          "seed": 44,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -1870.1637957086475,
+          "selected": false,
+          "fallback_used": false
+        }
+      ]
+    },
+    {
+      "date": "2012-02-13 00:00:00",
+      "regime": "Bear",
+      "converged": true,
+      "n_iter": 200,
+      "log_likelihood": -1876.2533913485997,
+      "turnover": 0.12672428047788825,
+      "cost": 0.00025344856095577654,
+      "restarts": [
+        {
+          "seed": 42,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -2101.5013928151648,
+          "selected": false,
+          "fallback_used": false
+        },
+        {
+          "seed": 43,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -1889.4606737706324,
+          "selected": false,
+          "fallback_used": false
+        },
+        {
+          "seed": 44,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -1876.2533913485997,
+          "selected": true,
+          "fallback_used": false
+        }
+      ]
+    },
+    {
+      "date": "2012-03-15 00:00:00",
+      "regime": "Bull",
+      "converged": true,
+      "n_iter": 200,
+      "log_likelihood": -1790.7907240717177,
+      "turnover": 0.4456705582851963,
+      "cost": 0.0008913411165703926,
+      "restarts": [
+        {
+          "seed": 42,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -2177.7074622680307,
+          "selected": false,
+          "fallback_used": false
+        },
+        {
+          "seed": 43,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -1790.7907240717177,
+          "selected": true,
+          "fallback_used": false
+        },
+        {
+          "seed": 44,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -1790.7907478650168,
+          "selected": false,
+          "fallback_used": false
+        }
+      ]
+    },
+    {
+      "date": "2012-04-17 00:00:00",
+      "regime": "Bull",
+      "converged": true,
+      "n_iter": 200,
+      "log_likelihood": -1800.7385395982892,
+      "turnover": 0.014399151597620688,
+      "cost": 2.879830319524138e-05,
+      "restarts": [
+        {
+          "seed": 42,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -2164.412071930124,
+          "selected": false,
+          "fallback_used": false
+        },
+        {
+          "seed": 43,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -1800.7385395982892,
+          "selected": true,
+          "fallback_used": false
+        },
+        {
+          "seed": 44,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -1828.1737177885495,
+          "selected": false,
+          "fallback_used": false
+        }
+      ]
+    },
+    {
+      "date": "2012-05-17 00:00:00",
+      "regime": "Bear",
+      "converged": true,
+      "n_iter": 200,
+      "log_likelihood": -1839.6988386905941,
+      "turnover": 0.440627931789308,
+      "cost": 0.000881255863578616,
+      "restarts": [
+        {
+          "seed": 42,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -2145.498697614627,
+          "selected": false,
+          "fallback_used": false
+        },
+        {
+          "seed": 43,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -1839.6988386905941,
+          "selected": true,
+          "fallback_used": false
+        },
+        {
+          "seed": 44,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -1840.1186130873261,
+          "selected": false,
+          "fallback_used": false
+        }
+      ]
+    },
+    {
+      "date": "2013-02-21 00:00:00",
+      "regime": "Bear",
+      "converged": true,
+      "n_iter": 200,
+      "log_likelihood": -1888.239359718348,
+      "turnover": 0.001450178710774473,
+      "cost": 2.9003574215489458e-06,
+      "restarts": [
+        {
+          "seed": 42,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -2157.0096541614375,
+          "selected": false,
+          "fallback_used": false
+        },
+        {
+          "seed": 43,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -1888.239359718348,
+          "selected": true,
+          "fallback_used": false
+        },
+        {
+          "seed": 44,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -1913.5071737975413,
+          "selected": false,
+          "fallback_used": false
+        }
+      ]
+    },
+    {
+      "date": "2013-03-22 00:00:00",
+      "regime": "Bear",
+      "converged": true,
+      "n_iter": 200,
+      "log_likelihood": -1924.3600077251504,
+      "turnover": 0.00273328704179669,
+      "cost": 5.46657408359338e-06,
+      "restarts": [
+        {
+          "seed": 42,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -2244.703514784047,
+          "selected": false,
+          "fallback_used": false
+        },
+        {
+          "seed": 43,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -1924.3600130320629,
+          "selected": false,
+          "fallback_used": false
+        },
+        {
+          "seed": 44,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -1924.3600077251504,
+          "selected": true,
+          "fallback_used": false
+        }
+      ]
+    },
+    {
+      "date": "2013-04-26 00:00:00",
+      "regime": "Bear",
+      "converged": true,
+      "n_iter": 200,
+      "log_likelihood": -1900.2907123436084,
+      "turnover": 0.38834409215572113,
+      "cost": 0.0007766881843114423,
+      "restarts": [
+        {
+          "seed": 42,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -2236.44842209736,
+          "selected": false,
+          "fallback_used": false
+        },
+        {
+          "seed": 43,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -1927.5528965265416,
+          "selected": false,
+          "fallback_used": false
+        },
+        {
+          "seed": 44,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -1900.2907123436084,
+          "selected": true,
+          "fallback_used": false
+        }
+      ]
+    },
+    {
+      "date": "2013-05-28 00:00:00",
+      "regime": "Bear",
+      "converged": true,
+      "n_iter": 200,
+      "log_likelihood": -1958.548368113488,
+      "turnover": 0.3857642909160309,
+      "cost": 0.0007715285818320619,
+      "restarts": [
+        {
+          "seed": 42,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -2175.8438047053355,
+          "selected": false,
+          "fallback_used": false
+        },
+        {
+          "seed": 43,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -1958.5484006287193,
+          "selected": false,
+          "fallback_used": false
+        },
+        {
+          "seed": 44,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -1958.548368113488,
+          "selected": true,
+          "fallback_used": false
+        }
+      ]
+    },
+    {
+      "date": "2013-06-26 00:00:00",
+      "regime": "Bear",
+      "converged": true,
+      "n_iter": 200,
+      "log_likelihood": -1950.156424916845,
+      "turnover": 0.18493086318962368,
+      "cost": 0.0003698617263792473,
+      "restarts": [
+        {
+          "seed": 42,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -2183.5059557187747,
+          "selected": false,
+          "fallback_used": false
+        },
+        {
+          "seed": 43,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -1950.1564300976809,
+          "selected": false,
+          "fallback_used": false
+        },
+        {
+          "seed": 44,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -1950.156424916845,
+          "selected": true,
+          "fallback_used": false
+        }
+      ]
+    },
+    {
+      "date": "2013-07-25 00:00:00",
+      "regime": "Bear",
+      "converged": true,
+      "n_iter": 200,
+      "log_likelihood": -1930.1391189596857,
+      "turnover": 0.1903942000888636,
+      "cost": 0.00038078840017772723,
+      "restarts": [
+        {
+          "seed": 42,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -1939.3746149830372,
+          "selected": false,
+          "fallback_used": false
+        },
+        {
+          "seed": 43,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -1931.483989462105,
+          "selected": false,
+          "fallback_used": false
+        },
+        {
+          "seed": 44,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -1930.1391189596857,
+          "selected": true,
+          "fallback_used": false
+        }
+      ]
+    },
+    {
+      "date": "2013-08-27 00:00:00",
+      "regime": "Crisis",
+      "converged": true,
+      "n_iter": 200,
+      "log_likelihood": -1949.6739056029558,
+      "turnover": 0.25000784290238043,
+      "cost": 0.0005000156858047608,
+      "restarts": [
+        {
+          "seed": 42,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -2048.993083728989,
+          "selected": false,
+          "fallback_used": false
+        },
+        {
+          "seed": 43,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -1949.673918818941,
+          "selected": false,
+          "fallback_used": false
+        },
+        {
+          "seed": 44,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -1949.6739056029558,
+          "selected": true,
+          "fallback_used": false
+        }
+      ]
+    },
+    {
+      "date": "2013-09-26 00:00:00",
+      "regime": "Crisis",
+      "converged": true,
+      "n_iter": 200,
+      "log_likelihood": -1936.6970854627252,
+      "turnover": 0.024582279091007134,
+      "cost": 4.9164558182014274e-05,
+      "restarts": [
+        {
+          "seed": 42,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -1974.147233570658,
+          "selected": false,
+          "fallback_used": false
+        },
+        {
+          "seed": 43,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -1936.717268361346,
+          "selected": false,
+          "fallback_used": false
+        },
+        {
+          "seed": 44,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -1936.6970854627252,
+          "selected": true,
+          "fallback_used": false
+        }
+      ]
+    },
+    {
+      "date": "2013-10-29 00:00:00",
+      "regime": "Crisis",
+      "converged": true,
+      "n_iter": 200,
+      "log_likelihood": -1958.1169758741614,
+      "turnover": 0.007512413234211337,
+      "cost": 1.5024826468422672e-05,
+      "restarts": [
+        {
+          "seed": 42,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -1966.249785985788,
+          "selected": false,
+          "fallback_used": false
+        },
+        {
+          "seed": 43,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -1958.1169758741614,
+          "selected": true,
+          "fallback_used": false
+        },
+        {
+          "seed": 44,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -2049.2372579367157,
+          "selected": false,
+          "fallback_used": false
+        }
+      ]
+    },
+    {
+      "date": "2013-11-29 00:00:00",
+      "regime": "Bull",
+      "converged": true,
+      "n_iter": 200,
+      "log_likelihood": -2037.81355964216,
+      "turnover": 0.5206838285287309,
+      "cost": 0.0010413676570574617,
+      "restarts": [
+        {
+          "seed": 42,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -2249.3873578622383,
+          "selected": false,
+          "fallback_used": false
+        },
+        {
+          "seed": 43,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -2037.81355964216,
+          "selected": true,
+          "fallback_used": false
+        },
+        {
+          "seed": 44,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -2042.0380327257014,
+          "selected": false,
+          "fallback_used": false
+        }
+      ]
+    },
+    {
+      "date": "2013-12-31 00:00:00",
+      "regime": "Bull",
+      "converged": true,
+      "n_iter": 200,
+      "log_likelihood": -1994.8346275122128,
+      "turnover": 0.2471579297033178,
+      "cost": 0.0004943158594066356,
+      "restarts": [
+        {
+          "seed": 42,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -1994.8346275122128,
+          "selected": true,
+          "fallback_used": false
+        },
+        {
+          "seed": 43,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -2001.25905480295,
+          "selected": false,
+          "fallback_used": false
+        },
+        {
+          "seed": 44,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -1997.808405121968,
+          "selected": false,
+          "fallback_used": false
+        }
+      ]
+    },
+    {
+      "date": "2014-01-29 00:00:00",
+      "regime": "Bull",
+      "converged": true,
+      "n_iter": 200,
+      "log_likelihood": -1940.0903090457596,
+      "turnover": 0.008898896167883232,
+      "cost": 1.7797792335766465e-05,
+      "restarts": [
+        {
+          "seed": 42,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -1951.6767559662412,
+          "selected": false,
+          "fallback_used": false
+        },
+        {
+          "seed": 43,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -1941.2212745691145,
+          "selected": false,
+          "fallback_used": false
+        },
+        {
+          "seed": 44,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -1940.0903090457596,
+          "selected": true,
+          "fallback_used": false
+        }
+      ]
+    },
+    {
+      "date": "2014-02-28 00:00:00",
+      "regime": "Bull",
+      "converged": true,
+      "n_iter": 200,
+      "log_likelihood": -1924.1186346246961,
+      "turnover": 0.09084804277248629,
+      "cost": 0.0001816960855449726,
+      "restarts": [
+        {
+          "seed": 42,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -1930.2678347255664,
+          "selected": false,
+          "fallback_used": false
+        },
+        {
+          "seed": 43,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -1930.2678733754121,
+          "selected": false,
+          "fallback_used": false
+        },
+        {
+          "seed": 44,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -1924.1186346246961,
+          "selected": true,
+          "fallback_used": false
+        }
+      ]
+    },
+    {
+      "date": "2014-04-01 00:00:00",
+      "regime": "Bull",
+      "converged": true,
+      "n_iter": 200,
+      "log_likelihood": -1927.3218914740696,
+      "turnover": 0.24278576957637224,
+      "cost": 0.00048557153915274444,
+      "restarts": [
+        {
+          "seed": 42,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -1927.3218914740696,
+          "selected": true,
+          "fallback_used": false
+        },
+        {
+          "seed": 43,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -1928.734757684372,
+          "selected": false,
+          "fallback_used": false
+        },
+        {
+          "seed": 44,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -1943.038958479046,
+          "selected": false,
+          "fallback_used": false
+        }
+      ]
+    },
+    {
+      "date": "2014-05-07 00:00:00",
+      "regime": "Bull",
+      "converged": true,
+      "n_iter": 200,
+      "log_likelihood": -1965.9298661227278,
+      "turnover": 0.25974186584195663,
+      "cost": 0.0005194837316839132,
+      "restarts": [
+        {
+          "seed": 42,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -2039.2985538359524,
+          "selected": false,
+          "fallback_used": false
+        },
+        {
+          "seed": 43,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -1965.9298661227278,
+          "selected": true,
+          "fallback_used": false
+        },
+        {
+          "seed": 44,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -1968.7163637826898,
+          "selected": false,
+          "fallback_used": false
+        }
+      ]
+    },
+    {
+      "date": "2014-06-05 00:00:00",
+      "regime": "Crisis",
+      "converged": true,
+      "n_iter": 200,
+      "log_likelihood": -1985.6386767846573,
+      "turnover": 0.7310209255566419,
+      "cost": 0.0014620418511132839,
+      "restarts": [
+        {
+          "seed": 42,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -1985.6386767846573,
+          "selected": true,
+          "fallback_used": false
+        },
+        {
+          "seed": 43,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -1994.459219804139,
+          "selected": false,
+          "fallback_used": false
+        },
+        {
+          "seed": 44,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -2010.7673732843693,
+          "selected": false,
+          "fallback_used": false
+        }
+      ]
+    },
+    {
+      "date": "2014-07-04 00:00:00",
+      "regime": "Bull",
+      "converged": true,
+      "n_iter": 200,
+      "log_likelihood": -1883.4973590739205,
+      "turnover": 0.7460502719428396,
+      "cost": 0.0014921005438856792,
+      "restarts": [
+        {
+          "seed": 42,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -1883.4973590745522,
+          "selected": false,
+          "fallback_used": false
+        },
+        {
+          "seed": 43,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -1883.4973590739205,
+          "selected": true,
+          "fallback_used": false
+        },
+        {
+          "seed": 44,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -1883.4973590749405,
+          "selected": false,
+          "fallback_used": false
+        }
+      ]
+    },
+    {
+      "date": "2014-08-05 00:00:00",
+      "regime": "Bull",
+      "converged": true,
+      "n_iter": 200,
+      "log_likelihood": -1859.3196163845523,
+      "turnover": 0.20031648551776948,
+      "cost": 0.0004006329710355389,
+      "restarts": [
+        {
+          "seed": 42,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -2182.7861359247086,
+          "selected": false,
+          "fallback_used": false
+        },
+        {
+          "seed": 43,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -1859.3196163845523,
+          "selected": true,
+          "fallback_used": false
+        },
+        {
+          "seed": 44,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -1921.9210775724307,
+          "selected": false,
+          "fallback_used": false
+        }
+      ]
+    },
+    {
+      "date": "2014-09-05 00:00:00",
+      "regime": "Bear",
+      "converged": true,
+      "n_iter": 200,
+      "log_likelihood": -1865.3151668112373,
+      "turnover": 0.4060216528439563,
+      "cost": 0.0008120433056879125,
+      "restarts": [
+        {
+          "seed": 42,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -1939.435988545136,
+          "selected": false,
+          "fallback_used": false
+        },
+        {
+          "seed": 43,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -1865.3151668112373,
+          "selected": true,
+          "fallback_used": false
+        },
+        {
+          "seed": 44,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -1865.3151684884635,
+          "selected": false,
+          "fallback_used": false
+        }
+      ]
+    },
+    {
+      "date": "2014-10-09 00:00:00",
+      "regime": "Crisis",
+      "converged": true,
+      "n_iter": 200,
+      "log_likelihood": -2027.442256846655,
+      "turnover": 0.3256183803291814,
+      "cost": 0.0006512367606583628,
+      "restarts": [
+        {
+          "seed": 42,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -2113.381989974714,
+          "selected": false,
+          "fallback_used": false
+        },
+        {
+          "seed": 43,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -2031.8039731982017,
+          "selected": false,
+          "fallback_used": false
+        },
+        {
+          "seed": 44,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -2027.442256846655,
+          "selected": true,
+          "fallback_used": false
+        }
+      ]
+    },
+    {
+      "date": "2014-11-13 00:00:00",
+      "regime": "Crisis",
+      "converged": true,
+      "n_iter": 200,
+      "log_likelihood": -2011.3104329051207,
+      "turnover": 0.011628325618472095,
+      "cost": 2.325665123694419e-05,
+      "restarts": [
+        {
+          "seed": 42,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -2011.3104329051207,
+          "selected": true,
+          "fallback_used": false
+        },
+        {
+          "seed": 43,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -2058.6540100391976,
+          "selected": false,
+          "fallback_used": false
+        },
+        {
+          "seed": 44,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -2019.1842822699125,
+          "selected": false,
+          "fallback_used": false
+        }
+      ]
+    },
+    {
+      "date": "2014-12-12 00:00:00",
+      "regime": "Bear",
+      "converged": true,
+      "n_iter": 200,
+      "log_likelihood": -2002.9419996789554,
+      "turnover": 0.34011443412501347,
+      "cost": 0.0006802288682500268,
+      "restarts": [
+        {
+          "seed": 42,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -2199.097018142975,
+          "selected": false,
+          "fallback_used": false
+        },
+        {
+          "seed": 43,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -2002.9419996789554,
+          "selected": true,
+          "fallback_used": false
+        },
+        {
+          "seed": 44,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -2014.5985826049196,
+          "selected": false,
+          "fallback_used": false
+        }
+      ]
+    },
+    {
+      "date": "2015-01-13 00:00:00",
+      "regime": "Crisis",
+      "converged": true,
+      "n_iter": 200,
+      "log_likelihood": -1949.4633059684127,
+      "turnover": 0.3370952017929666,
+      "cost": 0.0006741904035859331,
+      "restarts": [
+        {
+          "seed": 42,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -2024.2730497089756,
+          "selected": false,
+          "fallback_used": false
+        },
+        {
+          "seed": 43,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -1995.8189416131609,
+          "selected": false,
+          "fallback_used": false
+        },
+        {
+          "seed": 44,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -1949.4633059684127,
+          "selected": true,
+          "fallback_used": false
+        }
+      ]
+    },
+    {
+      "date": "2015-02-12 00:00:00",
+      "regime": "Bull",
+      "converged": true,
+      "n_iter": 200,
+      "log_likelihood": -1970.7460255968012,
+      "turnover": 0.7331917246138254,
+      "cost": 0.0014663834492276509,
+      "restarts": [
+        {
+          "seed": 42,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -2015.6299080521785,
+          "selected": false,
+          "fallback_used": false
+        },
+        {
+          "seed": 43,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -1970.7460255968012,
+          "selected": true,
+          "fallback_used": false
+        },
+        {
+          "seed": 44,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -2023.8861034832844,
+          "selected": false,
+          "fallback_used": false
+        }
+      ]
+    },
+    {
+      "date": "2015-03-17 00:00:00",
+      "regime": "Crisis",
+      "converged": true,
+      "n_iter": 200,
+      "log_likelihood": -2016.2958671054191,
+      "turnover": 0.7476541996210564,
+      "cost": 0.0014953083992421128,
+      "restarts": [
+        {
+          "seed": 42,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -2227.1808092933115,
+          "selected": false,
+          "fallback_used": false
+        },
+        {
+          "seed": 43,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -2016.2958671054191,
+          "selected": true,
+          "fallback_used": false
+        },
+        {
+          "seed": 44,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -2066.0608391854857,
+          "selected": false,
+          "fallback_used": false
+        }
+      ]
+    },
+    {
+      "date": "2015-04-20 00:00:00",
+      "regime": "Crisis",
+      "converged": true,
+      "n_iter": 200,
+      "log_likelihood": -1972.6636581557168,
+      "turnover": 0.00590244768806537,
+      "cost": 1.180489537613074e-05,
+      "restarts": [
+        {
+          "seed": 42,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -1972.6636581557168,
+          "selected": true,
+          "fallback_used": false
+        },
+        {
+          "seed": 43,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -1972.6636673331482,
+          "selected": false,
+          "fallback_used": false
+        },
+        {
+          "seed": 44,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -2024.7398784491886,
+          "selected": false,
+          "fallback_used": false
+        }
+      ]
+    },
+    {
+      "date": "2015-05-20 00:00:00",
+      "regime": "Crisis",
+      "converged": true,
+      "n_iter": 200,
+      "log_likelihood": -1984.0237938339453,
+      "turnover": 0.0020188553083781494,
+      "cost": 4.037710616756299e-06,
+      "restarts": [
+        {
+          "seed": 42,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -2261.032694916328,
+          "selected": false,
+          "fallback_used": false
+        },
+        {
+          "seed": 43,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -1984.0237938339453,
+          "selected": true,
+          "fallback_used": false
+        },
+        {
+          "seed": 44,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -2018.7469458070007,
+          "selected": false,
+          "fallback_used": false
+        }
+      ]
+    },
+    {
+      "date": "2015-06-18 00:00:00",
+      "regime": "Crisis",
+      "converged": true,
+      "n_iter": 200,
+      "log_likelihood": -1937.43687795116,
+      "turnover": 0.007832272062492776,
+      "cost": 1.5664544124985552e-05,
+      "restarts": [
+        {
+          "seed": 42,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -1937.9927709367446,
+          "selected": false,
+          "fallback_used": false
+        },
+        {
+          "seed": 43,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -2010.8564457642874,
+          "selected": false,
+          "fallback_used": false
+        },
+        {
+          "seed": 44,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -1937.43687795116,
+          "selected": true,
+          "fallback_used": false
+        }
+      ]
+    },
+    {
+      "date": "2015-07-17 00:00:00",
+      "regime": "Bear",
+      "converged": true,
+      "n_iter": 200,
+      "log_likelihood": -1944.8948419231565,
+      "turnover": 0.3527293400749356,
+      "cost": 0.0007054586801498713,
+      "restarts": [
+        {
+          "seed": 42,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -2262.035109920839,
+          "selected": false,
+          "fallback_used": false
+        },
+        {
+          "seed": 43,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -1944.8948419231565,
+          "selected": true,
+          "fallback_used": false
+        },
+        {
+          "seed": 44,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -1955.9168855924922,
+          "selected": false,
+          "fallback_used": false
+        }
+      ]
+    },
+    {
+      "date": "2015-08-17 00:00:00",
+      "regime": "Bull",
+      "converged": true,
+      "n_iter": 200,
+      "log_likelihood": -1997.333194749925,
+      "turnover": 0.4046710016149736,
+      "cost": 0.0008093420032299471,
+      "restarts": [
+        {
+          "seed": 42,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -2256.272352279898,
+          "selected": false,
+          "fallback_used": false
+        },
+        {
+          "seed": 43,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -1997.333194749925,
+          "selected": true,
+          "fallback_used": false
+        },
+        {
+          "seed": 44,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -2007.5602249602466,
+          "selected": false,
+          "fallback_used": false
+        }
+      ]
+    },
+    {
+      "date": "2015-09-15 00:00:00",
+      "regime": "Crisis",
+      "converged": true,
+      "n_iter": 200,
+      "log_likelihood": -1959.0680807306976,
+      "turnover": 0.7386841663573026,
+      "cost": 0.0014773683327146054,
+      "restarts": [
+        {
+          "seed": 42,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -2189.8814312275713,
+          "selected": false,
+          "fallback_used": false
+        },
+        {
+          "seed": 43,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -1959.0680807306976,
+          "selected": true,
+          "fallback_used": false
+        },
+        {
+          "seed": 44,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -1972.358230407665,
+          "selected": false,
+          "fallback_used": false
+        }
+      ]
+    },
+    {
+      "date": "2015-10-19 00:00:00",
+      "regime": "Bear",
+      "converged": true,
+      "n_iter": 200,
+      "log_likelihood": -1886.0206029033943,
+      "turnover": 0.2538288822006438,
+      "cost": 0.0005076577644012877,
+      "restarts": [
+        {
+          "seed": 42,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -2136.007105119167,
+          "selected": false,
+          "fallback_used": false
+        },
+        {
+          "seed": 43,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -1886.0206029033943,
+          "selected": true,
+          "fallback_used": false
+        },
+        {
+          "seed": 44,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -1926.7563027597926,
+          "selected": false,
+          "fallback_used": false
+        }
+      ]
+    },
+    {
+      "date": "2015-11-20 00:00:00",
+      "regime": "Bull",
+      "converged": true,
+      "n_iter": 200,
+      "log_likelihood": -1899.5789533044433,
+      "turnover": 0.3587434566515074,
+      "cost": 0.0007174869133030148,
+      "restarts": [
+        {
+          "seed": 42,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -2008.0127201375622,
+          "selected": false,
+          "fallback_used": false
+        },
+        {
+          "seed": 43,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -1943.7240991690685,
+          "selected": false,
+          "fallback_used": false
+        },
+        {
+          "seed": 44,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -1899.5789533044433,
+          "selected": true,
+          "fallback_used": false
+        }
+      ]
+    },
+    {
+      "date": "2015-12-22 00:00:00",
+      "regime": "Bull",
+      "converged": true,
+      "n_iter": 200,
+      "log_likelihood": -1909.5390633992643,
+      "turnover": 0.026511145453800296,
+      "cost": 5.3022290907600595e-05,
+      "restarts": [
+        {
+          "seed": 42,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -1909.5390633992643,
+          "selected": true,
+          "fallback_used": false
+        },
+        {
+          "seed": 43,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -1917.8804332702994,
+          "selected": false,
+          "fallback_used": false
+        },
+        {
+          "seed": 44,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -1939.519037551242,
+          "selected": false,
+          "fallback_used": false
+        }
+      ]
+    },
+    {
+      "date": "2016-01-21 00:00:00",
+      "regime": "Bull",
+      "converged": true,
+      "n_iter": 200,
+      "log_likelihood": -1897.5209333458606,
+      "turnover": 0.018785155503445367,
+      "cost": 3.7570311006890733e-05,
+      "restarts": [
+        {
+          "seed": 42,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -2169.350466064181,
+          "selected": false,
+          "fallback_used": false
+        },
+        {
+          "seed": 43,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -1897.5209333458606,
+          "selected": true,
+          "fallback_used": false
+        },
+        {
+          "seed": 44,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -1897.7457792901807,
+          "selected": false,
+          "fallback_used": false
+        }
+      ]
+    },
+    {
+      "date": "2016-02-22 00:00:00",
+      "regime": "Crisis",
+      "converged": true,
+      "n_iter": 200,
+      "log_likelihood": -1826.7460385819707,
+      "turnover": 0.3931282376169771,
+      "cost": 0.0007862564752339542,
+      "restarts": [
+        {
+          "seed": 42,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -1826.7460402336453,
+          "selected": false,
+          "fallback_used": false
+        },
+        {
+          "seed": 43,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -1826.7460385819707,
+          "selected": true,
+          "fallback_used": false
+        },
+        {
+          "seed": 44,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -1826.746040986355,
+          "selected": false,
+          "fallback_used": false
+        }
+      ]
+    },
+    {
+      "date": "2016-03-23 00:00:00",
+      "regime": "Crisis",
+      "converged": true,
+      "n_iter": 200,
+      "log_likelihood": -1869.8039260131802,
+      "turnover": 0.0060155805497667525,
+      "cost": 1.2031161099533504e-05,
+      "restarts": [
+        {
+          "seed": 42,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -2113.0462650348054,
+          "selected": false,
+          "fallback_used": false
+        },
+        {
+          "seed": 43,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -1886.2729288898452,
+          "selected": false,
+          "fallback_used": false
+        },
+        {
+          "seed": 44,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -1869.8039260131802,
+          "selected": true,
+          "fallback_used": false
+        }
+      ]
+    },
+    {
+      "date": "2016-04-28 00:00:00",
+      "regime": "Bull",
+      "converged": true,
+      "n_iter": 200,
+      "log_likelihood": -1884.3372435813385,
+      "turnover": 0.484725428124751,
+      "cost": 0.000969450856249502,
+      "restarts": [
+        {
+          "seed": 42,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -1936.5256673080182,
+          "selected": false,
+          "fallback_used": false
+        },
+        {
+          "seed": 43,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -1918.6593564495965,
+          "selected": false,
+          "fallback_used": false
+        },
+        {
+          "seed": 44,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -1884.3372435813385,
+          "selected": true,
+          "fallback_used": false
+        }
+      ]
+    },
+    {
+      "date": "2016-05-27 00:00:00",
+      "regime": "Bull",
+      "converged": true,
+      "n_iter": 200,
+      "log_likelihood": -1824.1095460859876,
+      "turnover": 0.009669177928060685,
+      "cost": 1.933835585612137e-05,
+      "restarts": [
+        {
+          "seed": 42,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -1880.6536817198592,
+          "selected": false,
+          "fallback_used": false
+        },
+        {
+          "seed": 43,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -1829.8379539087239,
+          "selected": false,
+          "fallback_used": false
+        },
+        {
+          "seed": 44,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -1824.1095460859876,
+          "selected": true,
+          "fallback_used": false
+        }
+      ]
+    },
+    {
+      "date": "2016-06-27 00:00:00",
+      "regime": "Bull",
+      "converged": true,
+      "n_iter": 200,
+      "log_likelihood": -1783.7418178398743,
+      "turnover": 0.01111805507716672,
+      "cost": 2.223611015433344e-05,
+      "restarts": [
+        {
+          "seed": 42,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -1827.2068918356279,
+          "selected": false,
+          "fallback_used": false
+        },
+        {
+          "seed": 43,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -1818.4473540656797,
+          "selected": false,
+          "fallback_used": false
+        },
+        {
+          "seed": 44,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -1783.7418178398743,
+          "selected": true,
+          "fallback_used": false
+        }
+      ]
+    },
+    {
+      "date": "2016-07-27 00:00:00",
+      "regime": "Bull",
+      "converged": true,
+      "n_iter": 200,
+      "log_likelihood": -1735.0189997328036,
+      "turnover": 0.016175283124945677,
+      "cost": 3.235056624989136e-05,
+      "restarts": [
+        {
+          "seed": 42,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -1817.9389873444782,
+          "selected": false,
+          "fallback_used": false
+        },
+        {
+          "seed": 43,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -1782.6229453567857,
+          "selected": false,
+          "fallback_used": false
+        },
+        {
+          "seed": 44,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -1735.0189997328036,
+          "selected": true,
+          "fallback_used": false
+        }
+      ]
+    },
+    {
+      "date": "2016-08-26 00:00:00",
+      "regime": "Bull",
+      "converged": true,
+      "n_iter": 200,
+      "log_likelihood": -1682.7880966813639,
+      "turnover": 0.005184574593445762,
+      "cost": 1.0369149186891524e-05,
+      "restarts": [
+        {
+          "seed": 42,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -1694.6735944565323,
+          "selected": false,
+          "fallback_used": false
+        },
+        {
+          "seed": 43,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -1682.7881131925235,
+          "selected": false,
+          "fallback_used": false
+        },
+        {
+          "seed": 44,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -1682.7880966813639,
+          "selected": true,
+          "fallback_used": false
+        }
+      ]
+    },
+    {
+      "date": "2016-09-28 00:00:00",
+      "regime": "Bull",
+      "converged": true,
+      "n_iter": 200,
+      "log_likelihood": -1786.2880523667297,
+      "turnover": 0.19950937360414003,
+      "cost": 0.00039901874720828007,
+      "restarts": [
+        {
+          "seed": 42,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -1881.3218991899566,
+          "selected": false,
+          "fallback_used": false
+        },
+        {
+          "seed": 43,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -1786.2880523667297,
+          "selected": true,
+          "fallback_used": false
+        },
+        {
+          "seed": 44,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -1786.2880599070982,
+          "selected": false,
+          "fallback_used": false
+        }
+      ]
+    },
+    {
+      "date": "2016-11-01 00:00:00",
+      "regime": "Bear",
+      "converged": true,
+      "n_iter": 200,
+      "log_likelihood": -1792.9400288210038,
+      "turnover": 0.4526066587051124,
+      "cost": 0.0009052133174102249,
+      "restarts": [
+        {
+          "seed": 42,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -1818.9985182390315,
+          "selected": false,
+          "fallback_used": false
+        },
+        {
+          "seed": 43,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -1810.6331979978806,
+          "selected": false,
+          "fallback_used": false
+        },
+        {
+          "seed": 44,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -1792.9400288210038,
+          "selected": true,
+          "fallback_used": false
+        }
+      ]
+    },
+    {
+      "date": "2016-12-01 00:00:00",
+      "regime": "Crisis",
+      "converged": true,
+      "n_iter": 200,
+      "log_likelihood": -1718.1570644396368,
+      "turnover": 0.6843138656252705,
+      "cost": 0.0013686277312505413,
+      "restarts": [
+        {
+          "seed": 42,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -1751.2960676738933,
+          "selected": false,
+          "fallback_used": false
+        },
+        {
+          "seed": 43,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -1718.1570644396368,
+          "selected": true,
+          "fallback_used": false
+        },
+        {
+          "seed": 44,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -1726.4937439764615,
+          "selected": false,
+          "fallback_used": false
+        }
+      ]
+    },
+    {
+      "date": "2016-12-30 00:00:00",
+      "regime": "Bear",
+      "converged": true,
+      "n_iter": 200,
+      "log_likelihood": -1724.1369788490936,
+      "turnover": 0.6884413160488194,
+      "cost": 0.0013768826320976388,
+      "restarts": [
+        {
+          "seed": 42,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -1765.1383693669468,
+          "selected": false,
+          "fallback_used": false
+        },
+        {
+          "seed": 43,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -1724.1369788490936,
+          "selected": true,
+          "fallback_used": false
+        },
+        {
+          "seed": 44,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -1735.9487869404848,
+          "selected": false,
+          "fallback_used": false
+        }
+      ]
+    },
+    {
+      "date": "2017-01-31 00:00:00",
+      "regime": "Bear",
+      "converged": true,
+      "n_iter": 200,
+      "log_likelihood": -1755.203201945443,
+      "turnover": 0.19677986457014252,
+      "cost": 0.00039355972914028496,
+      "restarts": [
+        {
+          "seed": 42,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -1755.2032028892286,
+          "selected": false,
+          "fallback_used": false
+        },
+        {
+          "seed": 43,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -1803.5143021998185,
+          "selected": false,
+          "fallback_used": false
+        },
+        {
+          "seed": 44,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -1755.203201945443,
+          "selected": true,
+          "fallback_used": false
+        }
+      ]
+    },
+    {
+      "date": "2017-03-02 00:00:00",
+      "regime": "Bear",
+      "converged": true,
+      "n_iter": 200,
+      "log_likelihood": -1806.9567169232853,
+      "turnover": 0.5276986004137604,
+      "cost": 0.0010553972008275209,
+      "restarts": [
+        {
+          "seed": 42,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -1806.956717516395,
+          "selected": false,
+          "fallback_used": false
+        },
+        {
+          "seed": 43,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -1873.3293975830181,
+          "selected": false,
+          "fallback_used": false
+        },
+        {
+          "seed": 44,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -1806.9567169232853,
+          "selected": true,
+          "fallback_used": false
+        }
+      ]
+    },
+    {
+      "date": "2017-04-03 00:00:00",
+      "regime": "Bull",
+      "converged": true,
+      "n_iter": 200,
+      "log_likelihood": -1844.7759514150596,
+      "turnover": 0.39083524616937004,
+      "cost": 0.00078167049233874,
+      "restarts": [
+        {
+          "seed": 42,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -1865.1404897028942,
+          "selected": false,
+          "fallback_used": false
+        },
+        {
+          "seed": 43,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -1844.7759514150596,
+          "selected": true,
+          "fallback_used": false
+        },
+        {
+          "seed": 44,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -1865.140489887179,
+          "selected": false,
+          "fallback_used": false
+        }
+      ]
+    },
+    {
+      "date": "2017-05-05 00:00:00",
+      "regime": "Bull",
+      "converged": true,
+      "n_iter": 200,
+      "log_likelihood": -1793.7451217140854,
+      "turnover": 0.0003568349139629455,
+      "cost": 7.13669827925891e-07,
+      "restarts": [
+        {
+          "seed": 42,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -1804.8391966908148,
+          "selected": false,
+          "fallback_used": false
+        },
+        {
+          "seed": 43,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -1793.7451217140854,
+          "selected": true,
+          "fallback_used": false
+        },
+        {
+          "seed": 44,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -1812.1613228365713,
+          "selected": false,
+          "fallback_used": false
+        }
+      ]
+    },
+    {
+      "date": "2017-06-05 00:00:00",
+      "regime": "Bull",
+      "converged": true,
+      "n_iter": 200,
+      "log_likelihood": -1728.0885901918523,
+      "turnover": 0.0059590877335024516,
+      "cost": 1.1918175467004902e-05,
+      "restarts": [
+        {
+          "seed": 42,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -1975.0512133297284,
+          "selected": false,
+          "fallback_used": false
+        },
+        {
+          "seed": 43,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -1738.027068726471,
+          "selected": false,
+          "fallback_used": false
+        },
+        {
+          "seed": 44,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -1728.0885901918523,
+          "selected": true,
+          "fallback_used": false
+        }
+      ]
+    },
+    {
+      "date": "2017-07-05 00:00:00",
+      "regime": "Bull",
+      "converged": true,
+      "n_iter": 200,
+      "log_likelihood": -1699.9470031156213,
+      "turnover": 0.001136037812862415,
+      "cost": 2.27207562572483e-06,
+      "restarts": [
+        {
+          "seed": 42,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -1950.1356986602345,
+          "selected": false,
+          "fallback_used": false
+        },
+        {
+          "seed": 43,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -1699.9470031156213,
+          "selected": true,
+          "fallback_used": false
+        },
+        {
+          "seed": 44,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -1699.9470049970082,
+          "selected": false,
+          "fallback_used": false
+        }
+      ]
+    },
+    {
+      "date": "2017-08-03 00:00:00",
+      "regime": "Bull",
+      "converged": true,
+      "n_iter": 200,
+      "log_likelihood": -1647.208396293016,
+      "turnover": 0.005533290668438934,
+      "cost": 1.106658133687787e-05,
+      "restarts": [
+        {
+          "seed": 42,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -1647.208396293016,
+          "selected": true,
+          "fallback_used": false
+        },
+        {
+          "seed": 43,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -1654.5397249485227,
+          "selected": false,
+          "fallback_used": false
+        },
+        {
+          "seed": 44,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -1647.2084241389505,
+          "selected": false,
+          "fallback_used": false
+        }
+      ]
+    },
+    {
+      "date": "2017-09-05 00:00:00",
+      "regime": "Crisis",
+      "converged": true,
+      "n_iter": 200,
+      "log_likelihood": -1694.3354057700572,
+      "turnover": 0.7626639374020976,
+      "cost": 0.001525327874804195,
+      "restarts": [
+        {
+          "seed": 42,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -1958.7051955149802,
+          "selected": false,
+          "fallback_used": false
+        },
+        {
+          "seed": 43,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -1694.3354057700572,
+          "selected": true,
+          "fallback_used": false
+        },
+        {
+          "seed": 44,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -1706.4537453116302,
+          "selected": false,
+          "fallback_used": false
+        }
+      ]
+    },
+    {
+      "date": "2017-10-05 00:00:00",
+      "regime": "Crisis",
+      "converged": true,
+      "n_iter": 200,
+      "log_likelihood": -1684.6261487777967,
+      "turnover": 0.0074137244539086225,
+      "cost": 1.4827448907817246e-05,
+      "restarts": [
+        {
+          "seed": 42,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -1814.4312726610701,
+          "selected": false,
+          "fallback_used": false
+        },
+        {
+          "seed": 43,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -1684.6261487777967,
+          "selected": true,
+          "fallback_used": false
+        },
+        {
+          "seed": 44,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -1684.6261502597808,
+          "selected": false,
+          "fallback_used": false
+        }
+      ]
+    },
+    {
+      "date": "2017-11-06 00:00:00",
+      "regime": "Bull",
+      "converged": true,
+      "n_iter": 200,
+      "log_likelihood": -1688.7614783669453,
+      "turnover": 0.7591528932092005,
+      "cost": 0.001518305786418401,
+      "restarts": [
+        {
+          "seed": 42,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -1691.2361984329934,
+          "selected": false,
+          "fallback_used": false
+        },
+        {
+          "seed": 43,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -1738.286833594292,
+          "selected": false,
+          "fallback_used": false
+        },
+        {
+          "seed": 44,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -1688.7614783669453,
+          "selected": true,
+          "fallback_used": false
+        }
+      ]
+    },
+    {
+      "date": "2017-12-05 00:00:00",
+      "regime": "Bull",
+      "converged": true,
+      "n_iter": 200,
+      "log_likelihood": -1788.147476364999,
+      "turnover": 0.0057521827075213555,
+      "cost": 1.150436541504271e-05,
+      "restarts": [
+        {
+          "seed": 42,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -1796.6635023004562,
+          "selected": false,
+          "fallback_used": false
+        },
+        {
+          "seed": 43,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -1788.147476364999,
+          "selected": true,
+          "fallback_used": false
+        },
+        {
+          "seed": 44,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -1797.825007010389,
+          "selected": false,
+          "fallback_used": false
+        }
+      ]
+    },
+    {
+      "date": "2018-01-04 00:00:00",
+      "regime": "Bull",
+      "converged": true,
+      "n_iter": 200,
+      "log_likelihood": -1821.4290970747224,
+      "turnover": 0.0054173613584779425,
+      "cost": 1.0834722716955883e-05,
+      "restarts": [
+        {
+          "seed": 42,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -1821.4290970747224,
+          "selected": true,
+          "fallback_used": false
+        },
+        {
+          "seed": 43,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -1876.3537168000319,
+          "selected": false,
+          "fallback_used": false
+        },
+        {
+          "seed": 44,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -1876.355376391662,
+          "selected": false,
+          "fallback_used": false
+        }
+      ]
+    },
+    {
+      "date": "2018-02-05 00:00:00",
+      "regime": "Crisis",
+      "converged": true,
+      "n_iter": 200,
+      "log_likelihood": -1956.6188338056877,
+      "turnover": 0.7190154914925644,
+      "cost": 0.001438030982985129,
+      "restarts": [
+        {
+          "seed": 42,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -1960.9297595134904,
+          "selected": false,
+          "fallback_used": false
+        },
+        {
+          "seed": 43,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -1956.6188477037879,
+          "selected": false,
+          "fallback_used": false
+        },
+        {
+          "seed": 44,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -1956.6188338056877,
+          "selected": true,
+          "fallback_used": false
+        }
+      ]
+    },
+    {
+      "date": "2018-03-08 00:00:00",
+      "regime": "Crisis",
+      "converged": true,
+      "n_iter": 200,
+      "log_likelihood": -1864.039348949058,
+      "turnover": 0.0053262823979739055,
+      "cost": 1.0652564795947811e-05,
+      "restarts": [
+        {
+          "seed": 42,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -1869.6138976416391,
+          "selected": false,
+          "fallback_used": false
+        },
+        {
+          "seed": 43,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -1864.039348949058,
+          "selected": true,
+          "fallback_used": false
+        },
+        {
+          "seed": 44,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -1864.0393490476995,
+          "selected": false,
+          "fallback_used": false
+        }
+      ]
+    },
+    {
+      "date": "2018-04-10 00:00:00",
+      "regime": "Crisis",
+      "converged": true,
+      "n_iter": 200,
+      "log_likelihood": -1822.5607731571365,
+      "turnover": 0.0037189870776145606,
+      "cost": 7.437974155229121e-06,
+      "restarts": [
+        {
+          "seed": 42,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -2049.260099239311,
+          "selected": false,
+          "fallback_used": false
+        },
+        {
+          "seed": 43,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -1831.813859015658,
+          "selected": false,
+          "fallback_used": false
+        },
+        {
+          "seed": 44,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -1822.5607731571365,
+          "selected": true,
+          "fallback_used": false
+        }
+      ]
+    },
+    {
+      "date": "2018-05-10 00:00:00",
+      "regime": "Bull",
+      "converged": true,
+      "n_iter": 200,
+      "log_likelihood": -1846.354666385318,
+      "turnover": 0.7159135387242201,
+      "cost": 0.0014318270774484403,
+      "restarts": [
+        {
+          "seed": 42,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -1846.354669296181,
+          "selected": false,
+          "fallback_used": false
+        },
+        {
+          "seed": 43,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -1846.354666385318,
+          "selected": true,
+          "fallback_used": false
+        },
+        {
+          "seed": 44,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -1846.3546764503208,
+          "selected": false,
+          "fallback_used": false
+        }
+      ]
+    },
+    {
+      "date": "2018-06-08 00:00:00",
+      "regime": "Bear",
+      "converged": true,
+      "n_iter": 200,
+      "log_likelihood": -1868.1795496323257,
+      "turnover": 0.40312876367112094,
+      "cost": 0.0008062575273422419,
+      "restarts": [
+        {
+          "seed": 42,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -2184.926433834157,
+          "selected": false,
+          "fallback_used": false
+        },
+        {
+          "seed": 43,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -1868.1795496323257,
+          "selected": true,
+          "fallback_used": false
+        },
+        {
+          "seed": 44,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -1868.1795771988284,
+          "selected": false,
+          "fallback_used": false
+        }
+      ]
+    },
+    {
+      "date": "2018-07-09 00:00:00",
+      "regime": "Bear",
+      "converged": true,
+      "n_iter": 200,
+      "log_likelihood": -1923.797567307535,
+      "turnover": 0.21174208272365855,
+      "cost": 0.0004234841654473171,
+      "restarts": [
+        {
+          "seed": 42,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -2007.1468611678042,
+          "selected": false,
+          "fallback_used": false
+        },
+        {
+          "seed": 43,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -1923.797567307535,
+          "selected": true,
+          "fallback_used": false
+        },
+        {
+          "seed": 44,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -1940.7112597619584,
+          "selected": false,
+          "fallback_used": false
+        }
+      ]
+    },
+    {
+      "date": "2018-08-07 00:00:00",
+      "regime": "Bull",
+      "converged": true,
+      "n_iter": 200,
+      "log_likelihood": -1938.7986033508976,
+      "turnover": 0.5192189420702632,
+      "cost": 0.0010384378841405261,
+      "restarts": [
+        {
+          "seed": 42,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -2177.5443801012407,
+          "selected": false,
+          "fallback_used": false
+        },
+        {
+          "seed": 43,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -1977.656165932759,
+          "selected": false,
+          "fallback_used": false
+        },
+        {
+          "seed": 44,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -1938.7986033508976,
+          "selected": true,
+          "fallback_used": false
+        }
+      ]
+    },
+    {
+      "date": "2018-09-07 00:00:00",
+      "regime": "Bull",
+      "converged": true,
+      "n_iter": 200,
+      "log_likelihood": -1948.3005878960141,
+      "turnover": 0.062085829906185955,
+      "cost": 0.0001241716598123719,
+      "restarts": [
+        {
+          "seed": 42,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -2181.861352586199,
+          "selected": false,
+          "fallback_used": false
+        },
+        {
+          "seed": 43,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -1985.7519461163674,
+          "selected": false,
+          "fallback_used": false
+        },
+        {
+          "seed": 44,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -1948.3005878960141,
+          "selected": true,
+          "fallback_used": false
+        }
+      ]
+    },
+    {
+      "date": "2018-10-11 00:00:00",
+      "regime": "Crisis",
+      "converged": true,
+      "n_iter": 200,
+      "log_likelihood": -1899.0013349506812,
+      "turnover": 0.7281149994101431,
+      "cost": 0.001456229998820286,
+      "restarts": [
+        {
+          "seed": 42,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -2089.2692442221723,
+          "selected": false,
+          "fallback_used": false
+        },
+        {
+          "seed": 43,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -1899.0013349506812,
+          "selected": true,
+          "fallback_used": false
+        },
+        {
+          "seed": 44,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -1909.4998134054906,
+          "selected": false,
+          "fallback_used": false
+        }
+      ]
+    },
+    {
+      "date": "2018-11-13 00:00:00",
+      "regime": "Crisis",
+      "converged": true,
+      "n_iter": 200,
+      "log_likelihood": -1770.750845391651,
+      "turnover": 0.01216363882114646,
+      "cost": 2.4327277642292924e-05,
+      "restarts": [
+        {
+          "seed": 42,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -1980.5786500464876,
+          "selected": false,
+          "fallback_used": false
+        },
+        {
+          "seed": 43,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -1770.750845391651,
+          "selected": true,
+          "fallback_used": false
+        },
+        {
+          "seed": 44,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -1770.7510257492625,
+          "selected": false,
+          "fallback_used": false
+        }
+      ]
+    },
+    {
+      "date": "2018-12-13 00:00:00",
+      "regime": "Bear",
+      "converged": true,
+      "n_iter": 200,
+      "log_likelihood": -1863.068061931941,
+      "turnover": 0.708450131872399,
+      "cost": 0.001416900263744798,
+      "restarts": [
+        {
+          "seed": 42,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -2073.4408254765594,
+          "selected": false,
+          "fallback_used": false
+        },
+        {
+          "seed": 43,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -1883.6632269836985,
+          "selected": false,
+          "fallback_used": false
+        },
+        {
+          "seed": 44,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -1863.068061931941,
+          "selected": true,
+          "fallback_used": false
+        }
+      ]
+    },
+    {
+      "date": "2019-01-14 00:00:00",
+      "regime": "Bear",
+      "converged": true,
+      "n_iter": 200,
+      "log_likelihood": -1826.925565432966,
+      "turnover": 0.38313098845067384,
+      "cost": 0.0007662619769013476,
+      "restarts": [
+        {
+          "seed": 42,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -1826.925565432966,
+          "selected": true,
+          "fallback_used": false
+        },
+        {
+          "seed": 43,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -1833.6670768850913,
+          "selected": false,
+          "fallback_used": false
+        },
+        {
+          "seed": 44,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -1826.925601425413,
+          "selected": false,
+          "fallback_used": false
+        }
+      ]
+    },
+    {
+      "date": "2019-02-12 00:00:00",
+      "regime": "Bear",
+      "converged": true,
+      "n_iter": 200,
+      "log_likelihood": -1812.2722554805932,
+      "turnover": 0.002816864772692577,
+      "cost": 5.633729545385154e-06,
+      "restarts": [
+        {
+          "seed": 42,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -2088.2749250731504,
+          "selected": false,
+          "fallback_used": false
+        },
+        {
+          "seed": 43,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -1812.2723886419149,
+          "selected": false,
+          "fallback_used": false
+        },
+        {
+          "seed": 44,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -1812.2722554805932,
+          "selected": true,
+          "fallback_used": false
+        }
+      ]
+    },
+    {
+      "date": "2019-03-15 00:00:00",
+      "regime": "Bear",
+      "converged": true,
+      "n_iter": 200,
+      "log_likelihood": -1836.7217491869364,
+      "turnover": 0.6522132565175323,
+      "cost": 0.0013044265130350645,
+      "restarts": [
+        {
+          "seed": 42,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -2110.1060562823127,
+          "selected": false,
+          "fallback_used": false
+        },
+        {
+          "seed": 43,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -1836.7217491869364,
+          "selected": true,
+          "fallback_used": false
+        },
+        {
+          "seed": 44,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -1840.182371668121,
+          "selected": false,
+          "fallback_used": false
+        }
+      ]
+    },
+    {
+      "date": "2019-04-18 00:00:00",
+      "regime": "Bull",
+      "converged": true,
+      "n_iter": 200,
+      "log_likelihood": -1805.5276858819088,
+      "turnover": 0.39301672990042946,
+      "cost": 0.0007860334598008588,
+      "restarts": [
+        {
+          "seed": 42,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -2092.5680552659137,
+          "selected": false,
+          "fallback_used": false
+        },
+        {
+          "seed": 43,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -1805.527691073592,
+          "selected": false,
+          "fallback_used": false
+        },
+        {
+          "seed": 44,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -1805.5276858819088,
+          "selected": true,
+          "fallback_used": false
+        }
+      ]
+    },
+    {
+      "date": "2019-05-22 00:00:00",
+      "regime": "Bear",
+      "converged": true,
+      "n_iter": 200,
+      "log_likelihood": -1778.3588157339202,
+      "turnover": 0.3992852400663449,
+      "cost": 0.0007985704801326899,
+      "restarts": [
+        {
+          "seed": 42,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -1980.156313454412,
+          "selected": false,
+          "fallback_used": false
+        },
+        {
+          "seed": 43,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -1863.96114916227,
+          "selected": false,
+          "fallback_used": false
+        },
+        {
+          "seed": 44,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -1778.3588157339202,
+          "selected": true,
+          "fallback_used": false
+        }
+      ]
+    },
+    {
+      "date": "2019-06-21 00:00:00",
+      "regime": "Bear",
+      "converged": true,
+      "n_iter": 200,
+      "log_likelihood": -1695.544866304548,
+      "turnover": 0.6010856518444959,
+      "cost": 0.0012021713036889916,
+      "restarts": [
+        {
+          "seed": 42,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -1991.0601549713424,
+          "selected": false,
+          "fallback_used": false
+        },
+        {
+          "seed": 43,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -1776.2482124507985,
+          "selected": false,
+          "fallback_used": false
+        },
+        {
+          "seed": 44,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -1695.544866304548,
+          "selected": true,
+          "fallback_used": false
+        }
+      ]
+    },
+    {
+      "date": "2019-07-22 00:00:00",
+      "regime": "Bear",
+      "converged": true,
+      "n_iter": 200,
+      "log_likelihood": -1845.9684583236444,
+      "turnover": 0.18355106600058702,
+      "cost": 0.000367102132001174,
+      "restarts": [
+        {
+          "seed": 42,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -2062.8473627452854,
+          "selected": false,
+          "fallback_used": false
+        },
+        {
+          "seed": 43,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -1857.2995298085516,
+          "selected": false,
+          "fallback_used": false
+        },
+        {
+          "seed": 44,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -1845.9684583236444,
+          "selected": true,
+          "fallback_used": false
+        }
+      ]
+    },
+    {
+      "date": "2019-08-22 00:00:00",
+      "regime": "Crisis",
+      "converged": true,
+      "n_iter": 200,
+      "log_likelihood": -1813.4288007897667,
+      "turnover": 0.6899676845946492,
+      "cost": 0.0013799353691892984,
+      "restarts": [
+        {
+          "seed": 42,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -1813.4288007897667,
+          "selected": true,
+          "fallback_used": false
+        },
+        {
+          "seed": 43,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -1813.4288207386467,
+          "selected": false,
+          "fallback_used": false
+        },
+        {
+          "seed": 44,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -1813.428820520456,
+          "selected": false,
+          "fallback_used": false
+        }
+      ]
+    },
+    {
+      "date": "2019-09-24 00:00:00",
+      "regime": "Crisis",
+      "converged": true,
+      "n_iter": 200,
+      "log_likelihood": -1790.9968089760507,
+      "turnover": 0.015872786454650477,
+      "cost": 3.174557290930095e-05,
+      "restarts": [
+        {
+          "seed": 42,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -1805.6855736246478,
+          "selected": false,
+          "fallback_used": false
+        },
+        {
+          "seed": 43,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -1790.9968089760507,
+          "selected": true,
+          "fallback_used": false
+        },
+        {
+          "seed": 44,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -1853.9979647529733,
+          "selected": false,
+          "fallback_used": false
+        }
+      ]
+    },
+    {
+      "date": "2019-10-27 00:00:00",
+      "regime": "Bear",
+      "converged": true,
+      "n_iter": 200,
+      "log_likelihood": -1726.5613364019855,
+      "turnover": 0.6966271640916728,
+      "cost": 0.0013932543281833455,
+      "restarts": [
+        {
+          "seed": 42,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -1726.5613364019855,
+          "selected": true,
+          "fallback_used": false
+        },
+        {
+          "seed": 43,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -1805.6873444832954,
+          "selected": false,
+          "fallback_used": false
+        },
+        {
+          "seed": 44,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -1805.0560732839713,
+          "selected": false,
+          "fallback_used": false
+        }
+      ]
+    },
+    {
+      "date": "2019-11-27 00:00:00",
+      "regime": "Bull",
+      "converged": true,
+      "n_iter": 200,
+      "log_likelihood": -1812.520813844953,
+      "turnover": 0.43876882476697354,
+      "cost": 0.0008775376495339471,
+      "restarts": [
+        {
+          "seed": 42,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -2121.919913493493,
+          "selected": false,
+          "fallback_used": false
+        },
+        {
+          "seed": 43,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -1812.520813844953,
+          "selected": true,
+          "fallback_used": false
+        },
+        {
+          "seed": 44,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -1812.520813900656,
+          "selected": false,
+          "fallback_used": false
+        }
+      ]
+    },
+    {
+      "date": "2019-12-27 00:00:00",
+      "regime": "Bull",
+      "converged": true,
+      "n_iter": 200,
+      "log_likelihood": -1861.8537364710858,
+      "turnover": 0.34809856508725434,
+      "cost": 0.0006961971301745087,
+      "restarts": [
+        {
+          "seed": 42,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -2198.3279093379606,
+          "selected": false,
+          "fallback_used": false
+        },
+        {
+          "seed": 43,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -1861.8537364710858,
+          "selected": true,
+          "fallback_used": false
+        },
+        {
+          "seed": 44,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -1863.8482542791535,
+          "selected": false,
+          "fallback_used": false
+        }
+      ]
+    },
+    {
+      "date": "2020-01-27 00:00:00",
+      "regime": "Bear",
+      "converged": true,
+      "n_iter": 200,
+      "log_likelihood": -1852.893079828281,
+      "turnover": 0.4005153521727298,
+      "cost": 0.0008010307043454597,
+      "restarts": [
+        {
+          "seed": 42,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -2192.468251907947,
+          "selected": false,
+          "fallback_used": false
+        },
+        {
+          "seed": 43,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -1852.893079828281,
+          "selected": true,
+          "fallback_used": false
+        },
+        {
+          "seed": 44,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -1852.8931055416747,
+          "selected": false,
+          "fallback_used": false
+        }
+      ]
+    },
+    {
+      "date": "2020-02-26 00:00:00",
+      "regime": "Crisis",
+      "converged": true,
+      "n_iter": 200,
+      "log_likelihood": -1920.9363282354782,
+      "turnover": 0.24733770389514886,
+      "cost": 0.0004946754077902977,
+      "restarts": [
+        {
+          "seed": 42,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -1920.9363795586867,
+          "selected": false,
+          "fallback_used": false
+        },
+        {
+          "seed": 43,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -1935.9929075319205,
+          "selected": false,
+          "fallback_used": false
+        },
+        {
+          "seed": 44,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -1920.9363282354782,
+          "selected": true,
+          "fallback_used": false
+        }
+      ]
+    },
+    {
+      "date": "2020-03-27 00:00:00",
+      "regime": "Crisis",
+      "converged": true,
+      "n_iter": 200,
+      "log_likelihood": -1490.774454368479,
+      "turnover": 0.12810488984710044,
+      "cost": 0.0002562097796942009,
+      "restarts": [
+        {
+          "seed": 42,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -1490.774454368479,
+          "selected": true,
+          "fallback_used": false
+        },
+        {
+          "seed": 43,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -1543.7403609899714,
+          "selected": false,
+          "fallback_used": false
+        },
+        {
+          "seed": 44,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -1617.6249390641206,
+          "selected": false,
+          "fallback_used": false
+        }
+      ]
+    },
+    {
+      "date": "2020-05-04 00:00:00",
+      "regime": "Crisis",
+      "converged": true,
+      "n_iter": 200,
+      "log_likelihood": -1325.3338767706705,
+      "turnover": 0.021134962298775824,
+      "cost": 4.226992459755165e-05,
+      "restarts": [
+        {
+          "seed": 42,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -1532.7192192486934,
+          "selected": false,
+          "fallback_used": false
+        },
+        {
+          "seed": 43,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -1325.3338767706705,
+          "selected": true,
+          "fallback_used": false
+        },
+        {
+          "seed": 44,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -1438.4457136105634,
+          "selected": false,
+          "fallback_used": false
+        }
+      ]
+    },
+    {
+      "date": "2020-06-03 00:00:00",
+      "regime": "Bear",
+      "converged": true,
+      "n_iter": 200,
+      "log_likelihood": -1459.5655581554163,
+      "turnover": 0.23893719110222023,
+      "cost": 0.0004778743822044404,
+      "restarts": [
+        {
+          "seed": 42,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -1501.6481525958138,
+          "selected": false,
+          "fallback_used": false
+        },
+        {
+          "seed": 43,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -1463.8569984457724,
+          "selected": false,
+          "fallback_used": false
+        },
+        {
+          "seed": 44,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -1459.5655581554163,
+          "selected": true,
+          "fallback_used": false
+        }
+      ]
+    },
+    {
+      "date": "2020-07-02 00:00:00",
+      "regime": "Bull",
+      "converged": true,
+      "n_iter": 200,
+      "log_likelihood": -1464.6542849854666,
+      "turnover": 0.3426171480958381,
+      "cost": 0.0006852342961916762,
+      "restarts": [
+        {
+          "seed": 42,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -1464.6542849854666,
+          "selected": true,
+          "fallback_used": false
+        },
+        {
+          "seed": 43,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -1464.6542854628033,
+          "selected": false,
+          "fallback_used": false
+        },
+        {
+          "seed": 44,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -1498.9135641204223,
+          "selected": false,
+          "fallback_used": false
+        }
+      ]
+    },
+    {
+      "date": "2020-07-31 00:00:00",
+      "regime": "Bull",
+      "converged": true,
+      "n_iter": 200,
+      "log_likelihood": -1474.851873893682,
+      "turnover": 0.011550819037517465,
+      "cost": 2.3101638075034932e-05,
+      "restarts": [
+        {
+          "seed": 42,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -1474.851873893682,
+          "selected": true,
+          "fallback_used": false
+        },
+        {
+          "seed": 43,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -1502.0350038130427,
+          "selected": false,
+          "fallback_used": false
+        },
+        {
+          "seed": 44,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -1491.0289606353786,
+          "selected": false,
+          "fallback_used": false
+        }
+      ]
+    },
+    {
+      "date": "2020-08-31 00:00:00",
+      "regime": "Bull",
+      "converged": true,
+      "n_iter": 200,
+      "log_likelihood": -1389.9861161425008,
+      "turnover": 0.006613380808625118,
+      "cost": 1.3226761617250236e-05,
+      "restarts": [
+        {
+          "seed": 42,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -1389.9861161425008,
+          "selected": true,
+          "fallback_used": false
+        },
+        {
+          "seed": 43,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -1470.0684031011494,
+          "selected": false,
+          "fallback_used": false
+        },
+        {
+          "seed": 44,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -1470.06842398512,
+          "selected": false,
+          "fallback_used": false
+        }
+      ]
+    },
+    {
+      "date": "2020-09-29 00:00:00",
+      "regime": "Bull",
+      "converged": true,
+      "n_iter": 200,
+      "log_likelihood": -1430.0338528250898,
+      "turnover": 0.0036440701040090758,
+      "cost": 7.288140208018151e-06,
+      "restarts": [
+        {
+          "seed": 42,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -1478.5383034097433,
+          "selected": false,
+          "fallback_used": false
+        },
+        {
+          "seed": 43,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -1430.0338528250898,
+          "selected": true,
+          "fallback_used": false
+        },
+        {
+          "seed": 44,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -1430.0345460351843,
+          "selected": false,
+          "fallback_used": false
+        }
+      ]
+    },
+    {
+      "date": "2020-10-29 00:00:00",
+      "regime": "Bear",
+      "converged": true,
+      "n_iter": 200,
+      "log_likelihood": -1361.5349452065175,
+      "turnover": 0.3586488638201799,
+      "cost": 0.0007172977276403598,
+      "restarts": [
+        {
+          "seed": 42,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -1361.5349452065175,
+          "selected": true,
+          "fallback_used": false
+        },
+        {
+          "seed": 43,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -1409.4213928196282,
+          "selected": false,
+          "fallback_used": false
+        },
+        {
+          "seed": 44,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -1439.5192500990645,
+          "selected": false,
+          "fallback_used": false
+        }
+      ]
+    },
+    {
+      "date": "2020-11-27 00:00:00",
+      "regime": "Bull",
+      "converged": true,
+      "n_iter": 200,
+      "log_likelihood": -1425.3350542079265,
+      "turnover": 0.3331922787617247,
+      "cost": 0.0006663845575234494,
+      "restarts": [
+        {
+          "seed": 42,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -1429.1437578525183,
+          "selected": false,
+          "fallback_used": false
+        },
+        {
+          "seed": 43,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -1429.1436380558384,
+          "selected": false,
+          "fallback_used": false
+        },
+        {
+          "seed": 44,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -1425.3350542079265,
+          "selected": true,
+          "fallback_used": false
+        }
+      ]
+    },
+    {
+      "date": "2020-12-30 00:00:00",
+      "regime": "Bull",
+      "converged": true,
+      "n_iter": 200,
+      "log_likelihood": -1401.0111644651552,
+      "turnover": 0.4315889100948697,
+      "cost": 0.0008631778201897394,
+      "restarts": [
+        {
+          "seed": 42,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -1450.6565262671056,
+          "selected": false,
+          "fallback_used": false
+        },
+        {
+          "seed": 43,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -1418.1364586626955,
+          "selected": false,
+          "fallback_used": false
+        },
+        {
+          "seed": 44,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -1401.0111644651552,
+          "selected": true,
+          "fallback_used": false
+        }
+      ]
+    },
+    {
+      "date": "2021-01-29 00:00:00",
+      "regime": "Bull",
+      "converged": true,
+      "n_iter": 200,
+      "log_likelihood": -1397.9988093402749,
+      "turnover": 0.0008161435375088636,
+      "cost": 1.6322870750177272e-06,
+      "restarts": [
+        {
+          "seed": 42,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -1465.8703449294596,
+          "selected": false,
+          "fallback_used": false
+        },
+        {
+          "seed": 43,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -1397.9988093402749,
+          "selected": true,
+          "fallback_used": false
+        },
+        {
+          "seed": 44,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -1397.9988094413845,
+          "selected": false,
+          "fallback_used": false
+        }
+      ]
+    },
+    {
+      "date": "2021-03-01 00:00:00",
+      "regime": "Bull",
+      "converged": true,
+      "n_iter": 200,
+      "log_likelihood": -1420.8804121713977,
+      "turnover": 0.11786475591988384,
+      "cost": 0.00023572951183976765,
+      "restarts": [
+        {
+          "seed": 42,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -1493.531198615454,
+          "selected": false,
+          "fallback_used": false
+        },
+        {
+          "seed": 43,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -1461.7760439505212,
+          "selected": false,
+          "fallback_used": false
+        },
+        {
+          "seed": 44,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -1420.8804121713977,
+          "selected": true,
+          "fallback_used": false
+        }
+      ]
+    },
+    {
+      "date": "2021-04-01 00:00:00",
+      "regime": "Bull",
+      "converged": true,
+      "n_iter": 200,
+      "log_likelihood": -1492.502612019168,
+      "turnover": 0.004583653636960887,
+      "cost": 9.167307273921773e-06,
+      "restarts": [
+        {
+          "seed": 42,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -1492.502612019168,
+          "selected": true,
+          "fallback_used": false
+        },
+        {
+          "seed": 43,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -1523.9345234326315,
+          "selected": false,
+          "fallback_used": false
+        },
+        {
+          "seed": 44,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -1523.9345232094308,
+          "selected": false,
+          "fallback_used": false
+        }
+      ]
+    },
+    {
+      "date": "2021-05-05 00:00:00",
+      "regime": "Bear",
+      "converged": true,
+      "n_iter": 200,
+      "log_likelihood": -1676.9893476857455,
+      "turnover": 0.599994483171381,
+      "cost": 0.0011999889663427618,
+      "restarts": [
+        {
+          "seed": 42,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -1676.9893898404243,
+          "selected": false,
+          "fallback_used": false
+        },
+        {
+          "seed": 43,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -1676.9893476857455,
+          "selected": true,
+          "fallback_used": false
+        },
+        {
+          "seed": 44,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -1688.9876881883115,
+          "selected": false,
+          "fallback_used": false
+        }
+      ]
+    },
+    {
+      "date": "2021-06-04 00:00:00",
+      "regime": "Bear",
+      "converged": true,
+      "n_iter": 200,
+      "log_likelihood": -1942.8084435346118,
+      "turnover": 0.21747602521918824,
+      "cost": 0.0004349520504383765,
+      "restarts": [
+        {
+          "seed": 42,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -1942.8084435346118,
+          "selected": true,
+          "fallback_used": false
+        },
+        {
+          "seed": 43,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -1962.5181375652783,
+          "selected": false,
+          "fallback_used": false
+        },
+        {
+          "seed": 44,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -1964.6063390984075,
+          "selected": false,
+          "fallback_used": false
+        }
+      ]
+    },
+    {
+      "date": "2021-07-05 00:00:00",
+      "regime": "Bear",
+      "converged": true,
+      "n_iter": 200,
+      "log_likelihood": -1897.0384383498897,
+      "turnover": 0.21675874062590508,
+      "cost": 0.00043351748125181023,
+      "restarts": [
+        {
+          "seed": 42,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -1966.2895286542682,
+          "selected": false,
+          "fallback_used": false
+        },
+        {
+          "seed": 43,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -1927.7874326067622,
+          "selected": false,
+          "fallback_used": false
+        },
+        {
+          "seed": 44,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -1897.0384383498897,
+          "selected": true,
+          "fallback_used": false
+        }
+      ]
+    },
+    {
+      "date": "2021-08-04 00:00:00",
+      "regime": "Bear",
+      "converged": true,
+      "n_iter": 200,
+      "log_likelihood": -1897.6306815517762,
+      "turnover": 0.0059902987584271325,
+      "cost": 1.1980597516854265e-05,
+      "restarts": [
+        {
+          "seed": 42,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -1907.0300248041879,
+          "selected": false,
+          "fallback_used": false
+        },
+        {
+          "seed": 43,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -1897.6306815517762,
+          "selected": true,
+          "fallback_used": false
+        },
+        {
+          "seed": 44,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -1941.7031602802806,
+          "selected": false,
+          "fallback_used": false
+        }
+      ]
+    },
+    {
+      "date": "2021-09-03 00:00:00",
+      "regime": "Bear",
+      "converged": true,
+      "n_iter": 200,
+      "log_likelihood": -1875.8978732156409,
+      "turnover": 0.014827652387550058,
+      "cost": 2.9655304775100116e-05,
+      "restarts": [
+        {
+          "seed": 42,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -1975.6229061220627,
+          "selected": false,
+          "fallback_used": false
+        },
+        {
+          "seed": 43,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -1875.8978732156409,
+          "selected": true,
+          "fallback_used": false
+        },
+        {
+          "seed": 44,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -1878.1146516047781,
+          "selected": false,
+          "fallback_used": false
+        }
+      ]
+    },
+    {
+      "date": "2021-10-05 00:00:00",
+      "regime": "Bear",
+      "converged": true,
+      "n_iter": 200,
+      "log_likelihood": -1783.4791658565182,
+      "turnover": 0.006447148517775605,
+      "cost": 1.289429703555121e-05,
+      "restarts": [
+        {
+          "seed": 42,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -1868.5669861444367,
+          "selected": false,
+          "fallback_used": false
+        },
+        {
+          "seed": 43,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -1802.7923889026874,
+          "selected": false,
+          "fallback_used": false
+        },
+        {
+          "seed": 44,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -1783.4791658565182,
+          "selected": true,
+          "fallback_used": false
+        }
+      ]
+    },
+    {
+      "date": "2021-11-04 00:00:00",
+      "regime": "Bear",
+      "converged": true,
+      "n_iter": 200,
+      "log_likelihood": -1717.3806518175472,
+      "turnover": 0.0007439048117441453,
+      "cost": 1.4878096234882904e-06,
+      "restarts": [
+        {
+          "seed": 42,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -1717.3806518175472,
+          "selected": true,
+          "fallback_used": false
+        },
+        {
+          "seed": 43,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -1717.380652445421,
+          "selected": false,
+          "fallback_used": false
+        },
+        {
+          "seed": 44,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -1717.380651862111,
+          "selected": false,
+          "fallback_used": false
+        }
+      ]
+    },
+    {
+      "date": "2021-12-07 00:00:00",
+      "regime": "Crisis",
+      "converged": true,
+      "n_iter": 200,
+      "log_likelihood": -1753.7097317037671,
+      "turnover": 0.36117438743869007,
+      "cost": 0.0007223487748773802,
+      "restarts": [
+        {
+          "seed": 42,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -1990.9155939018206,
+          "selected": false,
+          "fallback_used": false
+        },
+        {
+          "seed": 43,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -1753.7097317037671,
+          "selected": true,
+          "fallback_used": false
+        },
+        {
+          "seed": 44,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -1753.7097317354974,
+          "selected": false,
+          "fallback_used": false
+        }
+      ]
+    },
+    {
+      "date": "2022-01-05 00:00:00",
+      "regime": "Crisis",
+      "converged": true,
+      "n_iter": 200,
+      "log_likelihood": -1726.7915872454823,
+      "turnover": 0.007243760481178686,
+      "cost": 1.4487520962357372e-05,
+      "restarts": [
+        {
+          "seed": 42,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -2254.1401051123444,
+          "selected": false,
+          "fallback_used": false
+        },
+        {
+          "seed": 43,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -1751.807925307676,
+          "selected": false,
+          "fallback_used": false
+        },
+        {
+          "seed": 44,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -1726.7915872454823,
+          "selected": true,
+          "fallback_used": false
+        }
+      ]
+    },
+    {
+      "date": "2022-02-04 00:00:00",
+      "regime": "Bear",
+      "converged": true,
+      "n_iter": 200,
+      "log_likelihood": -1752.6541047984613,
+      "turnover": 0.3775976943232693,
+      "cost": 0.0007551953886465385,
+      "restarts": [
+        {
+          "seed": 42,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -1811.699726056058,
+          "selected": false,
+          "fallback_used": false
+        },
+        {
+          "seed": 43,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -1752.654105805194,
+          "selected": false,
+          "fallback_used": false
+        },
+        {
+          "seed": 44,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -1752.6541047984613,
+          "selected": true,
+          "fallback_used": false
+        }
+      ]
+    },
+    {
+      "date": "2022-03-08 00:00:00",
+      "regime": "Crisis",
+      "converged": true,
+      "n_iter": 200,
+      "log_likelihood": -1686.454369967483,
+      "turnover": 0.32683912924406494,
+      "cost": 0.00065367825848813,
+      "restarts": [
+        {
+          "seed": 42,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -1686.4544257794162,
+          "selected": false,
+          "fallback_used": false
+        },
+        {
+          "seed": 43,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -1686.454369967483,
+          "selected": true,
+          "fallback_used": false
+        },
+        {
+          "seed": 44,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -1686.454402961845,
+          "selected": false,
+          "fallback_used": false
+        }
+      ]
+    },
+    {
+      "date": "2022-04-07 00:00:00",
+      "regime": "Crisis",
+      "converged": true,
+      "n_iter": 200,
+      "log_likelihood": -1630.843836472427,
+      "turnover": 0.010099330932699716,
+      "cost": 2.0198661865399434e-05,
+      "restarts": [
+        {
+          "seed": 42,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -1630.843836472427,
+          "selected": true,
+          "fallback_used": false
+        },
+        {
+          "seed": 43,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -1670.9362173229579,
+          "selected": false,
+          "fallback_used": false
+        },
+        {
+          "seed": 44,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -1670.9362227655902,
+          "selected": false,
+          "fallback_used": false
+        }
+      ]
+    },
+    {
+      "date": "2022-05-11 00:00:00",
+      "regime": "Crisis",
+      "converged": true,
+      "n_iter": 200,
+      "log_likelihood": -1669.360995654313,
+      "turnover": 0.005468014132734459,
+      "cost": 1.093602826546892e-05,
+      "restarts": [
+        {
+          "seed": 42,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -1701.0325507974853,
+          "selected": false,
+          "fallback_used": false
+        },
+        {
+          "seed": 43,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -1669.360995654313,
+          "selected": true,
+          "fallback_used": false
+        },
+        {
+          "seed": 44,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -1669.3610000750052,
+          "selected": false,
+          "fallback_used": false
+        }
+      ]
+    },
+    {
+      "date": "2022-06-09 00:00:00",
+      "regime": "Crisis",
+      "converged": true,
+      "n_iter": 200,
+      "log_likelihood": -1569.8400044588093,
+      "turnover": 0.005030962069233067,
+      "cost": 1.0061924138466134e-05,
+      "restarts": [
+        {
+          "seed": 42,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -1605.856616202714,
+          "selected": false,
+          "fallback_used": false
+        },
+        {
+          "seed": 43,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -1585.8971549426585,
+          "selected": false,
+          "fallback_used": false
+        },
+        {
+          "seed": 44,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -1569.8400044588093,
+          "selected": true,
+          "fallback_used": false
+        }
+      ]
+    },
+    {
+      "date": "2022-07-08 00:00:00",
+      "regime": "Bear",
+      "converged": true,
+      "n_iter": 200,
+      "log_likelihood": -1663.7748526801922,
+      "turnover": 0.6971686844232492,
+      "cost": 0.0013943373688464985,
+      "restarts": [
+        {
+          "seed": 42,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -1663.7748537409384,
+          "selected": false,
+          "fallback_used": false
+        },
+        {
+          "seed": 43,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -1682.684158645582,
+          "selected": false,
+          "fallback_used": false
+        },
+        {
+          "seed": 44,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -1663.7748526801922,
+          "selected": true,
+          "fallback_used": false
+        }
+      ]
+    },
+    {
+      "date": "2022-08-08 00:00:00",
+      "regime": "Bull",
+      "converged": true,
+      "n_iter": 200,
+      "log_likelihood": -1694.2400066499104,
+      "turnover": 0.39162976082226686,
+      "cost": 0.0007832595216445337,
+      "restarts": [
+        {
+          "seed": 42,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -1694.2400066499104,
+          "selected": true,
+          "fallback_used": false
+        },
+        {
+          "seed": 43,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -1704.2436200811087,
+          "selected": false,
+          "fallback_used": false
+        },
+        {
+          "seed": 44,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -1696.7290165801708,
+          "selected": false,
+          "fallback_used": false
+        }
+      ]
+    },
+    {
+      "date": "2022-09-09 00:00:00",
+      "regime": "Bull",
+      "converged": true,
+      "n_iter": 200,
+      "log_likelihood": -1769.266305414216,
+      "turnover": 0.20886156745195808,
+      "cost": 0.0004177231349039162,
+      "restarts": [
+        {
+          "seed": 42,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -2018.731003567853,
+          "selected": false,
+          "fallback_used": false
+        },
+        {
+          "seed": 43,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -1803.1870404291758,
+          "selected": false,
+          "fallback_used": false
+        },
+        {
+          "seed": 44,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -1769.266305414216,
+          "selected": true,
+          "fallback_used": false
+        }
+      ]
+    },
+    {
+      "date": "2022-10-11 00:00:00",
+      "regime": "Bull",
+      "converged": true,
+      "n_iter": 200,
+      "log_likelihood": -1914.1072375691251,
+      "turnover": 0.011512589430334452,
+      "cost": 2.3025178860668908e-05,
+      "restarts": [
+        {
+          "seed": 42,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -1919.3474011617482,
+          "selected": false,
+          "fallback_used": false
+        },
+        {
+          "seed": 43,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -1914.1072375691251,
+          "selected": true,
+          "fallback_used": false
+        },
+        {
+          "seed": 44,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -1917.5711676535084,
+          "selected": false,
+          "fallback_used": false
+        }
+      ]
+    },
+    {
+      "date": "2022-11-11 00:00:00",
+      "regime": "Bull",
+      "converged": true,
+      "n_iter": 200,
+      "log_likelihood": -1827.82436268531,
+      "turnover": 0.013969349709542958,
+      "cost": 2.7938699419085917e-05,
+      "restarts": [
+        {
+          "seed": 42,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -1899.2016115163176,
+          "selected": false,
+          "fallback_used": false
+        },
+        {
+          "seed": 43,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -1827.82436268531,
+          "selected": true,
+          "fallback_used": false
+        },
+        {
+          "seed": 44,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -1827.8243646703143,
+          "selected": false,
+          "fallback_used": false
+        }
+      ]
+    },
+    {
+      "date": "2022-12-12 00:00:00",
+      "regime": "Bull",
+      "converged": true,
+      "n_iter": 200,
+      "log_likelihood": -1733.9595479908073,
+      "turnover": 0.20334535576267093,
+      "cost": 0.0004066907115253419,
+      "restarts": [
+        {
+          "seed": 42,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -1995.6792953617276,
+          "selected": false,
+          "fallback_used": false
+        },
+        {
+          "seed": 43,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -1751.3885102484996,
+          "selected": false,
+          "fallback_used": false
+        },
+        {
+          "seed": 44,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -1733.9595479908073,
+          "selected": true,
+          "fallback_used": false
+        }
+      ]
+    },
+    {
+      "date": "2023-01-10 00:00:00",
+      "regime": "Bull",
+      "converged": true,
+      "n_iter": 200,
+      "log_likelihood": -1715.5061830340114,
+      "turnover": 0.19999998720708512,
+      "cost": 0.0003999999744141703,
+      "restarts": [
+        {
+          "seed": 42,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -1792.2922473711549,
+          "selected": false,
+          "fallback_used": false
+        },
+        {
+          "seed": 43,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -1715.5061830340114,
+          "selected": true,
+          "fallback_used": false
+        },
+        {
+          "seed": 44,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -1715.5061833474624,
+          "selected": false,
+          "fallback_used": false
+        }
+      ]
+    },
+    {
+      "date": "2023-02-09 00:00:00",
+      "regime": "Crisis",
+      "converged": true,
+      "n_iter": 200,
+      "log_likelihood": -1729.5892207976608,
+      "turnover": 0.5278873999572156,
+      "cost": 0.001055774799914431,
+      "restarts": [
+        {
+          "seed": 42,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -1978.097401920164,
+          "selected": false,
+          "fallback_used": false
+        },
+        {
+          "seed": 43,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -1784.2463995947992,
+          "selected": false,
+          "fallback_used": false
+        },
+        {
+          "seed": 44,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -1729.5892207976608,
+          "selected": true,
+          "fallback_used": false
+        }
+      ]
+    },
+    {
+      "date": "2023-03-13 00:00:00",
+      "regime": "Bear",
+      "converged": true,
+      "n_iter": 200,
+      "log_likelihood": -1825.9194202524243,
+      "turnover": 0.5617474999281171,
+      "cost": 0.0011234949998562343,
+      "restarts": [
+        {
+          "seed": 42,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -2021.6612698803874,
+          "selected": false,
+          "fallback_used": false
+        },
+        {
+          "seed": 43,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -1825.9194202524243,
+          "selected": true,
+          "fallback_used": false
+        },
+        {
+          "seed": 44,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -1843.4024557330486,
+          "selected": false,
+          "fallback_used": false
+        }
+      ]
+    },
+    {
+      "date": "2023-04-17 00:00:00",
+      "regime": "Crisis",
+      "converged": true,
+      "n_iter": 200,
+      "log_likelihood": -1780.6551585447094,
+      "turnover": 0.5871733553471457,
+      "cost": 0.0011743467106942911,
+      "restarts": [
+        {
+          "seed": 42,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -2023.9859789228983,
+          "selected": false,
+          "fallback_used": false
+        },
+        {
+          "seed": 43,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -1780.6551585447094,
+          "selected": true,
+          "fallback_used": false
+        },
+        {
+          "seed": 44,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -1801.8211683040872,
+          "selected": false,
+          "fallback_used": false
+        }
+      ]
+    },
+    {
+      "date": "2023-05-17 00:00:00",
+      "regime": "Bear",
+      "converged": true,
+      "n_iter": 200,
+      "log_likelihood": -1735.4121470648347,
+      "turnover": 0.7505529969673495,
+      "cost": 0.0015011059939346986,
+      "restarts": [
+        {
+          "seed": 42,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -2066.1389959390926,
+          "selected": false,
+          "fallback_used": false
+        },
+        {
+          "seed": 43,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -1759.4272628408182,
+          "selected": false,
+          "fallback_used": false
+        },
+        {
+          "seed": 44,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -1735.4121470648347,
+          "selected": true,
+          "fallback_used": false
+        }
+      ]
+    },
+    {
+      "date": "2023-06-15 00:00:00",
+      "regime": "Bear",
+      "converged": true,
+      "n_iter": 200,
+      "log_likelihood": -1795.5392249339611,
+      "turnover": 0.18846523985813737,
+      "cost": 0.0003769304797162747,
+      "restarts": [
+        {
+          "seed": 42,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -2146.9644793407433,
+          "selected": false,
+          "fallback_used": false
+        },
+        {
+          "seed": 43,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -1795.539225848132,
+          "selected": false,
+          "fallback_used": false
+        },
+        {
+          "seed": 44,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -1795.5392249339611,
+          "selected": true,
+          "fallback_used": false
+        }
+      ]
+    },
+    {
+      "date": "2023-07-17 00:00:00",
+      "regime": "Bull",
+      "converged": true,
+      "n_iter": 200,
+      "log_likelihood": -1881.5214271857171,
+      "turnover": 0.39114840316534344,
+      "cost": 0.0007822968063306868,
+      "restarts": [
+        {
+          "seed": 42,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -2202.41168199252,
+          "selected": false,
+          "fallback_used": false
+        },
+        {
+          "seed": 43,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -1899.8839520305742,
+          "selected": false,
+          "fallback_used": false
+        },
+        {
+          "seed": 44,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -1881.5214271857171,
+          "selected": true,
+          "fallback_used": false
+        }
+      ]
+    },
+    {
+      "date": "2023-08-16 00:00:00",
+      "regime": "Bear",
+      "converged": true,
+      "n_iter": 200,
+      "log_likelihood": -1869.6112160352286,
+      "turnover": 0.44727692317976625,
+      "cost": 0.0008945538463595325,
+      "restarts": [
+        {
+          "seed": 42,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -1869.6112160352286,
+          "selected": true,
+          "fallback_used": false
+        },
+        {
+          "seed": 43,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -1881.435958887596,
+          "selected": false,
+          "fallback_used": false
+        },
+        {
+          "seed": 44,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -1876.8437022518387,
+          "selected": false,
+          "fallback_used": false
+        }
+      ]
+    },
+    {
+      "date": "2023-09-14 00:00:00",
+      "regime": "Bear",
+      "converged": true,
+      "n_iter": 200,
+      "log_likelihood": -1829.4818510532334,
+      "turnover": 0.027020743907114543,
+      "cost": 5.4041487814229095e-05,
+      "restarts": [
+        {
+          "seed": 42,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -2174.388754514535,
+          "selected": false,
+          "fallback_used": false
+        },
+        {
+          "seed": 43,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -1829.4818510532334,
+          "selected": true,
+          "fallback_used": false
+        },
+        {
+          "seed": 44,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -1860.697881178589,
+          "selected": false,
+          "fallback_used": false
+        }
+      ]
+    },
+    {
+      "date": "2023-10-17 00:00:00",
+      "regime": "Crisis",
+      "converged": true,
+      "n_iter": 200,
+      "log_likelihood": -1719.414796423621,
+      "turnover": 0.7389203505412287,
+      "cost": 0.0014778407010824575,
+      "restarts": [
+        {
+          "seed": 42,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -2095.7321521308704,
+          "selected": false,
+          "fallback_used": false
+        },
+        {
+          "seed": 43,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -1719.4148122300314,
+          "selected": false,
+          "fallback_used": false
+        },
+        {
+          "seed": 44,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -1719.414796423621,
+          "selected": true,
+          "fallback_used": false
+        }
+      ]
+    },
+    {
+      "date": "2023-11-17 00:00:00",
+      "regime": "Crisis",
+      "converged": true,
+      "n_iter": 200,
+      "log_likelihood": -1780.8625139589624,
+      "turnover": 0.010520502522248999,
+      "cost": 2.1041005044497996e-05,
+      "restarts": [
+        {
+          "seed": 42,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -2208.665944313573,
+          "selected": false,
+          "fallback_used": false
+        },
+        {
+          "seed": 43,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -1784.8944461415538,
+          "selected": false,
+          "fallback_used": false
+        },
+        {
+          "seed": 44,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -1780.8625139589624,
+          "selected": true,
+          "fallback_used": false
+        }
+      ]
+    },
+    {
+      "date": "2023-12-19 00:00:00",
+      "regime": "Bull",
+      "converged": true,
+      "n_iter": 200,
+      "log_likelihood": -1915.2610247189298,
+      "turnover": 0.7769089515482432,
+      "cost": 0.0015538179030964866,
+      "restarts": [
+        {
+          "seed": 42,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -1985.3411682753995,
+          "selected": false,
+          "fallback_used": false
+        },
+        {
+          "seed": 43,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -1925.4465970140343,
+          "selected": false,
+          "fallback_used": false
+        },
+        {
+          "seed": 44,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -1915.2610247189298,
+          "selected": true,
+          "fallback_used": false
+        }
+      ]
+    },
+    {
+      "date": "2024-01-18 00:00:00",
+      "regime": "Bull",
+      "converged": true,
+      "n_iter": 200,
+      "log_likelihood": -1838.4597146081458,
+      "turnover": 0.0003724580518217281,
+      "cost": 7.449161036434561e-07,
+      "restarts": [
+        {
+          "seed": 42,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -2214.482727143509,
+          "selected": false,
+          "fallback_used": false
+        },
+        {
+          "seed": 43,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -1838.498822842903,
+          "selected": false,
+          "fallback_used": false
+        },
+        {
+          "seed": 44,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -1838.4597146081458,
+          "selected": true,
+          "fallback_used": false
+        }
+      ]
+    },
+    {
+      "date": "2024-02-20 00:00:00",
+      "regime": "Bull",
+      "converged": true,
+      "n_iter": 200,
+      "log_likelihood": -1906.020978368405,
+      "turnover": 0.005122133887754892,
+      "cost": 1.0244267775509784e-05,
+      "restarts": [
+        {
+          "seed": 42,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -1906.020978368405,
+          "selected": true,
+          "fallback_used": false
+        },
+        {
+          "seed": 43,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -1908.9802532013741,
+          "selected": false,
+          "fallback_used": false
+        },
+        {
+          "seed": 44,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -1925.634500126921,
+          "selected": false,
+          "fallback_used": false
+        }
+      ]
+    },
+    {
+      "date": "2024-03-21 00:00:00",
+      "regime": "Bull",
+      "converged": true,
+      "n_iter": 200,
+      "log_likelihood": -1953.4140366175614,
+      "turnover": 0.013810767302487278,
+      "cost": 2.7621534604974556e-05,
+      "restarts": [
+        {
+          "seed": 42,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -2240.2635646607023,
+          "selected": false,
+          "fallback_used": false
+        },
+        {
+          "seed": 43,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -1975.0585474544773,
+          "selected": false,
+          "fallback_used": false
+        },
+        {
+          "seed": 44,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -1953.4140366175614,
+          "selected": true,
+          "fallback_used": false
+        }
+      ]
+    },
+    {
+      "date": "2024-04-25 00:00:00",
+      "regime": "Bear",
+      "converged": true,
+      "n_iter": 200,
+      "log_likelihood": -1957.8611221028257,
+      "turnover": 0.3925794007780915,
+      "cost": 0.000785158801556183,
+      "restarts": [
+        {
+          "seed": 42,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -2041.8380089790082,
+          "selected": false,
+          "fallback_used": false
+        },
+        {
+          "seed": 43,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -2031.2087844742198,
+          "selected": false,
+          "fallback_used": false
+        },
+        {
+          "seed": 44,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -1957.8611221028257,
+          "selected": true,
+          "fallback_used": false
+        }
+      ]
+    },
+    {
+      "date": "2024-05-28 00:00:00",
+      "regime": "Crisis",
+      "converged": true,
+      "n_iter": 200,
+      "log_likelihood": -2035.9688496751398,
+      "turnover": 0.7469222561228339,
+      "cost": 0.001493844512245668,
+      "restarts": [
+        {
+          "seed": 42,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -2261.189702976535,
+          "selected": false,
+          "fallback_used": false
+        },
+        {
+          "seed": 43,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -2058.3108408018156,
+          "selected": false,
+          "fallback_used": false
+        },
+        {
+          "seed": 44,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -2035.9688496751398,
+          "selected": true,
+          "fallback_used": false
+        }
+      ]
+    },
+    {
+      "date": "2024-06-27 00:00:00",
+      "regime": "Crisis",
+      "converged": true,
+      "n_iter": 200,
+      "log_likelihood": -1803.090404753882,
+      "turnover": 0.0038097815531117404,
+      "cost": 7.619563106223481e-06,
+      "restarts": [
+        {
+          "seed": 42,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -1804.6398680060881,
+          "selected": false,
+          "fallback_used": false
+        },
+        {
+          "seed": 43,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -1803.090404753882,
+          "selected": true,
+          "fallback_used": false
+        },
+        {
+          "seed": 44,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -1843.8454579632378,
+          "selected": false,
+          "fallback_used": false
+        }
+      ]
+    },
+    {
+      "date": "2024-07-29 00:00:00",
+      "regime": "Bull",
+      "converged": true,
+      "n_iter": 200,
+      "log_likelihood": -1762.8973720518845,
+      "turnover": 0.7959876636615426,
+      "cost": 0.0015919753273230856,
+      "restarts": [
+        {
+          "seed": 42,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -1940.8824967998187,
+          "selected": false,
+          "fallback_used": false
+        },
+        {
+          "seed": 43,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -1762.8973720518845,
+          "selected": true,
+          "fallback_used": false
+        },
+        {
+          "seed": 44,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -1789.6632569741612,
+          "selected": false,
+          "fallback_used": false
+        }
+      ]
+    },
+    {
+      "date": "2024-08-28 00:00:00",
+      "regime": "Bull",
+      "converged": true,
+      "n_iter": 200,
+      "log_likelihood": -1790.6631418028592,
+      "turnover": 0.003380873809761141,
+      "cost": 6.761747619522281e-06,
+      "restarts": [
+        {
+          "seed": 42,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -1832.7892515690853,
+          "selected": false,
+          "fallback_used": false
+        },
+        {
+          "seed": 43,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -1790.6631418028592,
+          "selected": true,
+          "fallback_used": false
+        },
+        {
+          "seed": 44,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -1790.663163754614,
+          "selected": false,
+          "fallback_used": false
+        }
+      ]
+    },
+    {
+      "date": "2024-09-26 00:00:00",
+      "regime": "Bull",
+      "converged": true,
+      "n_iter": 200,
+      "log_likelihood": -1750.2933117198445,
+      "turnover": 0.0004199402459776587,
+      "cost": 8.398804919553174e-07,
+      "restarts": [
+        {
+          "seed": 42,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -1750.2933117198445,
+          "selected": true,
+          "fallback_used": false
+        },
+        {
+          "seed": 43,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -1776.8847480175484,
+          "selected": false,
+          "fallback_used": false
+        },
+        {
+          "seed": 44,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -1776.8847483774734,
+          "selected": false,
+          "fallback_used": false
+        }
+      ]
+    },
+    {
+      "date": "2024-10-28 00:00:00",
+      "regime": "Bear",
+      "converged": true,
+      "n_iter": 200,
+      "log_likelihood": -1795.6971765328847,
+      "turnover": 0.5819697565989375,
+      "cost": 0.001163939513197875,
+      "restarts": [
+        {
+          "seed": 42,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -1929.5432885186826,
+          "selected": false,
+          "fallback_used": false
+        },
+        {
+          "seed": 43,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -1795.6972129833198,
+          "selected": false,
+          "fallback_used": false
+        },
+        {
+          "seed": 44,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -1795.6971765328847,
+          "selected": true,
+          "fallback_used": false
+        }
+      ]
+    },
+    {
+      "date": "2024-11-28 00:00:00",
+      "regime": "Bear",
+      "converged": true,
+      "n_iter": 200,
+      "log_likelihood": -1830.4918560492283,
+      "turnover": 0.13303389036632235,
+      "cost": 0.00026606778073264464,
+      "restarts": [
+        {
+          "seed": 42,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -1865.5439098982306,
+          "selected": false,
+          "fallback_used": false
+        },
+        {
+          "seed": 43,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -1830.4918560492283,
+          "selected": true,
+          "fallback_used": false
+        },
+        {
+          "seed": 44,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -1831.9571560136021,
+          "selected": false,
+          "fallback_used": false
+        }
+      ]
+    },
+    {
+      "date": "2024-12-30 00:00:00",
+      "regime": "Bear",
+      "converged": true,
+      "n_iter": 200,
+      "log_likelihood": -1747.9065373630672,
+      "turnover": 0.1321314799587208,
+      "cost": 0.00026426295991744157,
+      "restarts": [
+        {
+          "seed": 42,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -1764.3816337818412,
+          "selected": false,
+          "fallback_used": false
+        },
+        {
+          "seed": 43,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -1747.9065373630672,
+          "selected": true,
+          "fallback_used": false
+        },
+        {
+          "seed": 44,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -1760.404618395758,
+          "selected": false,
+          "fallback_used": false
+        }
+      ]
+    },
+    {
+      "date": "2025-01-28 00:00:00",
+      "regime": "Bear",
+      "converged": true,
+      "n_iter": 200,
+      "log_likelihood": -1692.6438626816669,
+      "turnover": 0.01309343148888316,
+      "cost": 2.618686297776632e-05,
+      "restarts": [
+        {
+          "seed": 42,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -1695.0824139805345,
+          "selected": false,
+          "fallback_used": false
+        },
+        {
+          "seed": 43,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -1692.6438626816669,
+          "selected": true,
+          "fallback_used": false
+        },
+        {
+          "seed": 44,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -1692.643876614459,
+          "selected": false,
+          "fallback_used": false
+        }
+      ]
+    },
+    {
+      "date": "2025-02-25 00:00:00",
+      "regime": "Bear",
+      "converged": true,
+      "n_iter": 200,
+      "log_likelihood": -1621.209960360496,
+      "turnover": 0.19999829765966554,
+      "cost": 0.00039999659531933106,
+      "restarts": [
+        {
+          "seed": 42,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -1635.8737317244481,
+          "selected": false,
+          "fallback_used": false
+        },
+        {
+          "seed": 43,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -1621.209960360496,
+          "selected": true,
+          "fallback_used": false
+        },
+        {
+          "seed": 44,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -1621.8716037304866,
+          "selected": false,
+          "fallback_used": false
+        }
+      ]
+    },
+    {
+      "date": "2025-03-28 00:00:00",
+      "regime": "Bear",
+      "converged": true,
+      "n_iter": 200,
+      "log_likelihood": -1609.311894558469,
+      "turnover": 0.19999061012341923,
+      "cost": 0.00039998122024683844,
+      "restarts": [
+        {
+          "seed": 42,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -1669.6681326137168,
+          "selected": false,
+          "fallback_used": false
+        },
+        {
+          "seed": 43,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -1609.311894558469,
+          "selected": true,
+          "fallback_used": false
+        },
+        {
+          "seed": 44,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -1659.817589143829,
+          "selected": false,
+          "fallback_used": false
+        }
+      ]
+    },
+    {
+      "date": "2025-05-05 00:00:00",
+      "regime": "Crisis",
+      "converged": true,
+      "n_iter": 200,
+      "log_likelihood": -1706.7145437194313,
+      "turnover": 0.7471399224945401,
+      "cost": 0.0014942798449890803,
+      "restarts": [
+        {
+          "seed": 42,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -1706.7145443705763,
+          "selected": false,
+          "fallback_used": false
+        },
+        {
+          "seed": 43,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -1706.7145437194313,
+          "selected": true,
+          "fallback_used": false
+        },
+        {
+          "seed": 44,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -1706.714543722656,
+          "selected": false,
+          "fallback_used": false
+        }
+      ]
+    },
+    {
+      "date": "2025-06-03 00:00:00",
+      "regime": "Crisis",
+      "converged": true,
+      "n_iter": 200,
+      "log_likelihood": -1666.6958838787882,
+      "turnover": 0.011932108151656063,
+      "cost": 2.386421630331213e-05,
+      "restarts": [
+        {
+          "seed": 42,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -1666.6958838787882,
+          "selected": true,
+          "fallback_used": false
+        },
+        {
+          "seed": 43,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -1666.6958856286285,
+          "selected": false,
+          "fallback_used": false
+        },
+        {
+          "seed": 44,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -1666.6958859901854,
+          "selected": false,
+          "fallback_used": false
+        }
+      ]
+    },
+    {
+      "date": "2025-07-02 00:00:00",
+      "regime": "Bull",
+      "converged": true,
+      "n_iter": 200,
+      "log_likelihood": -1675.0326804410115,
+      "turnover": 0.5647502972897205,
+      "cost": 0.001129500594579441,
+      "restarts": [
+        {
+          "seed": 42,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -1700.6771511686864,
+          "selected": false,
+          "fallback_used": false
+        },
+        {
+          "seed": 43,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -1700.677158855902,
+          "selected": false,
+          "fallback_used": false
+        },
+        {
+          "seed": 44,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -1675.0326804410115,
+          "selected": true,
+          "fallback_used": false
+        }
+      ]
+    },
+    {
+      "date": "2025-07-31 00:00:00",
+      "regime": "Bull",
+      "converged": true,
+      "n_iter": 200,
+      "log_likelihood": -1695.7248372620695,
+      "turnover": 0.0276864796358796,
+      "cost": 5.53729592717592e-05,
+      "restarts": [
+        {
+          "seed": 42,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -1736.1157841959866,
+          "selected": false,
+          "fallback_used": false
+        },
+        {
+          "seed": 43,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -1695.7248372620695,
+          "selected": true,
+          "fallback_used": false
+        },
+        {
+          "seed": 44,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -1757.1561472436688,
+          "selected": false,
+          "fallback_used": false
+        }
+      ]
+    },
+    {
+      "date": "2025-09-02 00:00:00",
+      "regime": "Bull",
+      "converged": true,
+      "n_iter": 200,
+      "log_likelihood": -1720.4064359267538,
+      "turnover": 0.012983886830404315,
+      "cost": 2.596777366080863e-05,
+      "restarts": [
+        {
+          "seed": 42,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -2164.930626191005,
+          "selected": false,
+          "fallback_used": false
+        },
+        {
+          "seed": 43,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -1759.0052347072856,
+          "selected": false,
+          "fallback_used": false
+        },
+        {
+          "seed": 44,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -1720.4064359267538,
+          "selected": true,
+          "fallback_used": false
+        }
+      ]
+    },
+    {
+      "date": "2025-10-01 00:00:00",
+      "regime": "Bull",
+      "converged": true,
+      "n_iter": 200,
+      "log_likelihood": -1644.520234830096,
+      "turnover": 0.025798656370242715,
+      "cost": 5.1597312740485426e-05,
+      "restarts": [
+        {
+          "seed": 42,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -1708.6569917164265,
+          "selected": false,
+          "fallback_used": false
+        },
+        {
+          "seed": 43,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -1649.9162806667607,
+          "selected": false,
+          "fallback_used": false
+        },
+        {
+          "seed": 44,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -1644.520234830096,
+          "selected": true,
+          "fallback_used": false
+        }
+      ]
+    },
+    {
+      "date": "2025-11-03 00:00:00",
+      "regime": "Bull",
+      "converged": true,
+      "n_iter": 200,
+      "log_likelihood": -1632.3602300780208,
+      "turnover": 0.18380557151803148,
+      "cost": 0.0003676111430360629,
+      "restarts": [
+        {
+          "seed": 42,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -1632.3602300780208,
+          "selected": true,
+          "fallback_used": false
+        },
+        {
+          "seed": 43,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -1632.3602301707376,
+          "selected": false,
+          "fallback_used": false
+        },
+        {
+          "seed": 44,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -1632.3602301037547,
+          "selected": false,
+          "fallback_used": false
+        }
+      ]
+    },
+    {
+      "date": "2025-12-03 00:00:00",
+      "regime": "Bull",
+      "converged": true,
+      "n_iter": 200,
+      "log_likelihood": -1605.21939974923,
+      "turnover": 0.023325787101907615,
+      "cost": 4.665157420381523e-05,
+      "restarts": [
+        {
+          "seed": 42,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -1605.21939974923,
+          "selected": true,
+          "fallback_used": false
+        },
+        {
+          "seed": 43,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -1605.2193999153644,
+          "selected": false,
+          "fallback_used": false
+        },
+        {
+          "seed": 44,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -1605.2194071344215,
+          "selected": false,
+          "fallback_used": false
+        }
+      ]
+    },
+    {
+      "date": "2026-01-02 00:00:00",
+      "regime": "Bull",
+      "converged": true,
+      "n_iter": 200,
+      "log_likelihood": -1620.8515838417711,
+      "turnover": 0.008131395622939245,
+      "cost": 1.626279124587849e-05,
+      "restarts": [
+        {
+          "seed": 42,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -1620.8515846129733,
+          "selected": false,
+          "fallback_used": false
+        },
+        {
+          "seed": 43,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -1652.8148893268033,
+          "selected": false,
+          "fallback_used": false
+        },
+        {
+          "seed": 44,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -1620.8515838417711,
+          "selected": true,
+          "fallback_used": false
+        }
+      ]
+    },
+    {
+      "date": "2026-02-03 00:00:00",
+      "regime": "Crisis",
+      "converged": true,
+      "n_iter": 200,
+      "log_likelihood": -1748.2451290828235,
+      "turnover": 0.741846775793892,
+      "cost": 0.001483693551587784,
+      "restarts": [
+        {
+          "seed": 42,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -1748.2451305649508,
+          "selected": false,
+          "fallback_used": false
+        },
+        {
+          "seed": 43,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -1748.2451304916488,
+          "selected": false,
+          "fallback_used": false
+        },
+        {
+          "seed": 44,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -1748.2451290828235,
+          "selected": true,
+          "fallback_used": false
+        }
+      ]
+    },
+    {
+      "date": "2026-03-05 00:00:00",
+      "regime": "Crisis",
+      "converged": true,
+      "n_iter": 200,
+      "log_likelihood": -1807.352680573395,
+      "turnover": 0.010473538190358834,
+      "cost": 2.094707638071767e-05,
+      "restarts": [
+        {
+          "seed": 42,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -2125.948466504209,
+          "selected": false,
+          "fallback_used": false
+        },
+        {
+          "seed": 43,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -1907.0115226624644,
+          "selected": false,
+          "fallback_used": false
+        },
+        {
+          "seed": 44,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -1807.352680573395,
+          "selected": true,
+          "fallback_used": false
+        }
+      ]
+    },
+    {
+      "date": "2026-04-08 00:00:00",
+      "regime": "Crisis",
+      "converged": true,
+      "n_iter": 200,
+      "log_likelihood": -1770.5482524377417,
+      "turnover": 0.011227744429923373,
+      "cost": 2.2455488859846746e-05,
+      "restarts": [
+        {
+          "seed": 42,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -1790.1795677440828,
+          "selected": false,
+          "fallback_used": false
+        },
+        {
+          "seed": 43,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -1790.1794221421899,
+          "selected": false,
+          "fallback_used": false
+        },
+        {
+          "seed": 44,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -1770.5482524377417,
+          "selected": true,
+          "fallback_used": false
+        }
+      ]
+    },
+    {
+      "date": "2026-05-08 00:00:00",
+      "regime": "Bull",
+      "converged": true,
+      "n_iter": 200,
+      "log_likelihood": -1692.842886595807,
+      "turnover": 0.5501158339180945,
+      "cost": 0.0011002316678361888,
+      "restarts": [
+        {
+          "seed": 42,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -1692.842886595807,
+          "selected": true,
+          "fallback_used": false
+        },
+        {
+          "seed": 43,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -1711.5962333948294,
+          "selected": false,
+          "fallback_used": false
+        },
+        {
+          "seed": 44,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -1711.594715517839,
+          "selected": false,
+          "fallback_used": false
+        }
+      ]
+    },
+    {
+      "date": "2026-06-08 00:00:00",
+      "regime": "Crisis",
+      "converged": true,
+      "n_iter": 200,
+      "log_likelihood": -1521.7529870121914,
+      "turnover": 0.5459135429001416,
+      "cost": 0.0010918270858002832,
+      "restarts": [
+        {
+          "seed": 42,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -1598.7705024760126,
+          "selected": false,
+          "fallback_used": false
+        },
+        {
+          "seed": 43,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -1521.7529870121914,
+          "selected": true,
+          "fallback_used": false
+        },
+        {
+          "seed": 44,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -1608.3264085743551,
+          "selected": false,
+          "fallback_used": false
+        }
+      ]
+    },
+    {
+      "date": "2026-07-07 00:00:00",
+      "regime": "Bear",
+      "converged": true,
+      "n_iter": 200,
+      "log_likelihood": -1520.5552356812905,
+      "turnover": 0.5585239669434477,
+      "cost": 0.0011170479338868957,
+      "restarts": [
+        {
+          "seed": 42,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -2007.4499747263162,
+          "selected": false,
+          "fallback_used": false
+        },
+        {
+          "seed": 43,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -1520.5552356812905,
+          "selected": true,
+          "fallback_used": false
+        },
+        {
+          "seed": 44,
+          "converged": true,
+          "n_iter": 200,
+          "log_likelihood": -1520.5632554601013,
+          "selected": false,
+          "fallback_used": false
+        }
+      ]
+    }
+  ]
+}

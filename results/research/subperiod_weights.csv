@@ -1,0 +1,64 @@
+Period,Strategy,asset,average_weight
+Development,Equal Weight,bond,0.3308566960738149
+Development,Equal Weight,equity,0.3347855304821463
+Development,Equal Weight,gold,0.33386491982156463
+Development,HMM fixed allocations,bond,0.3521927779719157
+Development,HMM fixed allocations,equity,0.38552841634419743
+Development,HMM fixed allocations,gold,0.26227880568388673
+Development,Minimum variance,bond,0.7995959414504794
+Development,Minimum variance,equity,0.0852847252488369
+Development,Minimum variance,gold,0.11511933330068354
+Development,No-regime optimizer,bond,0.24029024546993413
+Development,No-regime optimizer,equity,0.3914226116913823
+Development,No-regime optimizer,gold,0.3682871428386835
+Development,RegimeShift,bond,0.3879815116075648
+Development,RegimeShift,equity,0.31989668683473493
+Development,RegimeShift,gold,0.2921218015799795
+Development,Static 60/40,bond,0.3971086289726935
+Development,Static 60/40,equity,0.6023985174048324
+Development,Static 60/40,gold,0.0
+Development,Volatility rule,bond,0.21904006731568237
+Development,Volatility rule,equity,0.5459597561323118
+Development,Volatility rule,gold,0.23500017655200575
+Validation,Equal Weight,bond,0.3323918894958251
+Validation,Equal Weight,equity,0.33464697469448423
+Validation,Equal Weight,gold,0.3329611358096905
+Validation,HMM fixed allocations,bond,0.3224635730141341
+Validation,HMM fixed allocations,equity,0.4120147482462789
+Validation,HMM fixed allocations,gold,0.265521678739587
+Validation,Minimum variance,bond,0.7994474500376715
+Validation,Minimum variance,equity,0.1174669949865729
+Validation,Minimum variance,gold,0.0830855549757556
+Validation,No-regime optimizer,bond,0.2783950890417344
+Validation,No-regime optimizer,equity,0.4786713349433601
+Validation,No-regime optimizer,gold,0.24293357601490545
+Validation,RegimeShift,bond,0.4068297053400085
+Validation,RegimeShift,equity,0.3852709081513154
+Validation,RegimeShift,gold,0.20789938650866158
+Validation,Static 60/40,bond,0.3985352956630078
+Validation,Static 60/40,equity,0.6014647043369921
+Validation,Static 60/40,gold,0.0
+Validation,Volatility rule,bond,0.2027769050640897
+Validation,Volatility rule,equity,0.5709912070154257
+Validation,Volatility rule,gold,0.22623188792048454
+Retrospective evaluation,Equal Weight,bond,0.33235297021181726
+Retrospective evaluation,Equal Weight,equity,0.33217763295531644
+Retrospective evaluation,Equal Weight,gold,0.33546939683286614
+Retrospective evaluation,HMM fixed allocations,bond,0.3475448883537022
+Retrospective evaluation,HMM fixed allocations,equity,0.39178008421686006
+Retrospective evaluation,HMM fixed allocations,gold,0.2606750274294377
+Retrospective evaluation,Minimum variance,bond,0.7993873192436763
+Retrospective evaluation,Minimum variance,equity,0.09821500316202902
+Retrospective evaluation,Minimum variance,gold,0.10239767759429455
+Retrospective evaluation,No-regime optimizer,bond,0.05089606364104335
+Retrospective evaluation,No-regime optimizer,equity,0.349456256340593
+Retrospective evaluation,No-regime optimizer,gold,0.5996476800183635
+Retrospective evaluation,RegimeShift,bond,0.28568829889870073
+Retrospective evaluation,RegimeShift,equity,0.33110665631627767
+Retrospective evaluation,RegimeShift,gold,0.3832050447901446
+Retrospective evaluation,Static 60/40,bond,0.40018144263808686
+Retrospective evaluation,Static 60/40,equity,0.5998185573619133
+Retrospective evaluation,Static 60/40,gold,0.0
+Retrospective evaluation,Volatility rule,bond,0.2166218228249401
+Retrospective evaluation,Volatility rule,equity,0.5483612311716474
+Retrospective evaluation,Volatility rule,gold,0.2350169460034125

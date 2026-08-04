@@ -10,7 +10,7 @@ from __future__ import annotations
 import copy
 import logging
 from dataclasses import dataclass, field
-from typing import Dict, List, Optional
+from typing import Any, Dict, List, Optional
 
 import numpy as np
 import pandas as pd
@@ -103,8 +103,14 @@ def run_walk_forward_backtest(
     config: Optional[RegimeShiftConfig] = None,
     transaction_cost_bps: Optional[float] = None,
     risk_free_rate: float = 0.0,
+    policy: Optional[Any] = None,
 ) -> BacktestResult:
-    """Run the official ``NEXT_CLOSE`` event sequence without same-bar fills."""
+    """Run the official ``NEXT_CLOSE`` event sequence without same-bar fills.
+
+    ``policy`` is an optional research policy that selects a target weight at a
+    rebalance.  It never owns return accrual, execution, drift, turnover, or
+    transaction costs; those remain in this event loop for every variant.
+    """
     config = copy.deepcopy(config or RegimeShiftConfig())
     config.validate()
     if config.execution_model is not ExecutionModel.NEXT_CLOSE:
@@ -164,16 +170,35 @@ def run_walk_forward_backtest(
             train = raw_features.loc[:date].tail(config.train_window)
             returns_for_estimation = asset_returns.loc[:date].tail(config.portfolio_config.estimation_lookback)
             if len(train) >= config.minimum_training_observations and len(returns_for_estimation) >= config.portfolio_config.minimum_estimation_observations:
-                scaler = fit_feature_scaler(train)
-                scaled = transform_features(scaler, train)
-                hmm, _, _ = fit_hmm(scaled, train, config=config.hmm_config)
-                solution = predict_current_state(hmm, scaler, train, train, config=config.hmm_config)
-                regime = solution.regime
-                probability = solution.probabilities.reindex(_REGIME_ORDER).to_numpy(dtype=float)
-                transition = solution.transition_matrix.copy()
+                solution = None
+                hmm = None
+                if policy is None or getattr(policy, "requires_hmm", False):
+                    scaler = fit_feature_scaler(train)
+                    scaled = transform_features(scaler, train)
+                    hmm, _, _ = fit_hmm(scaled, train, config=config.hmm_config)
+                    solution = predict_current_state(hmm, scaler, train, train, config=config.hmm_config)
+                    regime = solution.regime
+                    probability = solution.probabilities.reindex(_REGIME_ORDER).to_numpy(dtype=float)
+                    transition = solution.transition_matrix.copy()
                 previous = dict(zip(assets, current)) if allocated else None
-                portfolio = optimize_portfolio(regime, returns_for_estimation, previous, config=config.portfolio_config)
-                target = np.array([portfolio.weights[asset] for asset in assets], dtype=float)
+                if policy is None:
+                    portfolio = optimize_portfolio(regime, returns_for_estimation, previous, config=config.portfolio_config)
+                    selected_weights = portfolio.weights
+                else:
+                    decision = policy.select(
+                        date=date,
+                        returns=returns_for_estimation,
+                        current_weights=previous,
+                        config=config,
+                        hmm_solution=solution,
+                    )
+                    selected_weights = decision.weights
+                    regime = decision.regime
+                    if decision.probabilities is not None:
+                        probability = np.asarray(decision.probabilities, dtype=float)
+                    if decision.transition_matrix is not None:
+                        transition = decision.transition_matrix.copy()
+                target = np.array([selected_weights[asset] for asset in assets], dtype=float)
                 # 7-8: cost is charged at close t and target becomes active only after that close.
                 turnover = float(np.abs(target).sum()) if not allocated else 0.5 * float(np.abs(target - current).sum())
                 cost = cost_model.cost_for_trade(target, current, assets, initial=not allocated)
@@ -183,8 +208,10 @@ def run_walk_forward_backtest(
                 if first_allocation is None:
                     first_allocation = pos
                 diag.append({
-                    "date": date, "regime": regime, "converged": solution.convergence,
-                    "n_iter": solution.n_iter, "log_likelihood": solution.log_likelihood,
+                    "date": date, "regime": regime,
+                    "converged": solution.convergence if solution is not None else None,
+                    "n_iter": solution.n_iter if solution is not None else None,
+                    "log_likelihood": solution.log_likelihood if solution is not None else None,
                     "turnover": turnover, "cost": cost,
                     "restarts": getattr(hmm, "_restart_diagnostics", []),
                 })
@@ -222,6 +249,7 @@ def run_walk_forward_backtest(
         config_metadata=_build_metadata(config, prices, has_vix, index, risk_free_rate, cost_model),
     )
     result.metrics = compute_performance_metrics(net_s, gross_returns=gross_s, turnover=turns_s, transaction_costs=costs_s, risk_free_rate=risk_free_rate, annualization_factor=config.annualization_factor).to_dict()
+    result.config_metadata["policy_name"] = getattr(policy, "name", "full_regimeshift")
     return result
 
 

@@ -21,7 +21,7 @@ Executes the full pipeline:
     Performance metrics + charts
 
 Usage:
-    python run_submission.py --data-path data/submission_market_data.csv --transaction-cost-bps 5 --output-dir results
+    python run_submission.py --data-path data/submission_market_data.csv --cost-scenario base --output-dir results/submission
 """
 
 from __future__ import annotations
@@ -62,7 +62,7 @@ logger = logging.getLogger(__name__)
 def parse_args() -> argparse.Namespace:
     """Parse CLI arguments."""
     parser = argparse.ArgumentParser(
-        description="RegimeShift official submission runner (IIT Bombay Summer Quant 2026)"
+        description="RegimeShift official NEXT_CLOSE experiment runner"
     )
     parser.add_argument(
         "--data-path",
@@ -84,7 +84,7 @@ def parse_args() -> argparse.Namespace:
         "--cost-scenario",
         choices=["optimistic", "base", "stressed"],
         default=None,
-        help="Named one-way asset-level assumption: 5, 10, or 20 bps.",
+        help="Named one-way asset-level assumption: 5, 10, or 20 bps; defaults to base.",
     )
     parser.add_argument(
         "--rebalance-freq",
@@ -100,8 +100,8 @@ def parse_args() -> argparse.Namespace:
     )
     parser.add_argument(
         "--output-dir",
-        default="results",
-        help="Output directory for charts and reports. Default: results/",
+        default="results/submission",
+        help="Output directory for charts and reports. Default: results/submission/",
     )
     return parser.parse_args()
 
@@ -122,7 +122,7 @@ def main() -> int:
         )
 
     logger.info("=" * 60)
-    logger.info("IIT Bombay Summer Quant 2026 - RegimeShift")
+    logger.info("RegimeShift official NEXT_CLOSE experiment")
     logger.info("=" * 60)
 
     data_path = Path(args.data_path)
