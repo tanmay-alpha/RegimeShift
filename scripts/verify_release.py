@@ -57,8 +57,8 @@ def main() -> int:
         raise SystemExit("Unknown cost input mode.")
     if metadata.get("execution_model") != "NEXT_CLOSE":
         raise SystemExit("Official results must use NEXT_CLOSE.")
-    if "same-close" in (ROOT / "README.md").read_text(encoding="utf-8").lower() and "baseline_legacy" not in (ROOT / "README.md").read_text(encoding="utf-8"):
-        raise SystemExit("README mentions legacy execution without isolating it.")
+    if "same-close" in (ROOT / "README.md").read_text(encoding="utf-8").lower():
+        raise SystemExit("README mentions legacy same-close execution; this must not appear in the public README.")
     daily = pd.read_csv(RESULTS / "daily_results.csv")
     timeline = pd.read_csv(RESULTS / "execution_timeline.csv")
     summary = pd.read_csv(RESULTS / "performance_summary.csv")
