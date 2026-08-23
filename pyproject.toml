@@ -5,9 +5,13 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "regime_shift"
 version = "1.0.0"
-description = "IIT Bombay Summer Quant 2026 Market-Regime Asset Allocation Framework"
+description = "Causal regime-allocation research: 3-state HMM + CVXPY for Indian multi-asset portfolio"
 readme = "README.md"
 requires-python = ">=3.9"
+license = {text = "MIT"}
+authors = [
+    {name = "tanmay-alpha"},
+]
 dependencies = [
     "numpy>=1.24.0",
     "pandas>=2.0.0",
@@ -19,10 +23,16 @@ dependencies = [
     "yfinance>=0.2.20",
 ]
 
+[project.urls]
+Repository = "https://github.com/tanmay-alpha/RegimeShift"
+Issues = "https://github.com/tanmay-alpha/RegimeShift/issues"
+
 [project.optional-dependencies]
 dev = [
     "pytest>=7.0.0",
     "jupyter>=1.0.0",
+    "nbconvert>=7.0.0",
+    "ruff>=0.1.0",
 ]
 
 [tool.setuptools.packages.find]
@@ -32,3 +42,11 @@ where = ["src"]
 testpaths = ["tests"]
 python_files = ["test_*.py"]
 pythonpath = ["src"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py39"
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I"]
+ignore = ["E501"]

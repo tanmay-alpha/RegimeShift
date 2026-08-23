@@ -42,11 +42,16 @@ notebooks/results/
 .idea/
 *.swp
 .claude/
+.antigravity/
+.codex/
+.benchmarks/
 
 # OS generated
 .DS_Store
 Thumbs.db
 *.log
+*.tmp
+*.bak
 
 # Submission data (the single source of truth CSV)
 !data/submission_market_data.csv
