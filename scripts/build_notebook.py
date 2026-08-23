@@ -183,8 +183,16 @@ def _notebook_json(
     ))
     cells.append(_code(
         'from pathlib import Path\n'
-        'import sys\n'
-        'sys.path.insert(0, str(Path(".").resolve() / "src"))\n'
+        'import sys, os\n'
+        '# Locate repo root — walk up from CWD until we find src/ or pyproject.toml\n'
+        '_cwd = Path.cwd()\n'
+        '_repo_root = _cwd\n'
+        'for _candidate in [_cwd, _cwd.parent, _cwd.parent.parent]:\n'
+        '    if (_candidate / "src").exists() or (_candidate / "pyproject.toml").exists():\n'
+        '        _repo_root = _candidate\n'
+        '        break\n'
+        'sys.path.insert(0, str(_repo_root / "src"))\n'
+        'os.chdir(str(_repo_root))  # Ensure data/ and results/ paths resolve correctly\n'
         '\n'
         'from regime_shift.config import RegimeShiftConfig\n'
         'from regime_shift.execution import ExecutionCostModel\n'

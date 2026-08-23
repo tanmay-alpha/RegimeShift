@@ -106,8 +106,9 @@ class TickerConfig:
         INR-denominated liquid-bond / cash-equivalent proxy, **not** a sovereign
         bond or 10-year G-Sec.  It tracks the Nifty Liquid Bond Index and has
         very short effective duration, so it provides defensive equity-risk
-        reduction without long-term rate exposure.  The original SBI Magnum
-        Gilt ticker (0P0001BVE8.BO) was delisted from yfinance in 2026.
+        reduction without long-term rate exposure.  A previously used gilt-fund
+        ticker was delisted from yfinance in 2026; LIQUIDBEES.NS is the
+        replacement with continuous history from 2009.
         Kind    : PRICE (NAV in INR, adjusted for distributions).
         Currency: INR.
         Notes   : Limitation — short duration means this asset does not provide
@@ -169,8 +170,8 @@ class TickerConfig:
             "Has continuous NAV history back to 2009 via yfinance. "
             "Limitation: short duration. NOT a sovereign bond, government gilt, "
             "or 10-year G-Sec; does not provide long-term duration hedge. "
-            "The original SBI Magnum Gilt ticker (0P0001BVE8.BO) was "
-            "delisted from yfinance in 2026."
+            "A previously used gilt-fund ticker was delisted from yfinance in 2026; "
+            "LIQUIDBEES.NS is the replacement with continuous history from 2009."
         ),
     ))
 
