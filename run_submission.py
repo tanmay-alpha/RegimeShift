@@ -21,7 +21,7 @@ Executes the full pipeline:
     Performance metrics + charts
 
 Usage:
-    python run_submission.py --data-path data/submission_market_data.csv --transaction-cost-bps 5 --output-dir results
+    python run_submission.py --data-path data/submission_market_data.csv --cost-scenario base --output-dir results/submission
 """
 
 from __future__ import annotations
