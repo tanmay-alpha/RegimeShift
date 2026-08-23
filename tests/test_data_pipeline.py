@@ -91,7 +91,7 @@ def base_config() -> RegimeShiftConfig:
     # the network-reachable production tickers.
     tickers.equity = _make_price_asset("^NSEI")
     tickers.gold   = _make_price_asset("GOLDBEES.NS")
-    tickers.bond   = _make_price_asset("0P0001BVE8.BO")
+    tickers.bond   = _make_price_asset("LIQUIDBEES.NS")
     tickers.vix    = _make_indicator_asset("^INDIAVIX")
 
     return RegimeShiftConfig(

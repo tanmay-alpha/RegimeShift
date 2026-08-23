@@ -1,75 +1,167 @@
-# RegimeShift — causal regime-allocation research
+# RegimeShift — Causal Regime-Allocation Research
 
-RegimeShift is a reproducible, index-level Indian multi-asset allocation study. It uses rolling train-only features, a three-state Gaussian HMM and a constrained optimizer, evaluated with causal close-only execution and stated asset-level cost assumptions.
+RegimeShift is a reproducible, index-level Indian multi-asset allocation study.
+It uses rolling train-only features, a three-state Gaussian HMM and a CVXPY
+regime-conditioned constrained optimizer, evaluated under causal NEXT_CLOSE
+execution with stated per-asset cost assumptions.
 
-The original academic baseline demonstrated useful walk-forward engineering but did not outperform static benchmarks. Corrected execution timing and uncertainty work are reported without performance-driven retuning.
+**Research question:** Does HMM regime detection improve risk-adjusted returns
+versus static benchmarks for a three-asset Indian portfolio — NIFTY 50,
+GOLDBEES.NS gold, LIQUIDBEES.NS liquid-bond — under realistic cost assumptions?
 
-## What the corrected experiment does
+**Answer (corrected experiment):** No — RegimeShift does not outperform the
+static 60/40 or equal-weight benchmarks on headline Sharpe or drawdown.
+The result is reported honestly, with full methodology transparency.
 
-```text
-price data -> causal features -> train-only scaler/HMM -> constrained target
-      ^                                                       |
-      +---- existing weights earn current close-to-close bar <-+
-                                      then costs are paid at close
-```
+---
 
-At close `t`, the portfolio already earned the `t-1 -> t` return. Only then can it observe data through `t`, fit the HMM, trade the target and deduct costs. The target first earns `t -> t+1`. `results/submission/execution_timeline.csv` records signal, execution, return, pre-trade, target, post-trade and drifted weights.
+## Results
 
-## Corrected results
+Official output is in `results/submission/` and uses `NEXT_CLOSE` causal
+execution, three deterministic HMM restarts, and the **base scenario (10 bps
+one-way per asset)**. The dataset ends 2026-07-27.
 
-Official output is `results/submission/` and uses `NEXT_CLOSE`, three deterministic HMM restarts, and a 10 bps one-way per-asset assumed-cost scenario. The dataset ends 2026-07-27 and remains an **index-level allocation simulation**: `^NSEI` is not a guaranteed tradable fill.
+**`^NSEI` is not a directly executable fill — this is an index-level simulation.**
 
-| Net strategy | CAGR | Sharpe | Max drawdown |
+| Strategy | Net CAGR | Net Sharpe | Max Drawdown |
 |---|---:|---:|---:|
-| RegimeShift | 6.02% | 0.400 | 35.77% |
+| **RegimeShift** | 6.02% | 0.400 | 35.77% |
 | Static 60/40 | 7.20% | 0.760 | 23.39% |
 | Equal Weight | 8.95% | 0.588 | 32.96% |
 
-The former 7.16% / 0.459 RegimeShift result is retained only in `results/baseline_legacy/`; it used the invalid same-bar execution convention and is not a resume result.
+_Source: `results/submission/performance_summary.csv`. Full methodology in the notebook._
 
-## Research protocol
+---
 
-The protocol is in [docs/RESEARCH_PROTOCOL.md](docs/RESEARCH_PROTOCOL.md) and frozen settings in `config/frozen_resume_v1.yaml`.
+## Causal Execution Timing
 
-| Research period | Dates | Interpretation |
+```
+At close t:
+  1. Holdings from t-1 earn t-1 → t return
+  2. Close t price becomes known
+  3. Features / HMM / optimizer fitted on data ≤ t  (no future data)
+  4. Target weights computed
+  5. Costs paid at close t
+  6. New target earns t → t+1 return
+```
+
+`results/submission/execution_timeline.csv` records signal, execution, return,
+pre-trade, target, post-trade and drifted weights for every trading day.
+
+---
+
+## Transaction Costs and Tradability
+
+| Scenario | One-way cost per asset |
+|---|---|
+| optimistic | 5 bps |
+| **base (official)** | **10 bps** |
+| stressed | 20 bps |
+
+These are **assumed-cost scenarios**, not sourced measurements of spreads or
+fills. Market impact and capacity are excluded (volume/ADV data absent).
+
+`^NSEI` is an index series. `GOLDBEES.NS` and `LIQUIDBEES.NS` are ETF proxies.
+An executable equity claim requires a separately verified ETF dataset with
+common history, corporate-action treatment, and liquidity audit.
+
+---
+
+## Asset Universe
+
+| Role | Ticker | Description |
 |---|---|---|
-| Development | 2010–2018 | Retrospective research |
-| Validation | 2019–2021 | Retrospective research |
-| Evaluation | 2022–2026 | Retrospective evaluation, not a pristine holdout |
-| Future lockbox | after dataset end | Frozen config only |
+| Equity | `^NSEI` | NIFTY 50 — **index, not directly executable** |
+| Gold | `GOLDBEES.NS` | Nippon India ETF Gold Bees |
+| Defensive | `LIQUIDBEES.NS` | Nippon India Liquid Bees — short-duration cash proxy |
+| VIX (feature only) | `^INDIAVIX` | Optional — omitted from submitted CSV |
 
-No historical split is called untouched because the full sample had been inspected before this protocol. HMM restarts are selected by training likelihood, never later portfolio performance.
+---
 
-## Costs and tradability
+## Research Validation
 
-The cost model charges absolute per-asset traded notional at each close. `optimistic`, `base`, and `stressed` scenarios correspond to 5, 10, and 20 bps one-way assumed cost. These are stress assumptions, not sourced measurements of spreads or fills. Market impact, capacity, ETF tracking difference and NAV-versus-traded-price differences are excluded because volume/ADV and execution data are absent.
+The research suite (`scripts/run_research_suite.py`) produces:
 
-`^NSEI` may be used as a regime/benchmark series, but it is an index. GOLDBEES and LIQUIDBEES are the gold and defensive ETF/NAV proxies. A resume-facing executable ETF claim requires a separately verified common-history equity ETF dataset, corporate-action treatment and liquidity audit.
+1. **Ablation study** — 7 strategies: Full RegimeShift, No-regime optimizer,
+   Volatility-rule, HMM+fixed weights, Minimum variance, Static 60/40,
+   Equal Weight. All share identical dates, costs, and execution.
+2. **Chronological subperiod analysis** — Development (2010–18), Validation
+   (2019–21), Retrospective Evaluation (2022–26).
+3. **Rolling-origin evaluation** — 5 folds: 2013–15, 2016–18, 2019–21,
+   2022–24, 2025–26.
+4. **Paired moving-block bootstrap** — 2,000 samples, block=21, seed=42.
+5. **HMM stability diagnostics** — convergence rates, posterior entropy,
+   state-occupancy distributions.
+
+**Disclosure:** No historical split is a pristine holdout — the full sample was
+inspected during development. HMM restarts are selected by training log-likelihood
+only; no performance-driven parameter changes were made after the protocol was frozen.
+
+---
 
 ## Reproduce
 
-```powershell
+```bash
 pip install -e ".[dev]"
-python run_submission.py --data-path data/submission_market_data.csv --transaction-cost-bps 10 --output-dir results/submission
+
+# Official experiment (base 10 bps, NEXT_CLOSE)
+python run_submission.py \
+    --data-path data/submission_market_data.csv \
+    --cost-scenario base \
+    --output-dir results/submission
+
+# Research validation suite
+python scripts/run_research_suite.py \
+    --data-path data/submission_market_data.csv \
+    --output-dir results/research
+
+# Rebuild submission notebook
+python scripts/build_notebook.py
+
+# Tests
 python -m pytest -q
+python scripts/verify_release.py
 ```
 
-Use `--include-vix` only when the input actually has a valid `vix` column; without the flag a supplied VIX column is deliberately ignored. `NEXT_OPEN` is rejected for this close-only dataset rather than being simulated from closes.
+---
 
-## Evidence and limitations
+## Repository Layout
 
-- `results/submission/experiment_manifest.json` binds outputs to a dataset hash, configuration hash, commit and result hashes.
-- Static benchmarks use the identical event ordering and cost model.
-- The HMM is a research hypothesis. Under corrected timing it underperforms both committed static benchmarks on headline Sharpe and drawdown.
-- Historical output is retrospective. Bootstrap confidence, fold/ablation and capacity claims require the corresponding reproducible artefacts before they may be asserted.
-- See [docs/QUANT_INTERVIEW_GUIDE.md](docs/QUANT_INTERVIEW_GUIDE.md) for concise code-matched answers.
-
-## Layout
-
-```text
-src/regime_shift/   causal engine, costs, HMM, metrics, manifest
-config/             protocol and frozen configuration
-results/submission/ corrected, hashed official experiment
-results/baseline_legacy/ isolated comparison-only legacy summary
-tests/              timing, leakage, data, HMM and metric checks
 ```
+src/regime_shift/      Causal engine: features, HMM, portfolio, backtest, metrics
+config/                Research protocol and frozen configuration YAML
+data/                  Canonical market data CSV (yfinance-sourced, CRLF-normalised)
+results/submission/    Official experiment artefacts (hashed, manifest-bound)
+results/research/      Research validation outputs (generated by run_research_suite.py)
+notebooks/             Submission notebook (generated by build_notebook.py)
+scripts/               build_notebook.py, run_research_suite.py, cost_sensitivity.py, verify_release.py
+tests/                 274 tests: timing, leakage, data, HMM, metrics, cost model
+config/research_protocol.yaml  Frozen experiment protocol (hypothesis, splits, cost scenarios)
+```
+
+---
+
+## Integrity
+
+- `results/submission/experiment_manifest.json` binds all outputs to:
+  dataset SHA-256, config hash, git commit, and result hashes.
+- Static benchmarks use the **identical** event ordering, cost model, and
+  date range as RegimeShift — no benchmark-period cherry-picking.
+- No parameters were changed after inspecting the retrospective evaluation period.
+- `scripts/verify_release.py` re-validates manifests and output consistency.
+
+---
+
+## Limitations
+
+1. **Index-level simulation** — `^NSEI` results are not executable fills.
+2. **Assumed costs** — not measured; market impact excluded.
+3. **Short-duration bond** — LIQUIDBEES.NS provides no rate hedge.
+4. **Retrospective evaluation** — no pristine holdout exists.
+5. **Three assets only** — narrow universe limits diversification.
+6. **Gaussian HMM** — Student-t tails may be more appropriate.
+7. **No alpha proven** — positive CAGR reflects the underlying market uptrend.
+
+---
+
+_IIT Bombay Summer Quant 2026 submission. Data sourced from Yahoo Finance via yfinance; subject to original provider terms._
