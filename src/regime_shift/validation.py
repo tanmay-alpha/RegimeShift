@@ -9,15 +9,13 @@ Rules enforced (see validate_price_data docstring for full contract):
   - Required columns present.
   - All price values numeric, strictly positive, non-infinite.
   - No NaN values in required columns unless allow_missing=True.
-  - No backward-fill evidence (detected heuristically via zero-return run check).
-  - Forward-fill runs bounded by configurable limit.
+  - Forward-fill runs bounded by configurable limit (uses explicit fill mask).
 
-A naturally constant price series (e.g. an ETF with low-volatility NAV) is
-NOT considered a forward-fill artifact. The ``fill_mask`` recorded by
-``data.py`` is the authoritative source for what was forward-filled and
-what was naturally flat. ``check_forward_fill_limit`` therefore inspects
-the recorded fill mask rather than heuristically inspecting identical-value
-runs.
+Fill provenance is captured in the data pipeline (data.py) before forward
+filling occurs.  The ``fill_mask`` passed here is the authoritative record
+of what was actually filled; naturally flat prices (e.g. LIQUIDBEES.NS
+liquid-bond NAV) are not considered fill artefacts and will not trigger
+an error.
 """
 
 from __future__ import annotations
@@ -159,7 +157,6 @@ def validate_price_data(
     required_cols: Optional[List[str]] = None,
     allow_missing: bool = False,
     forward_fill_limit: int = 3,
-    check_bfill: bool = True,
     fill_mask: Optional[pd.DataFrame] = None,
 ) -> pd.DataFrame:
     """
@@ -172,16 +169,15 @@ def validate_price_data(
       4. Required columns ['equity', 'gold', 'bond'] are present.
       5. All required column values are numeric, strictly positive, and finite.
       6. No NaN values in required columns (unless allow_missing=True).
-      7. No backward-fill evidence (heuristic warning, not hard error).
-      8. Forward-fill runs do not exceed forward_fill_limit days (uses the
-         explicit fill mask if provided).
+      7. Forward-fill runs do not exceed forward_fill_limit consecutive days.
+         Uses the explicit fill mask from the data pipeline when provided;
+         naturally constant prices are not treated as fill artefacts.
 
     Args:
         df: Input price DataFrame.
         required_cols: Required asset column names; defaults to ['equity','gold','bond'].
         allow_missing: If False (default), raise on any NaN in required columns.
         forward_fill_limit: Max consecutive forward-fill days (0 = disabled).
-        check_bfill: Whether to run the backward-fill heuristic check.
         fill_mask: Optional explicit fill mask recorded by the data pipeline.
 
     Returns:
