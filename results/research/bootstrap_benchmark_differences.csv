@@ -1,0 +1,7 @@
+metric,mean_diff,ci_lower_95,ci_upper_95,zero_inside_ci,statistically_significant,n_valid,note
+RegimeShift_sharpe_vs_6040,-0.2353504119391644,-0.7971404504442845,0.3960079677427314,True,False,2000,No significance claimed when zero lies inside CI
+RegimeShift_sharpe_vs_EW,-0.2672912726490453,-0.7890339242007919,-0.00810703274344753,False,True,2000,Zero outside CI; causal retrospective data only
+RegimeShift_cagr_vs_6040,-0.007655776223249621,-0.0665775275596308,0.05558086231984381,True,False,2000,No significance claimed when zero lies inside CI
+RegimeShift_cagr_vs_EW,-0.02844669627346144,-0.06191152609976369,0.0064513596583079995,True,False,2000,No significance claimed when zero lies inside CI
+RegimeShift_max_drawdown_vs_6040,0.0770400648975296,-0.16483547591234668,0.2920472361932918,True,False,2000,No significance claimed when zero lies inside CI
+RegimeShift_max_drawdown_vs_EW,0.039065268223613996,-0.034292076288984584,0.14858224647333795,True,False,2000,No significance claimed when zero lies inside CI

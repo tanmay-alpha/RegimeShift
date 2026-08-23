@@ -1,0 +1,8 @@
+{
+  "eval_start": "2010-10-05",
+  "eval_end": "2026-07-27",
+  "n_strategies": 7,
+  "cost_scenario": "base",
+  "cost_bps": 10,
+  "execution_model": "NEXT_CLOSE"
+}

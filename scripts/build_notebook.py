@@ -49,6 +49,24 @@ def _code(source: str) -> dict:
     }
 
 
+def _to_md_table(df: pd.DataFrame) -> str:
+    """Render a DataFrame as a GitHub-Flavored Markdown table (no tabulate required)."""
+    cols = list(df.columns)
+    rows = df.values.tolist()
+    header = "| " + " | ".join(str(c) for c in cols) + " |"
+    sep = "|" + "|".join("---" for _ in cols) + "|"
+    body_lines = ["| " + " | ".join(_fmt_cell(v) for v in row) + " |" for row in rows]
+    return "\n".join([header, sep] + body_lines)
+
+
+def _fmt_cell(v) -> str:
+    if isinstance(v, float):
+        if abs(v) >= 1000 or abs(v) < 0.001 and v != 0:
+            return f"{v:.4e}"
+        return f"{v:.4f}"
+    return str(v) if not (isinstance(v, float) and v != v) else "nan"
+
+
 # ---------------------------------------------------------------------------
 # Canonical SHA-256 (CRLF-normalised, matching experiment_manifest.json)
 # ---------------------------------------------------------------------------
@@ -404,10 +422,10 @@ def _notebook_json(
         '                  "Calmar","Annualised Turnover","Transaction Cost Drag"]])\n'
     ))
 
-    # ---- 12. Ablation Results ----
     ablation_md = "### 12. Ablation Study Results\n\n"
     if ablation_summary is not None and not ablation_summary.empty:
-        ablation_md += ablation_summary[["strategy", "sharpe", "cagr", "max_drawdown", "ann_turnover"]].to_markdown(index=False) + "\n\n"
+        ab_cols = ["strategy", "sharpe", "cagr", "max_drawdown", "ann_turnover"]
+        ablation_md += _to_md_table(ablation_summary[ab_cols]) + "\n\n"
     else:
         ablation_md += "_Run `python scripts/run_research_suite.py` to generate ablation results._\n\n"
     ablation_md += (
@@ -420,13 +438,13 @@ def _notebook_json(
     # ---- 13. Chronological Subperiod Results ----
     sub_md = "### 13. Chronological Subperiod Analysis\n\n"
     sub_md += (
-        "> **Important:** The retrospective evaluation period (2022–2026) is **not** a pristine "
+        "> **Important:** The retrospective evaluation period (2022-2026) is **not** a pristine "
         "holdout because the full historical sample was inspected during earlier project development.\n\n"
     )
     if subperiod_summary is not None and not subperiod_summary.empty:
         rs_sub = subperiod_summary[subperiod_summary["strategy"] == "RegimeShift"][
             ["period", "n_obs", "cagr", "sharpe", "max_drawdown"]]
-        sub_md += rs_sub.to_markdown(index=False) + "\n"
+        sub_md += _to_md_table(rs_sub) + "\n"
     else:
         sub_md += "_Run `python scripts/run_research_suite.py` to generate subperiod results._\n"
     cells.append(_md(sub_md))
@@ -436,7 +454,7 @@ def _notebook_json(
     if rolling_origin_summary is not None and not rolling_origin_summary.empty:
         rs_roll = rolling_origin_summary[rolling_origin_summary["strategy"] == "RegimeShift"][
             ["fold", "n_obs", "cagr", "sharpe", "max_drawdown"]]
-        roll_md += rs_roll.to_markdown(index=False) + "\n"
+        roll_md += _to_md_table(rs_roll) + "\n"
     else:
         roll_md += "_Run `python scripts/run_research_suite.py` to generate rolling-origin results._\n"
     cells.append(_md(roll_md))
@@ -444,7 +462,7 @@ def _notebook_json(
     # ---- 15. Bootstrap Uncertainty ----
     boot_md = "### 15. Bootstrap Uncertainty (Paired Moving-Block, n=2000, block=21)\n\n"
     if bootstrap_diff is not None and not bootstrap_diff.empty:
-        boot_md += bootstrap_diff.to_markdown(index=False) + "\n\n"
+        boot_md += _to_md_table(bootstrap_diff) + "\n\n"
         boot_md += (
             "No significance is claimed when zero lies inside a confidence interval. "
             "All results are retrospective causal simulation data only."
@@ -617,12 +635,8 @@ if __name__ == "__main__":
         else:
             print(f"  {fname} not found — run scripts/run_research_suite.py first")
 
-    # Rebuild hmm_diag from strategy if not loaded from file
-    if hmm_diag is None and strategy.hmm_diagnostics:
-        from scripts.run_research_suite import run_hmm_diagnostics
-        _outdir = research_dir
-        _outdir.mkdir(parents=True, exist_ok=True)
-        hmm_diag = run_hmm_diagnostics(strategy, _outdir)
+    # hmm_diag was loaded from file above; no fallback import needed
+    # (run `python scripts/run_research_suite.py` to generate hmm_diagnostics.csv)
 
     tickers = {
         "equity": cfg.tickers.equity_ticker,
