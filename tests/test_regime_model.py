@@ -875,3 +875,16 @@ class TestRegimeSolution:
         solution = predict_current_state(hmm, scaler, combined, train_features, config)
 
         assert len(solution.state_statistics) == 3
+
+
+def test_material_likelihood_decrease_is_not_tolerance_convergence():
+    from types import SimpleNamespace
+
+    from regime_shift.regime_model import em_converged
+
+    model = SimpleNamespace(monitor_=SimpleNamespace(history=[-100.0, -110.0], tol=0.001))
+    assert not em_converged(model)
+    model.monitor_.history = [-100.0, -99.9995]
+    assert em_converged(model)
+    model.monitor_.history = [-100.0, -100.0005]
+    assert em_converged(model)  # sub-tolerance numerical stagnation, not a material fall

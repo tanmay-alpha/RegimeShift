@@ -39,6 +39,7 @@ claimed identical research dates despite the unequal ablation CSV above.
 | Undefined statistical scores could imply zero PBO or significance | NaN CSCV ranks compare false; Holm accepted NaN; bootstrap percentile preceded draw validation | Undefined scores and p-values fail explicitly. Regressions cover constant-return candidates. |
 | Bootstrap p-value centering differed from its stated procedure | Draw mean used instead of observed difference | Null-centred differences use `d_boot - d_observed`; finite Monte Carlo correction prevents reporting p=0. |
 | Internal feature gaps could delete held-portfolio return sessions | Execution calendar intersected a feature frame after dropping all missing rows | Execution preparation rejects internal calendar gaps; leading warmup remains permitted. |
+| Material likelihood deterioration counted as convergence | One-sided `delta < tol` accepts every negative change | Require finite `abs(delta) < tol`; regression rejects a -10 likelihood step but accepts sub-tolerance numerical stagnation. |
 
 ## Numerical interpretation
 
