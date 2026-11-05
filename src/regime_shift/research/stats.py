@@ -40,7 +40,7 @@ def cagr_rows(r: np.ndarray, ann: int = ANNUALIZATION_FACTOR) -> np.ndarray:
 
 def max_drawdown_rows(r: np.ndarray) -> np.ndarray:
     wealth = np.cumprod(1.0 + r, axis=-1)
-    return np.max(1.0 - wealth / np.maximum.accumulate(wealth, axis=-1), axis=-1)
+    return np.max(1.0 - wealth / np.maximum(np.maximum.accumulate(wealth, axis=-1), 1.0), axis=-1)
 
 
 def ann_vol_rows(r: np.ndarray, ann: int = ANNUALIZATION_FACTOR) -> np.ndarray:
@@ -70,6 +70,8 @@ def holm_adjust(p_values: Sequence[float]) -> np.ndarray:
     """Holm-Bonferroni step-down adjusted p-values (family-wise error control)."""
     p = np.asarray(p_values, dtype=float)
     order = np.argsort(p)
+    if not np.all(np.isfinite(p)) or np.any((p < 0) | (p > 1)):
+        raise ValueError("Holm adjustment requires finite p-values in [0, 1].")
     m = len(p)
     adjusted = np.empty(m)
     running = 0.0
@@ -98,6 +100,8 @@ def paired_block_bootstrap(
     if returns.isna().any().any():
         raise ValueError("Bootstrap input contains NaN; align strategies before testing (never fill).")
     data = returns.to_numpy(dtype=float)
+    if not np.all(np.isfinite(data)) or np.any(data <= -1) or len(returns) < 2:
+        raise ValueError("Bootstrap requires finite returns > -1 and at least two observations.")
     cols = {c: i for i, c in enumerate(returns.columns)}
     idx = moving_block_indices(len(returns), block_len, n_boot, np.random.default_rng(seed))
     observed = {name: METRIC_FUNCS[name](data.T) for name in metrics}
@@ -106,11 +110,15 @@ def paired_block_bootstrap(
     for a, b in pairs:
         for name in metrics:
             d_obs = float(observed[name][cols[a]] - observed[name][cols[b]])
+            if not np.isfinite(d_obs):
+                raise ValueError(f"Undefined observed {name} for {a} versus {b}.")
             d = boot[name][cols[a]] - boot[name][cols[b]]
             d = d[np.isfinite(d)]
+            if len(d) < max(10, int(0.9 * n_boot)):
+                raise ValueError(f"Insufficient finite bootstrap draws for {name}: {len(d)}/{n_boot}.")
             draws[(a, b, name)] = d
             lo, hi = np.percentile(d, [100 * alpha / 2, 100 * (1 - alpha / 2)])
-            p = float(np.mean(np.abs(d - d.mean()) >= abs(d_obs))) if len(d) else float("nan")
+            p = float((1 + np.count_nonzero(np.abs(d - d_obs) >= abs(d_obs))) / (len(d) + 1))
             rows.append({
                 "strategy": a, "benchmark": b, "metric": name, "observed_diff": d_obs,
                 "boot_mean_diff": float(d.mean()), "ci_lower": float(lo), "ci_upper": float(hi),
@@ -188,6 +196,8 @@ def cscv_pbo(returns: pd.DataFrame, n_splits: int = 16,
     n_trials = data.shape[1]
     if n_trials < 2:
         raise ValueError("CSCV needs at least two trials.")
+    if len(data) < 2 * n_splits or not np.all(np.isfinite(data)):
+        raise ValueError("CSCV requires finite data and at least two observations per block.")
     blocks = np.array_split(np.arange(len(data)), n_splits)
     logits: List[float] = []
     degradations: List[Tuple[float, float]] = []
@@ -196,6 +206,8 @@ def cscv_pbo(returns: pd.DataFrame, n_splits: int = 16,
         oos_idx = np.concatenate([blocks[i] for i in range(n_splits) if i not in is_blocks])
         is_perf = metric(data[is_idx].T)
         oos_perf = metric(data[oos_idx].T)
+        if not np.all(np.isfinite(is_perf)) or not np.all(np.isfinite(oos_perf)):
+            raise ValueError("CSCV cannot rank undefined split scores; all trials must have finite scores.")
         best = int(np.nanargmax(is_perf))
         rank = float(sps.rankdata(oos_perf)[best])  # 1 = worst
         w = rank / (n_trials + 1.0)

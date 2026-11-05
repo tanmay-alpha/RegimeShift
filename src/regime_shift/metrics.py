@@ -192,7 +192,7 @@ def compute_performance_metrics(
         sortino = mean_excess / downside_dev * np.sqrt(annualization_factor)
 
     # Maximum drawdown (positive 0â€“1 value)
-    cummax = equity_curve.cummax()
+    cummax = equity_curve.cummax().clip(lower=1.0)
     drawdown = equity_curve / cummax - 1
     max_dd = float(abs(drawdown.min()))
     max_dd = max(0.0, min(1.0, max_dd))

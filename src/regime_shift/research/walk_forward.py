@@ -98,8 +98,11 @@ def walk_forward_select(
                 cost = cost_model.cost_for_trade(target, drifted, assets)
                 turnover = 0.5 * float(np.abs(target - drifted).sum())
             elif pos == 0 and not held:
-                # Start with the incoming strategy's own already-held book (no extra switch).
-                gross, cost, turnover = float(new.gross[day]), float(new.costs[day]), float(new.turnover[day])
+                # A standalone selector starts in cash; entry occurs at this fill close.
+                target = new.weights.loc[day].to_numpy(dtype=float)
+                gross = 0.0
+                cost = cost_model.cost_for_trade(target, np.zeros(len(assets)), assets, initial=True)
+                turnover = float(np.abs(target).sum())
             else:
                 gross, cost, turnover = float(new.gross[day]), float(new.costs[day]), float(new.turnover[day])
             columns["gross"].append(gross)
@@ -118,6 +121,8 @@ def walk_forward_select(
         pd.Series(columns["costs"], index=idx, name="transaction_cost"),
         pd.Series(columns["turnover"], index=idx, name="turnover"),
         weights=pd.DataFrame(weights_rows, index=idx, columns=assets),
-        info={"rule": f"max trailing {lookback_years}y net Sharpe (rf=0), chosen at last close of prior year"},
+        info={"rule": f"max trailing {lookback_years}y Sharpe "
+              f"({'excess over cash proxy' if cash_returns is not None else 'rf=0'}), "
+              "chosen at last close of prior year; starts from cash"},
     )
     return WalkForwardResult(run, pd.DataFrame(selections))

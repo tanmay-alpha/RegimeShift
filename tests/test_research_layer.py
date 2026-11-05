@@ -154,6 +154,9 @@ def test_walk_forward_selection_uses_only_prior_data_and_charges_switch_cost():
     chosen = result.selections.set_index("evaluation_year")["selected"]
     assert chosen[2018] == "eq" and chosen[2020] == "bd"
     assert (pd.to_datetime(result.selections["validation_end"]) < pd.to_datetime(result.selections["fill_close"])).all()
+    assert result.run.gross.iloc[0] == 0.0
+    assert result.run.net.iloc[0] == pytest.approx(-0.001)
+    assert result.run.turnover.iloc[0] == pytest.approx(1.0)
     switch_year = next(y for y in (2019, 2020) if chosen[y] == "bd")
     switch_day = result.run.index[result.run.index.year == switch_year][0]
     assert result.run.gross[switch_day] == pytest.approx(0.01)
@@ -182,3 +185,26 @@ def test_all_variants_share_first_fill_and_index(monkeypatch):
     for run in runs.values():
         assert run.turnover.iloc[0] == pytest.approx(1.0)
         assert run.costs.iloc[0] == pytest.approx(10 / 10_000)
+
+
+def test_undefined_statistics_cannot_be_reported_as_significance():
+    index = pd.bdate_range("2020-01-01", periods=100)
+    frame = pd.DataFrame({"constant": 0.001, "variable": np.tile([0.01, -0.01], 50)}, index=index)
+    with pytest.raises(ValueError, match="Undefined observed"):
+        paired_block_bootstrap(frame, [("constant", "variable")], metrics=["sharpe"], n_boot=50)
+    with pytest.raises(ValueError, match="undefined split scores"):
+        cscv_pbo(frame, n_splits=4)
+    with pytest.raises(ValueError, match="finite p-values"):
+        holm_adjust([np.nan])
+
+
+def test_internal_feature_gap_cannot_delete_execution_session(monkeypatch):
+    from regime_shift import backtest
+    from regime_shift.config import RegimeShiftConfig
+
+    index = pd.bdate_range("2020-01-01", periods=300)
+    prices = pd.DataFrame(100.0, index=index, columns=["equity", "gold", "bond"])
+    monkeypatch.setattr(backtest, "compute_raw_features", lambda p, c: p)
+    monkeypatch.setattr(backtest, "drop_feature_warmup", lambda f, config: f.drop(index[150]))
+    with pytest.raises(ValueError, match="Internal feature gaps"):
+        backtest.prepare_walk_forward_inputs(prices, RegimeShiftConfig())

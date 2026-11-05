@@ -48,12 +48,14 @@ def write_experiment_manifest(output_dir: str | Path, *, experiment_id: str, des
                               dataset_path: str | Path, config: Mapping[str, Any],
                               extra: Optional[Mapping[str, Any]] = None) -> Path:
     out = Path(output_dir)
+    out.mkdir(parents=True, exist_ok=True)
     files = {p.relative_to(out).as_posix(): sha256_file(p)
              for p in sorted(out.rglob("*")) if p.is_file() and p.name != "manifest.json"}
     manifest = {
         "experiment_id": experiment_id, "description": description, "protocol_version": PROTOCOL_VERSION,
         "created_utc": _utc_now(), "git_commit": git_commit(), "source_tree_dirty": source_tree_dirty(),
-        "dataset_path": Path(dataset_path).as_posix(), "dataset_sha256_canonical": sha256_file(dataset_path),
+        "dataset_path": Path(dataset_path).as_posix(),
+        "dataset_sha256_canonical": sha256_file(dataset_path) if Path(dataset_path).is_file() else None,
         "config": dict(config), "environment": environment(), "outputs": files, **dict(extra or {}),
     }
     path = out / "manifest.json"
@@ -70,7 +72,8 @@ def register_attempt(*, experiment_id: str, status: str, n_trials: int, summary:
     record = {
         "experiment_id": experiment_id, "status": status, "created_utc": _utc_now(),
         "protocol_version": PROTOCOL_VERSION, "git_commit": git_commit(),
-        "source_tree_dirty": source_tree_dirty(), "dataset_sha256_canonical": sha256_file(dataset_path),
+        "source_tree_dirty": source_tree_dirty(), "dataset_path": Path(dataset_path).as_posix(),
+        "dataset_sha256_canonical": sha256_file(dataset_path) if Path(dataset_path).is_file() else None,
         "n_trials": int(n_trials), "summary": dict(summary), "error": error,
     }
     path = Path(registry_dir) / f"{experiment_id}.jsonl"
