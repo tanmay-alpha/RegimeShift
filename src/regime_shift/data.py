@@ -59,6 +59,13 @@ logger = logging.getLogger(__name__)
 _CORE_COLS = ["equity", "gold", "bond"]
 _OPTIONAL_COLS = ["vix"]
 
+# A one-day move beyond 2x (|log return| > ln 2) is treated as a bad print when the
+# price returns to within 10% of its pre-jump level inside 5 rows. NIFTY's largest
+# genuine daily move in the sample is ~14%; the GOLDBEES 2019-12-19 print is ~100x.
+_SPIKE_LOG_THRESHOLD = float(np.log(2.0))
+_SPIKE_REVERT_TOLERANCE = 0.10
+_SPIKE_MAX_LENGTH = 5
+
 
 # ---------------------------------------------------------------------------
 # Internal helpers
@@ -140,6 +147,47 @@ def _download_single(
     return series
 
 
+def _mask_transient_spikes(df: pd.DataFrame, cols: List[str]) -> Tuple[pd.DataFrame, Dict[str, int]]:
+    """
+    Replace spike-and-revert bad prints with NaN so the bounded forward-fill bridges them.
+
+    A spike starts at row t when |log(p_t / p_{t-1})| exceeds ln 2 and some row
+    t+k (1 <= k <= 5) is back within 10% of p_{t-1}; rows t..t+k-1 are masked.
+    A large jump that never reverts (e.g. an unadjusted split) is left in place
+    and rejected later by ``check_no_extreme_jumps``.
+
+    Returns:
+        (copy of df with spikes masked, masked cell count per column)
+    """
+    out = df.copy()
+    masked: Dict[str, int] = {}
+    for col in cols:
+        observed = out[col].dropna()  # scan observed prints only; alignment gaps are not jumps
+        values = observed.to_numpy(dtype=float)
+        bad = np.zeros(len(values), dtype=bool)
+        t = 1
+        while t < len(values):
+            prev = values[t - 1]
+            if abs(np.log(values[t] / prev)) > _SPIKE_LOG_THRESHOLD:
+                end = min(t + _SPIKE_MAX_LENGTH, len(values) - 1)
+                revert = next(
+                    (k for k in range(t + 1, end + 1) if abs(values[k] / prev - 1.0) <= _SPIKE_REVERT_TOLERANCE),
+                    None,
+                )
+                if revert is not None:
+                    logger.warning(
+                        "Masked %d bad print(s) in %s starting %s (%.4g -> %.4g).",
+                        revert - t, col, observed.index[t].date(), prev, values[t],
+                    )
+                    bad[t:revert] = True
+                    t = revert
+                    continue
+            t += 1
+        out.loc[observed.index[bad], col] = np.nan
+        masked[col] = int(bad.sum())
+    return out, masked
+
+
 def _build_aligned_frame(
     series_map: Dict[str, pd.Series],
     col_order: List[str],
@@ -170,6 +218,7 @@ def _build_aligned_frame(
     """
     # Build raw frame — outer join preserves all dates initially
     raw = pd.DataFrame({col: series_map[col] for col in col_order if col in series_map})
+    raw, spikes_masked = _mask_transient_spikes(raw, list(raw.columns))
     total_dates_pre = len(raw)
 
     # Forward-fill with strict limit BEFORE dropping.
@@ -207,6 +256,7 @@ def _build_aligned_frame(
         "dates_dropped": dropped,
         "ffill_cells_applied": ffill_applied,
         "ffill_mask": fill_mask,
+        "spike_cells_masked": spikes_masked,
     }
 
     return clean, diagnostics
@@ -321,6 +371,7 @@ def download_market_data(
     aligned.attrs["data_diagnostics"] = {
         "ffill_cells_total": diagnostics.get("ffill_cells_applied", 0),
         "ffill_cells_per_asset": per_asset,
+        "spike_cells_masked": diagnostics.get("spike_cells_masked", {}),
         "dates_dropped": diagnostics.get("dates_dropped", 0),
         "rows_after_load": len(aligned),
     }
@@ -381,6 +432,7 @@ def load_market_data_csv(
 
     # Normalise the index (handles tz-aware exports)
     df = _normalise_index(df)
+    df, spikes_masked = _mask_transient_spikes(df, [c for c in _CORE_COLS if c in df.columns])
 
     # Re-apply the canonical forward-fill of up to ffl days so that a CSV
     # recorded with raw NaNs is still bridged conservatively and the cell-
@@ -423,6 +475,7 @@ def load_market_data_csv(
         "ffill_limit": ffl,
         "ffill_cells_total": ffill_cells,
         "ffill_cells_per_asset": per_asset,
+        "spike_cells_masked": spikes_masked,
         "dates_dropped": dropped,
         "rows_after_load": len(df),
     }

@@ -765,3 +765,36 @@ class TestDeterminism:
         df = pd.concat([valid_price_df, valid_price_df.iloc[:5]])
         result = _normalise_index(df)
         assert not result.index.has_duplicates
+
+
+class TestBadPrints:
+    """Unit-error prints (e.g. GOLDBEES 33.6 -> 0.3355 on 2019-12-19) must not reach returns."""
+
+    def _write(self, df: pd.DataFrame) -> str:
+        with tempfile.NamedTemporaryFile(suffix=".csv", delete=False) as f:
+            path = f.name
+        df.to_csv(path)
+        return path
+
+    def test_spike_and_revert_is_bridged_by_forward_fill(self, valid_price_df):
+        df = valid_price_df.copy()
+        before = df["gold"].iloc[39]
+        df.iloc[40:42, df.columns.get_loc("gold")] = before / 100.0
+        path = self._write(df)
+        try:
+            loaded = load_market_data_csv(path)
+        finally:
+            os.unlink(path)
+        assert loaded["gold"].iloc[40:42].to_numpy() == pytest.approx([before, before])
+        assert loaded.attrs["data_diagnostics"]["spike_cells_masked"]["gold"] == 2
+        pd.testing.assert_series_equal(loaded["equity"], valid_price_df["equity"], check_freq=False)
+
+    def test_persistent_unit_jump_is_rejected(self, valid_price_df):
+        df = valid_price_df.copy()
+        df.iloc[40:, df.columns.get_loc("gold")] /= 100.0  # never reverts: unadjusted split
+        path = self._write(df)
+        try:
+            with pytest.raises(DataValidationError, match="beyond 2.0x"):
+                load_market_data_csv(path)
+        finally:
+            os.unlink(path)

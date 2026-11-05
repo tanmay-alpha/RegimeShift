@@ -90,6 +90,24 @@ def check_numeric_positive(df: pd.DataFrame, asset_cols: List[str]) -> None:
             )
 
 
+def check_no_extreme_jumps(df: pd.DataFrame, asset_cols: List[str], max_ratio: float = 2.0) -> None:
+    """
+    Raise DataValidationError if any one-day price ratio exceeds ``max_ratio`` (or 1/max_ratio).
+
+    Such moves in index/ETF data are unit or split errors, not returns; transient
+    bad prints are masked upstream, so anything left here is a persistent defect.
+    """
+    limit = np.log(max_ratio)
+    for col in asset_cols:
+        log_moves = np.log(df[col].dropna()).diff().abs()
+        offenders = log_moves[log_moves > limit]
+        if not offenders.empty:
+            raise DataValidationError(
+                f"Column '{col}' has {len(offenders)} one-day move(s) beyond {max_ratio}x, "
+                f"first on {offenders.index[0].date()}; likely an unadjusted split or bad print."
+            )
+
+
 def check_forward_fill_limit(
     df: pd.DataFrame,
     asset_cols: List[str],
@@ -167,7 +185,8 @@ def validate_price_data(
       2. Index is monotonically ascending.
       3. Index has no duplicate dates.
       4. Required columns ['equity', 'gold', 'bond'] are present.
-      5. All required column values are numeric, strictly positive, and finite.
+      5. All required column values are numeric, strictly positive, and finite,
+         with no one-day move beyond 2x (unit/split errors).
       6. No NaN values in required columns (unless allow_missing=True).
       7. Forward-fill runs do not exceed forward_fill_limit consecutive days.
          Uses the explicit fill mask from the data pipeline when provided;
@@ -197,6 +216,7 @@ def validate_price_data(
     check_no_duplicates(df)
     check_required_columns(df, required_cols)
     check_numeric_positive(df, required_cols)
+    check_no_extreme_jumps(df, required_cols)
 
     if not allow_missing and df[required_cols].isna().any().any():
         nan_cols = df[required_cols].columns[df[required_cols].isna().any()].tolist()
