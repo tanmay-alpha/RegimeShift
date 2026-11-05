@@ -17,7 +17,7 @@ import regime_shift
 from regime_shift.config import RegimeShiftConfig
 from regime_shift.data import load_market_data_csv
 from regime_shift.execution import ExecutionCostModel
-from regime_shift.experiment import git_commit, sha256_file, source_tree_dirty
+from regime_shift.experiment import sha256_file
 from regime_shift.research.evaluation import metrics_table, net_return_frame, require_common_index
 from regime_shift.research.regime_intelligence import (
     BASELINE_CRISIS_VOL,
@@ -33,7 +33,7 @@ from regime_shift.research.regime_intelligence import (
     run_regime_intelligence,
 )
 from regime_shift.research.registry import register_attempt, write_experiment_manifest
-from regime_shift.research.spec import PROTOCOL_VERSION, TIMESTAMP_CONVENTION
+from regime_shift.research.spec import TIMESTAMP_CONVENTION
 from regime_shift.research.strategies import REGIME_FIXED_WEIGHTS, build_context
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -52,23 +52,9 @@ def _write_json(path: Path, value) -> None:
 
 
 def _register_failure(dataset: Path, registry: Path, summary: dict, error: str, n_trials: int) -> None:
-    """The shared registry hashes inputs; retain missing-input failures with a null hash."""
-    try:
-        register_attempt(experiment_id=EXPERIMENT_ID, status="failed", n_trials=n_trials,
-                         summary=summary, dataset_path=dataset, registry_dir=registry, error=error)
-    except OSError as registration_error:
-        # Do not substitute a hash of unrelated data when the input cannot be read.
-        record = {
-            "experiment_id": EXPERIMENT_ID, "status": "failed",
-            "created_utc": datetime.now(timezone.utc).isoformat(timespec="seconds"),
-            "protocol_version": PROTOCOL_VERSION, "git_commit": git_commit(),
-            "source_tree_dirty": source_tree_dirty(), "dataset_path": dataset.as_posix(),
-            "dataset_sha256_canonical": None, "n_trials": n_trials,
-            "summary": summary, "error": error, "registration_error": str(registration_error),
-        }
-        registry.mkdir(parents=True, exist_ok=True)
-        with (registry / f"{EXPERIMENT_ID}.jsonl").open("a", encoding="utf-8") as handle:
-            handle.write(json.dumps(record, default=str, allow_nan=False) + "\n")
+    """Preserve failed attempts, including absent datasets with a null hash."""
+    register_attempt(experiment_id=EXPERIMENT_ID, status="failed", n_trials=n_trials,
+                     summary=summary, dataset_path=dataset, registry_dir=registry, error=error)
 
 
 def _write_results(result, ctx, out: Path) -> pd.DataFrame:

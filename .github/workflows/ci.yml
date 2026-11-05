@@ -17,7 +17,7 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
-      - run: pip install -e ".[dev]"
+      - run: pip install -e ".[dev]" -c config/reproducibility_constraints.txt
       - run: python -m compileall src
       - name: Lint research laboratory
         run: >-

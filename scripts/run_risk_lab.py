@@ -161,22 +161,9 @@ def main(argv=None) -> int:
         status = "failed"
         error = f"{error or ''}; manifest failure: {type(exc).__name__}: {exc}"
     # Registry writing is independent of output setup/manifest success.
-    if DATASET.is_file():
-        register_attempt(experiment_id=EXPERIMENT_ID, status=status, n_trials=len(attempts),
-                         summary={**summary, "output_dir": str(out)}, dataset_path=DATASET,
-                         registry_dir=ROOT / "results" / "registry", error=error)
-    else:
-        # The shared registry requires a hashable dataset. Preserve a truthful
-        # pre-data failure record with a null hash rather than substituting a file.
-        from datetime import datetime, timezone
-
-        registry = ROOT / "results" / "registry"
-        registry.mkdir(parents=True, exist_ok=True)
-        with (registry / f"{EXPERIMENT_ID}.jsonl").open("a", encoding="utf-8") as handle:
-            handle.write(json.dumps({"experiment_id": EXPERIMENT_ID, "status": "failed",
-                                     "created_utc": datetime.now(timezone.utc).isoformat(),
-                                     "dataset_sha256_canonical": None, "n_trials": len(attempts),
-                                     "summary": summary, "error": error}) + "\n")
+    register_attempt(experiment_id=EXPERIMENT_ID, status=status, n_trials=len(attempts),
+                     summary={**summary, "output_dir": str(out)}, dataset_path=DATASET,
+                     registry_dir=ROOT / "results" / "registry", error=error)
     print(json.dumps({"status": status, "error": error, **summary}, indent=2))
     return 1 if status == "failed" else 0
 
