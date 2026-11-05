@@ -103,6 +103,17 @@ def _check_research() -> None:
         )
 
 
+def _check_readme_results(summary: pd.DataFrame) -> None:
+    """README headline table must quote performance_summary.csv net rows exactly."""
+    readme = (ROOT / "README.md").read_text(encoding="utf-8")
+    net = summary.set_index("Strategy")
+    for label, row_name in (("**RegimeShift**", "RegimeShift Net"), ("Static 60/40", "Static 60/40 Net"), ("Equal Weight", "Equal Weight Net")):
+        r = net.loc[row_name]
+        expected = f"| {label} | {r['CAGR']:.2%} | {r['Sharpe']:.3f} | {r['Maximum Drawdown']:.2%} |"
+        if expected not in readme:
+            raise SystemExit(f"README results row out of sync with performance_summary.csv; expected: {expected}")
+
+
 def main() -> int:
     # --- Official submission artefacts ---
     required = [
@@ -167,9 +178,13 @@ def main() -> int:
     if not {"signal_date", "execution_date", "return_date", "rebalance_flag"}.issubset(timeline.columns):
         raise SystemExit("Execution timeline does not expose causal event fields.")
 
-    if (timeline.loc[timeline["rebalance_flag"], "execution_date"] !=
-            timeline.loc[timeline["rebalance_flag"], "return_date"]).any():
+    fills = timeline.loc[timeline["rebalance_flag"]]
+    if (fills["execution_date"] != fills["return_date"]).any():
         raise SystemExit("Execution and return dates must be clearly aligned on close event rows.")
+    if (pd.to_datetime(fills["signal_date"]) >= pd.to_datetime(fills["execution_date"])).any():
+        raise SystemExit("Every fill must occur on a close strictly after its signal close.")
+
+    _check_readme_results(summary)
 
     # --- Hygiene ---
     _check_hygiene()

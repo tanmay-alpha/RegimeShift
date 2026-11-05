@@ -1,8 +1,10 @@
 """Event-driven, causally valid close-to-close walk-forward backtests.
 
-At close ``t`` the portfolio that was installed after close ``t-1`` first earns
-the ``t-1 -> t`` return.  Only then may a model observe close ``t``, submit a
-target, pay execution costs, and install weights that first earn ``t -> t+1``.
+Signal at close ``t`` (data through ``t`` only); fill at close ``t+1``.  At each
+close the portfolio installed after the previous close first earns the
+just-completed return.  A pending signal from the prior close is then traded,
+costs are paid, and the new weights first earn the following close-to-close
+return.  A target is never filled on the bar whose close produced it.
 """
 
 from __future__ import annotations
@@ -10,7 +12,7 @@ from __future__ import annotations
 import copy
 import logging
 from dataclasses import dataclass, field
-from typing import Dict, List, Optional
+from typing import Callable, Dict, List, Optional
 
 import numpy as np
 import pandas as pd
@@ -85,17 +87,141 @@ def _drift(weights: np.ndarray, asset_return: np.ndarray, date: pd.Timestamp) ->
     return gross, weights * (1.0 + asset_return) / wealth
 
 
-def _event_row(date: pd.Timestamp, rebalance: bool, pre_trade: np.ndarray, target: np.ndarray, post_trade: np.ndarray, post_return: np.ndarray) -> Dict:
+def _event_row(date: pd.Timestamp, signal_date: Optional[pd.Timestamp], executed: bool, pre_trade: np.ndarray, target: np.ndarray, post_trade: np.ndarray, post_return: np.ndarray) -> Dict:
     row: Dict = {
-        "signal_date": date if rebalance else pd.NaT,
-        "execution_date": date if rebalance else pd.NaT,
+        "signal_date": signal_date if executed else pd.NaT,
+        "execution_date": date if executed else pd.NaT,
         "return_date": date,
-        "rebalance_flag": bool(rebalance),
+        "rebalance_flag": bool(executed),
     }
     for prefix, values in (("pre_return", pre_trade), ("post_return_pre_trade", post_return), ("target", target), ("end_of_day_post_trade", post_trade)):
         for asset, value in zip(_ASSET_ORDER, values):
             row[f"{prefix}_{asset}_weight"] = float(value)
     return row
+
+
+@dataclass
+class Signal:
+    """Target weights decided at a close, plus model metadata to report."""
+    target: np.ndarray
+    info: Dict = field(default_factory=dict)
+
+
+# (position, signal date, end-of-day post-trade weights, already allocated) -> Signal or None
+SignalFn = Callable[[int, pd.Timestamp, np.ndarray, bool], Optional[Signal]]
+
+
+@dataclass
+class ExecutionTrace:
+    """Per-date output of :func:`simulate_lagged_execution`, trimmed to the first fill."""
+    gross: pd.Series
+    net: pd.Series
+    costs: pd.Series
+    turnover: pd.Series
+    executed: pd.Series
+    targets: pd.DataFrame
+    pre_trade: pd.DataFrame
+    post_return: pd.DataFrame
+    post_trade: pd.DataFrame
+    events: pd.DataFrame
+    signals: Dict[pd.Timestamp, Signal]
+    fills: Dict[pd.Timestamp, pd.Timestamp]  # signal date -> execution date
+
+
+def simulate_lagged_execution(
+    asset_returns: pd.DataFrame,
+    rebalance_positions: set,
+    signal_fn: SignalFn,
+    cost_model: ExecutionCostModel,
+) -> ExecutionTrace:
+    """Run the shared signal-at-close-t, fill-at-close-t+1 event loop.
+
+    ``signal_fn`` is called only on ``rebalance_positions`` and only after the
+    day's return and any pending fill are booked, so it can see data through
+    close ``t`` but its target is not traded until close ``t+1``.  A signal on
+    the final row has no next close and is never filled.
+    """
+    assets = list(asset_returns.columns)
+    dates = pd.DatetimeIndex(asset_returns.index)
+    returns = asset_returns.to_numpy(dtype=float)
+    n_assets = len(assets)
+    current = np.zeros(n_assets)
+    allocated = False
+    pending: Optional[tuple] = None
+    first_fill: Optional[int] = None
+    cols: Dict[str, List] = {k: [] for k in ("gross", "net", "cost", "turn", "exec", "target", "pre", "drift", "post", "event")}
+    signals: Dict[pd.Timestamp, Signal] = {}
+    fills: Dict[pd.Timestamp, pd.Timestamp] = {}
+
+    for pos, date in enumerate(dates):
+        pre_trade = current.copy()
+        gross_return, post_return = _drift(pre_trade, returns[pos], date)
+        current = post_return.copy()
+        target = np.zeros(n_assets)
+        cost = turnover = 0.0
+        signal_date = None
+        executed = pending is not None
+        if executed:
+            signal_date, signal = pending
+            pending = None
+            target = signal.target.copy()
+            turnover = float(np.abs(target).sum()) if not allocated else 0.5 * float(np.abs(target - current).sum())
+            cost = cost_model.cost_for_trade(target, current, assets, initial=not allocated)
+            current = target.copy()
+            allocated = True
+            fills[signal_date] = date
+            if first_fill is None:
+                first_fill = pos
+        post_trade = current.copy()
+
+        if pos in rebalance_positions:
+            signal = signal_fn(pos, date, post_trade.copy(), allocated)
+            if signal is not None:
+                signals[date] = signal
+                pending = (date, signal)
+
+        # Gross return belongs exclusively to holdings present before close t. Cost is paid after it.
+        cols["gross"].append(gross_return); cols["net"].append((1.0 + gross_return) * (1.0 - cost) - 1.0)
+        cols["cost"].append(cost); cols["turn"].append(turnover); cols["exec"].append(executed)
+        cols["target"].append(target); cols["pre"].append(pre_trade); cols["drift"].append(post_return); cols["post"].append(post_trade)
+        cols["event"].append(_event_row(date, signal_date, executed, pre_trade, target, post_trade, post_return))
+
+    if first_fill is None:
+        raise ValueError("No successful portfolio allocation occurred.")
+    index = dates[first_fill:]
+
+    def series(key: str, name: str) -> pd.Series:
+        return pd.Series(cols[key][first_fill:], index=index, name=name)
+
+    def frame(key: str) -> pd.DataFrame:
+        return pd.DataFrame(cols[key][first_fill:], index=index, columns=assets)
+
+    return ExecutionTrace(
+        gross=series("gross", "gross_return"), net=series("net", "net_return"),
+        costs=series("cost", "transaction_cost"), turnover=series("turn", "turnover"),
+        executed=series("exec", "rebalance").astype(bool),
+        targets=frame("target"), pre_trade=frame("pre"), post_return=frame("drift"), post_trade=frame("post"),
+        events=pd.DataFrame(cols["event"][first_fill:], index=index), signals=signals, fills=fills,
+    )
+
+
+def prepare_walk_forward_inputs(prices: pd.DataFrame, config: RegimeShiftConfig) -> tuple:
+    """Return (raw_features, asset_returns, rebalance_positions) on a shared date index."""
+    assets = config.core_assets
+    asset_returns = prices[assets].pct_change().iloc[1:]
+    feature_prices = prices[assets].copy()
+    if config.vix_col in prices.columns:
+        feature_prices[config.vix_col] = prices[config.vix_col]
+    raw_features = drop_feature_warmup(compute_raw_features(feature_prices, config.feature_config), config=config.feature_config)
+    common = raw_features.index.intersection(asset_returns.index)
+    raw_features, asset_returns = raw_features.loc[common], asset_returns.loc[common]
+    minimum = config.minimum_training_observations + config.rebalance_frequency
+    if len(common) < minimum:
+        raise ValueError(f"Insufficient data after feature warmup: have {len(common)}, need at least {minimum}.")
+    rebalance_positions = set(range(config.rebalance_frequency, len(common), config.rebalance_frequency))
+    if not rebalance_positions:
+        rebalance_positions = {len(common) - 2}
+    return raw_features, asset_returns, rebalance_positions
 
 
 def run_walk_forward_backtest(
@@ -104,129 +230,85 @@ def run_walk_forward_backtest(
     transaction_cost_bps: Optional[float] = None,
     risk_free_rate: float = 0.0,
 ) -> BacktestResult:
-    """Run the official ``NEXT_CLOSE`` event sequence without same-bar fills."""
+    """Run the official ``NEXT_CLOSE`` sequence: signal at close t, fill at close t+1."""
     config = copy.deepcopy(config or RegimeShiftConfig())
     config.validate()
     if config.execution_model is not ExecutionModel.NEXT_CLOSE:
         raise ValueError("NEXT_OPEN cannot be simulated from close-only price data.")
     assets = config.core_assets
-    price_data = prices[assets].copy()
-    asset_returns = price_data.pct_change().iloc[1:]
-    feature_prices = price_data.copy()
     has_vix = config.vix_col in prices.columns
-    if has_vix:
-        feature_prices[config.vix_col] = prices[config.vix_col]
-    raw_features = drop_feature_warmup(compute_raw_features(feature_prices, config.feature_config), config=config.feature_config)
-    common = raw_features.index.intersection(asset_returns.index)
-    raw_features, asset_returns = raw_features.loc[common], asset_returns.loc[common]
-    dates = pd.DatetimeIndex(asset_returns.index)
-    minimum = config.minimum_training_observations + config.rebalance_frequency
-    if len(dates) < minimum:
-        raise ValueError(f"Insufficient data after feature warmup: have {len(dates)}, need at least {minimum}.")
-    rebalance_positions = set(range(config.rebalance_frequency, len(dates), config.rebalance_frequency))
-    if not rebalance_positions:
-        rebalance_positions = {len(dates) - 1}
+    raw_features, asset_returns, rebalance_positions = prepare_walk_forward_inputs(prices, config)
     cost_model = _cost_model(config, transaction_cost_bps)
 
-    gross: List[float] = []
-    net: List[float] = []
-    costs: List[float] = []
-    turns: List[float] = []
-    flags: List[bool] = []
-    targets: List[np.ndarray] = []
-    drifts: List[np.ndarray] = []
-    pre_returns: List[np.ndarray] = []
-    end_of_days: List[np.ndarray] = []
-    regimes: List[str] = []
-    probs: List[np.ndarray] = []
-    rows: List[Dict] = []
-    diag: List[Dict] = []
-    current = np.zeros(len(assets))
-    allocated = False
-    regime = "Unknown"
-    probability = np.full(len(_REGIME_ORDER), np.nan)
-    transition = pd.DataFrame(np.eye(3), index=_REGIME_ORDER, columns=_REGIME_ORDER)
-    first_allocation: Optional[int] = None
+    def signal_fn(pos: int, date: pd.Timestamp, weights: np.ndarray, allocated: bool) -> Optional[Signal]:
+        # Every fit/estimate is cut off at close t.
+        train = raw_features.loc[:date].tail(config.train_window)
+        returns_for_estimation = asset_returns.loc[:date].tail(config.portfolio_config.estimation_lookback)
+        if len(train) < config.minimum_training_observations or len(returns_for_estimation) < config.portfolio_config.minimum_estimation_observations:
+            return None
+        scaler = fit_feature_scaler(train)
+        hmm, _, _ = fit_hmm(transform_features(scaler, train), train, config=config.hmm_config)
+        solution = predict_current_state(hmm, scaler, train, train, config=config.hmm_config)
+        previous = dict(zip(assets, weights)) if allocated else None
+        portfolio = optimize_portfolio(solution.regime, returns_for_estimation, previous, config=config.portfolio_config)
+        return Signal(
+            target=np.array([portfolio.weights[asset] for asset in assets], dtype=float),
+            info={
+                "regime": solution.regime,
+                "probabilities": solution.probabilities.reindex(_REGIME_ORDER).to_numpy(dtype=float),
+                "transition": solution.transition_matrix.copy(),
+                "converged": solution.convergence, "n_iter": solution.n_iter,
+                "log_likelihood": solution.log_likelihood,
+                "restarts": getattr(hmm, "_restart_diagnostics", []),
+            },
+        )
 
-    for pos, date in enumerate(dates):
-        # 1-3: existing post-close weights earn the just-completed close return and drift.
-        pre_trade = current.copy()
-        day_return = asset_returns.iloc[pos].to_numpy(dtype=float)
-        gross_return, post_return = _drift(pre_trade, day_return, date)
-        current = post_return.copy()
-        rebalance = pos in rebalance_positions
-        target = np.zeros(len(assets))
-        cost = turnover = 0.0
-        post_trade = current.copy()
+    trace = simulate_lagged_execution(asset_returns, rebalance_positions, signal_fn, cost_model)
+    index = trace.net.index
 
-        if rebalance:
-            # 4-6: close t is known; every fit/estimate is cut off at t.
-            train = raw_features.loc[:date].tail(config.train_window)
-            returns_for_estimation = asset_returns.loc[:date].tail(config.portfolio_config.estimation_lookback)
-            if len(train) >= config.minimum_training_observations and len(returns_for_estimation) >= config.portfolio_config.minimum_estimation_observations:
-                scaler = fit_feature_scaler(train)
-                scaled = transform_features(scaler, train)
-                hmm, _, _ = fit_hmm(scaled, train, config=config.hmm_config)
-                solution = predict_current_state(hmm, scaler, train, train, config=config.hmm_config)
-                regime = solution.regime
-                probability = solution.probabilities.reindex(_REGIME_ORDER).to_numpy(dtype=float)
-                transition = solution.transition_matrix.copy()
-                previous = dict(zip(assets, current)) if allocated else None
-                portfolio = optimize_portfolio(regime, returns_for_estimation, previous, config=config.portfolio_config)
-                target = np.array([portfolio.weights[asset] for asset in assets], dtype=float)
-                # 7-8: cost is charged at close t and target becomes active only after that close.
-                turnover = float(np.abs(target).sum()) if not allocated else 0.5 * float(np.abs(target - current).sum())
-                cost = cost_model.cost_for_trade(target, current, assets, initial=not allocated)
-                post_trade = target.copy()
-                current = target.copy()
-                allocated = True
-                if first_allocation is None:
-                    first_allocation = pos
-                diag.append({
-                    "date": date, "regime": regime, "converged": solution.convergence,
-                    "n_iter": solution.n_iter, "log_likelihood": solution.log_likelihood,
-                    "turnover": turnover, "cost": cost,
-                    "restarts": getattr(hmm, "_restart_diagnostics", []),
-                })
-            else:
-                rebalance = False
+    # Regime state as known at each close: the latest signal dated on or before it.
+    signal_dates = sorted(trace.signals)
+    known = pd.DataFrame(
+        [[trace.signals[d].info["regime"], *trace.signals[d].info["probabilities"]] for d in signal_dates],
+        index=pd.DatetimeIndex(signal_dates), columns=["regime", *_REGIME_ORDER],
+    ).reindex(index.union(signal_dates)).ffill().reindex(index)
+    regime_series = known["regime"].fillna("Unknown").rename("regime")
+    regime_probabilities = known[_REGIME_ORDER].astype(float)
+    transition = trace.signals[signal_dates[-1]].info["transition"]
 
-        # Gross return belongs exclusively to holdings present before close t. Cost is paid after it.
-        net_return = (1.0 + gross_return) * (1.0 - cost) - 1.0
-        gross.append(gross_return); net.append(net_return); costs.append(cost); turns.append(turnover); flags.append(rebalance)
-        targets.append(target); drifts.append(post_return); regimes.append(regime); probs.append(probability.copy())
-        pre_returns.append(pre_trade); end_of_days.append(post_trade)
-        rows.append(_event_row(date, rebalance, pre_trade, target, post_trade, post_return))
+    diag = []
+    for signal_date in signal_dates:
+        info = trace.signals[signal_date].info
+        execution_date = trace.fills.get(signal_date)
+        diag.append({
+            "date": signal_date, "execution_date": execution_date, "regime": info["regime"],
+            "converged": info["converged"], "n_iter": info["n_iter"], "log_likelihood": info["log_likelihood"],
+            "turnover": float(trace.turnover.get(execution_date, 0.0)) if execution_date is not None else 0.0,
+            "cost": float(trace.costs.get(execution_date, 0.0)) if execution_date is not None else 0.0,
+            "restarts": info["restarts"],
+        })
 
-    if first_allocation is None:
-        raise ValueError("No successful portfolio allocation occurred.")
-    start = first_allocation
-    index = dates[start:]
-    def series(values: List[float], name: str) -> pd.Series: return pd.Series(values[start:], index=index, name=name)
-    target_df = pd.DataFrame(targets[start:], index=index, columns=assets)
-    drifted_df = pd.DataFrame(drifts[start:], index=index, columns=assets)
-    pre_return_df = pd.DataFrame(pre_returns[start:], index=index, columns=assets)
-    end_of_day_df = pd.DataFrame(end_of_days[start:], index=index, columns=assets)
-    gross_s, net_s = series(gross, "gross_return"), series(net, "net_return")
-    costs_s, turns_s, flags_s = series(costs, "transaction_cost"), series(turns, "turnover"), pd.Series(flags[start:], index=index, name="rebalance")
     result = BacktestResult(
-        gross_returns=gross_s, net_returns=net_s, transaction_costs=costs_s, turnover=turns_s,
-        target_weights=target_df, daily_drifted_weights=end_of_day_df,
-        pre_return_weights=pre_return_df, post_return_pre_trade_weights=drifted_df,
-        end_of_day_post_trade_weights=end_of_day_df,
-        regime_series=pd.Series(regimes[start:], index=index, name="regime"),
-        regime_probabilities=pd.DataFrame(probs[start:], index=index, columns=_REGIME_ORDER),
-        transition_matrix=transition, gross_equity=(1 + gross_s).cumprod(), net_equity=(1 + net_s).cumprod(),
-        rebalance_flags=flags_s, event_log=pd.DataFrame(rows[start:], index=index),
+        gross_returns=trace.gross, net_returns=trace.net, transaction_costs=trace.costs, turnover=trace.turnover,
+        target_weights=trace.targets, daily_drifted_weights=trace.post_trade,
+        pre_return_weights=trace.pre_trade, post_return_pre_trade_weights=trace.post_return,
+        end_of_day_post_trade_weights=trace.post_trade,
+        regime_series=regime_series, regime_probabilities=regime_probabilities,
+        transition_matrix=transition, gross_equity=(1 + trace.gross).cumprod(), net_equity=(1 + trace.net).cumprod(),
+        rebalance_flags=trace.executed, event_log=trace.events,
         hmm_diagnostics=diag,
         config_metadata=_build_metadata(config, prices, has_vix, index, risk_free_rate, cost_model),
     )
-    result.metrics = compute_performance_metrics(net_s, gross_returns=gross_s, turnover=turns_s, transaction_costs=costs_s, risk_free_rate=risk_free_rate, annualization_factor=config.annualization_factor).to_dict()
+    result.metrics = compute_performance_metrics(trace.net, gross_returns=trace.gross, turnover=trace.turnover, transaction_costs=trace.costs, risk_free_rate=risk_free_rate, annualization_factor=config.annualization_factor).to_dict()
     return result
 
 
 def run_benchmark(prices: pd.DataFrame, weights: Dict[str, float], config: Optional[RegimeShiftConfig] = None, transaction_cost_bps: Optional[float] = None, rebalance_flags: Optional[pd.Series] = None, start_date: Optional[pd.Timestamp] = None, risk_free_rate: float = 0.0) -> BenchmarkResult:
-    """Run a benchmark with the exact same return-then-close-execution ordering."""
+    """Run a fixed-weight benchmark with the same return-then-close-execution ordering.
+
+    Pass the strategy's ``rebalance_flags`` (its fill dates) to trade on identical
+    dates.  Fixed weights carry no information, so signal and fill dates coincide.
+    """
     config = copy.deepcopy(config or RegimeShiftConfig()); config.validate()
     assets = config.core_assets
     returns = prices[assets].pct_change().iloc[1:]
@@ -248,26 +330,18 @@ def run_benchmark(prices: pd.DataFrame, weights: Dict[str, float], config: Optio
             target = target_fixed.copy(); turn = float(np.abs(target).sum()) if not allocated else 0.5 * float(np.abs(target - current).sum())
             cost = model.cost_for_trade(target, current, assets, initial=not allocated); current = target.copy(); post_trade = target.copy(); allocated = True
         values["gross"].append(g); values["net"].append((1 + g) * (1 - cost) - 1); values["cost"].append(cost); values["turn"].append(turn)
-        target_rows.append(target); drift_rows.append(post_return); records.append(_event_row(date, rebalance, pre, target, post_trade, post_return))
+        target_rows.append(target); drift_rows.append(post_return); records.append(_event_row(date, date, rebalance, pre, target, post_trade, post_return))
     gross_s = pd.Series(values["gross"], index=dates, name="gross_return"); net_s = pd.Series(values["net"], index=dates, name="net_return")
     costs_s = pd.Series(values["cost"], index=dates, name="transaction_cost"); turns_s = pd.Series(values["turn"], index=dates, name="turnover")
     metrics = compute_performance_metrics(net_s, gross_returns=gross_s, turnover=turns_s, transaction_costs=costs_s, risk_free_rate=risk_free_rate, annualization_factor=config.annualization_factor).to_dict()
     return BenchmarkResult("benchmark", gross_s, net_s, (1 + gross_s).cumprod(), (1 + net_s).cumprod(), turns_s, costs_s, flags, pd.DataFrame(drift_rows, index=dates, columns=assets), pd.DataFrame(target_rows, index=dates, columns=assets), pd.DataFrame(records, index=dates), metrics)
 
 
-def _override_transaction_cost(config: RegimeShiftConfig, bps: float) -> RegimeShiftConfig:
-    result = copy.deepcopy(config); result.transaction_cost_bps = bps; result.execution_cost_model = None; return result
-
-
-def _get_rebalance_dates(dates: pd.DatetimeIndex, frequency: int) -> pd.DatetimeIndex:
-    return dates[list(range(frequency, len(dates), frequency))] if len(dates) > frequency else pd.DatetimeIndex([])
-
-
 def _build_metadata(config: RegimeShiftConfig, prices: pd.DataFrame, has_vix: bool, result_dates: pd.DatetimeIndex, risk_free_rate: float, costs: ExecutionCostModel) -> Dict:
     diagnostics = getattr(prices, "attrs", {}).get("data_diagnostics", {})
     return {
         "execution_model": ExecutionModel.NEXT_CLOSE.value,
-        "execution_timing": "Return t-1-to-t accrues before close-t signal, execution, and cost; close-t target first earns t-to-t+1.",
+        "execution_timing": "Signal at close t from data through t; fill and cost at close t+1 after the t-to-t+1 return accrues on prior holdings; new target first earns t+1-to-t+2.",
         "tradability_label": "Index-level allocation simulation: equity uses ^NSEI, which is a signal/benchmark series and not a guaranteed executable fill.",
         "market_impact_and_capacity": "Not modeled because executable volume/ADV data is not included.",
         "cost_model": {"name": costs.name, "assets": {asset: cost.total_bps for asset, cost in costs.assets.items()}, "units": "one-way assumed bps"},

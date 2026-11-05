@@ -1,4 +1,4 @@
-"""Regression tests for the close-t signal / next-close return contract."""
+"""Regression tests for the signal-at-close-t / fill-at-close-t+1 contract."""
 
 from types import SimpleNamespace
 
@@ -13,9 +13,11 @@ from regime_shift.execution import ExecutionCostModel
 
 def _prices(n=90):
     index = pd.bdate_range("2020-01-01", periods=n)
-    # A single visible jump makes the earned bar unambiguous.
+    # Jump A lands on the bar right after the first signal close (price row 62);
+    # jump B lands well after the fill (price row 70).
     equity = np.ones(n) * 100.0
     equity[62:] = 110.0
+    equity[70:] = 121.0
     return pd.DataFrame({"equity": equity, "gold": 100.0, "bond": 100.0}, index=index)
 
 
@@ -34,16 +36,19 @@ def _fast_model(monkeypatch):
     monkeypatch.setattr(backtest, "optimize_portfolio", lambda *args, **kwargs: SimpleNamespace(weights={"equity": 1.0, "gold": 0.0, "bond": 0.0}))
 
 
-def test_target_at_close_t_first_earns_t_to_t_plus_1(monkeypatch):
+def test_signal_at_close_t_is_filled_at_close_t_plus_1(monkeypatch):
     _fast_model(monkeypatch)
     config = RegimeShiftConfig(minimum_training_observations=1, train_window=60, rebalance_frequency=60)
     result = backtest.run_walk_forward_backtest(_prices(), config, transaction_cost_bps=0)
-    execution = result.event_log[result.event_log.rebalance_flag].index[0]
-    # The target is installed at the close with no prior return captured.
-    assert result.gross_returns.loc[execution] == 0.0
-    assert result.net_returns.loc[execution] == 0.0
-    next_date = result.net_returns.index[result.net_returns.index.get_loc(execution) + 1]
-    assert result.gross_returns.loc[next_date] == pytest.approx(0.10)
+    fill = result.event_log[result.event_log.rebalance_flag].iloc[0]
+    prices = _prices()
+    # The signal close is the bar before the fill close.
+    assert prices.index.get_loc(fill.signal_date) + 1 == prices.index.get_loc(fill.execution_date)
+    # Jump A accrues between signal close and fill close: a same-close fill would earn it, a t+1 fill must not.
+    assert fill.execution_date == prices.index[62]
+    assert result.gross_returns.loc[fill.execution_date] == 0.0
+    # Once filled, the position earns subsequent returns (jump B).
+    assert result.gross_returns.loc[prices.index[70]] == pytest.approx(0.10)
 
 
 def test_cost_is_charged_on_execution_and_benchmark_has_same_order(monkeypatch):

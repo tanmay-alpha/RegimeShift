@@ -40,7 +40,9 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))
 
 from regime_shift.config import RegimeShiftConfig
 from regime_shift.data import load_market_data_csv
-from regime_shift.backtest import run_walk_forward_backtest, run_benchmark, _drift, _cost_model
+from regime_shift.backtest import (Signal, _cost_model, prepare_walk_forward_inputs,
+                                   run_benchmark, run_walk_forward_backtest,
+                                   simulate_lagged_execution)
 from regime_shift.benchmarks import static_60_40_weights, equal_weight_weights
 from regime_shift.metrics import compute_performance_metrics
 from regime_shift.execution import ExecutionCostModel
@@ -117,285 +119,107 @@ def _save_fig(fig: plt.Figure, path: Path) -> None:
 # Ablation variant runners
 # ---------------------------------------------------------------------------
 
-def _run_no_regime_optimizer(prices: pd.DataFrame, config: RegimeShiftConfig) -> tuple:
-    """Always optimise as if Bull regime — no HMM switching."""
-    from regime_shift.features import (compute_raw_features, drop_feature_warmup,
-                                        fit_feature_scaler, transform_features)
-    from regime_shift.portfolio import optimize_portfolio
+def _run_variant(prices: pd.DataFrame, config: RegimeShiftConfig, target_fn) -> tuple:
+    """Run an ablation through the official engine: same dates, schedule, t+1 fill and costs.
 
+    ``target_fn(date, raw_features, asset_returns, previous)`` sees data through
+    ``date`` only and returns target weights or None (no trade).
+    """
     cfg = copy.deepcopy(config)
     assets = cfg.core_assets
-    price_data = prices[assets].copy()
-    asset_returns = price_data.pct_change().iloc[1:]
-    raw_features = drop_feature_warmup(compute_raw_features(price_data, cfg.feature_config),
-                                        config=cfg.feature_config)
-    common = raw_features.index.intersection(asset_returns.index)
-    raw_features, asset_returns = raw_features.loc[common], asset_returns.loc[common]
-    dates = pd.DatetimeIndex(asset_returns.index)
-    minimum = cfg.minimum_training_observations + cfg.rebalance_frequency
-    if len(dates) < minimum:
-        raise ValueError("Insufficient data for no-regime optimizer ablation.")
-    rebalance_positions = set(range(cfg.rebalance_frequency, len(dates), cfg.rebalance_frequency))
-    cost_mdl = _cost_model(cfg, None)
+    raw_features, asset_returns, rebalance_positions = prepare_walk_forward_inputs(prices, cfg)
 
-    gross_l, net_l, costs_l, turns_l = [], [], [], []
-    current = np.zeros(len(assets))
-    allocated = False
-    first_allocation = None
+    def signal_fn(pos, date, weights, allocated):
+        previous = dict(zip(assets, weights)) if allocated else None
+        target = target_fn(date, raw_features.loc[:date], asset_returns.loc[:date], previous)
+        return None if target is None else Signal(np.asarray(target, dtype=float))
 
-    for pos, date in enumerate(dates):
-        pre_trade = current.copy()
-        day_return = asset_returns.iloc[pos].to_numpy(dtype=float)
-        gross_return, post_return = _drift(pre_trade, day_return, date)
-        current = post_return.copy()
-        rebalance = pos in rebalance_positions
-        cost = turnover = 0.0
+    trace = simulate_lagged_execution(asset_returns, rebalance_positions, signal_fn, _cost_model(cfg, None))
+    return trace.gross, trace.net, trace.costs, trace.turnover
 
-        if rebalance:
-            train = raw_features.loc[:date].tail(cfg.train_window)
-            returns_for_estimation = asset_returns.loc[:date].tail(
-                cfg.portfolio_config.estimation_lookback)
-            if (len(train) >= cfg.minimum_training_observations and
-                    len(returns_for_estimation) >= cfg.portfolio_config.minimum_estimation_observations):
-                previous = dict(zip(assets, current)) if allocated else None
-                portfolio = optimize_portfolio("Bull", returns_for_estimation, previous,
-                                               config=cfg.portfolio_config)
-                target = np.array([portfolio.weights[a] for a in assets], dtype=float)
-                turnover = (float(np.abs(target).sum()) if not allocated
-                            else 0.5 * float(np.abs(target - current).sum()))
-                cost = cost_mdl.cost_for_trade(target, current, assets, initial=not allocated)
-                current = target.copy()
-                allocated = True
-                if first_allocation is None:
-                    first_allocation = pos
-            else:
-                rebalance = False
 
-        net_return = (1.0 + gross_return) * (1.0 - cost) - 1.0
-        gross_l.append(gross_return); net_l.append(net_return)
-        costs_l.append(cost); turns_l.append(turnover)
+def _run_no_regime_optimizer(prices: pd.DataFrame, config: RegimeShiftConfig) -> tuple:
+    """Always optimise as if Bull regime — no HMM switching."""
+    from regime_shift.portfolio import optimize_portfolio
 
-    if first_allocation is None:
-        raise ValueError("No-regime optimizer: no allocation occurred.")
-    start = first_allocation
-    index = dates[start:]
-    return (pd.Series(gross_l[start:], index=index),
-            pd.Series(net_l[start:], index=index),
-            pd.Series(costs_l[start:], index=index),
-            pd.Series(turns_l[start:], index=index))
+    pc = config.portfolio_config
+
+    def target_fn(date, features, returns, previous):
+        if len(features.tail(config.train_window)) < config.minimum_training_observations:
+            return None
+        window = returns.tail(pc.estimation_lookback)
+        if len(window) < pc.minimum_estimation_observations:
+            return None
+        portfolio = optimize_portfolio("Bull", window, previous, config=pc)
+        return [portfolio.weights[a] for a in config.core_assets]
+
+    return _run_variant(prices, config, target_fn)
 
 
 def _run_hmm_fixed(prices: pd.DataFrame, config: RegimeShiftConfig) -> tuple:
     """HMM regime detection but fixed per-regime weights — no CVXPY."""
-    from regime_shift.features import (compute_raw_features, drop_feature_warmup,
-                                        fit_feature_scaler, transform_features)
+    from regime_shift.features import fit_feature_scaler, transform_features
     from regime_shift.regime_model import fit_hmm, predict_current_state
 
-    cfg = copy.deepcopy(config)
-    assets = cfg.core_assets
-    price_data = prices[assets].copy()
-    asset_returns = price_data.pct_change().iloc[1:]
-    raw_features = drop_feature_warmup(compute_raw_features(price_data, cfg.feature_config),
-                                        config=cfg.feature_config)
-    common = raw_features.index.intersection(asset_returns.index)
-    raw_features, asset_returns = raw_features.loc[common], asset_returns.loc[common]
-    dates = pd.DatetimeIndex(asset_returns.index)
-    minimum = cfg.minimum_training_observations + cfg.rebalance_frequency
-    if len(dates) < minimum:
-        raise ValueError("Insufficient data for HMM-fixed ablation.")
-    rebalance_positions = set(range(cfg.rebalance_frequency, len(dates), cfg.rebalance_frequency))
-    cost_mdl = _cost_model(cfg, None)
+    def target_fn(date, features, returns, previous):
+        train = features.tail(config.train_window)
+        if len(train) < config.minimum_training_observations:
+            return None
+        scaler = fit_feature_scaler(train)
+        hmm, _, _ = fit_hmm(transform_features(scaler, train), train, config=config.hmm_config)
+        regime = predict_current_state(hmm, scaler, train, train, config=config.hmm_config).regime
+        return [_HMM_FIXED[regime][a] for a in config.core_assets]
 
-    gross_l, net_l, costs_l, turns_l = [], [], [], []
-    current = np.zeros(len(assets))
-    allocated = False
-    first_allocation = None
-
-    for pos, date in enumerate(dates):
-        pre_trade = current.copy()
-        day_return = asset_returns.iloc[pos].to_numpy(dtype=float)
-        gross_return, post_return = _drift(pre_trade, day_return, date)
-        current = post_return.copy()
-        rebalance = pos in rebalance_positions
-        cost = turnover = 0.0
-
-        if rebalance:
-            train = raw_features.loc[:date].tail(cfg.train_window)
-            if len(train) >= cfg.minimum_training_observations:
-                scaler = fit_feature_scaler(train)
-                scaled = transform_features(scaler, train)
-                hmm, _, _ = fit_hmm(scaled, train, config=cfg.hmm_config)
-                solution = predict_current_state(hmm, scaler, train, train, config=cfg.hmm_config)
-                regime = solution.regime
-                target_dict = _HMM_FIXED[regime]
-                target = np.array([target_dict[a] for a in assets], dtype=float)
-                turnover = (float(np.abs(target).sum()) if not allocated
-                            else 0.5 * float(np.abs(target - current).sum()))
-                cost = cost_mdl.cost_for_trade(target, current, assets, initial=not allocated)
-                current = target.copy()
-                allocated = True
-                if first_allocation is None:
-                    first_allocation = pos
-            else:
-                rebalance = False
-
-        net_return = (1.0 + gross_return) * (1.0 - cost) - 1.0
-        gross_l.append(gross_return); net_l.append(net_return)
-        costs_l.append(cost); turns_l.append(turnover)
-
-    if first_allocation is None:
-        raise ValueError("HMM-fixed: no allocation occurred.")
-    start = first_allocation
-    index = dates[start:]
-    return (pd.Series(gross_l[start:], index=index),
-            pd.Series(net_l[start:], index=index),
-            pd.Series(costs_l[start:], index=index),
-            pd.Series(turns_l[start:], index=index))
+    return _run_variant(prices, config, target_fn)
 
 
 def _run_min_variance(prices: pd.DataFrame, config: RegimeShiftConfig) -> tuple:
     """Covariance-only minimum-variance portfolio. No expected returns."""
     import cvxpy as cp
-    from regime_shift.features import compute_raw_features, drop_feature_warmup
 
-    cfg = copy.deepcopy(config)
-    assets = cfg.core_assets
-    price_data = prices[assets].copy()
-    asset_returns = price_data.pct_change().iloc[1:]
-    raw_features = drop_feature_warmup(compute_raw_features(price_data, cfg.feature_config),
-                                        config=cfg.feature_config)
-    common = raw_features.index.intersection(asset_returns.index)
-    raw_features, asset_returns = raw_features.loc[common], asset_returns.loc[common]
-    dates = pd.DatetimeIndex(asset_returns.index)
-    minimum = cfg.minimum_training_observations + cfg.rebalance_frequency
-    if len(dates) < minimum:
-        raise ValueError("Insufficient data for min-variance ablation.")
-    rebalance_positions = set(range(cfg.rebalance_frequency, len(dates), cfg.rebalance_frequency))
-    cost_mdl = _cost_model(cfg, None)
-    LOOKBACK = cfg.portfolio_config.estimation_lookback
-    MIN_OBS = cfg.portfolio_config.minimum_estimation_observations
-    RIDGE = cfg.portfolio_config.covariance_ridge
+    pc = config.portfolio_config
 
-    gross_l, net_l, costs_l, turns_l = [], [], [], []
-    current = np.zeros(len(assets))
-    allocated = False
-    first_allocation = None
+    def target_fn(date, features, returns, previous):
+        window = returns.tail(pc.estimation_lookback)
+        if len(window) < pc.minimum_estimation_observations:
+            return None
+        cov = window.cov().values
+        cov = (cov + cov.T) / 2.0
+        eigvals, eigvecs = np.linalg.eigh(cov)
+        cov = eigvecs @ np.diag(np.where(eigvals < 0, 0.0, eigvals) + pc.covariance_ridge) @ eigvecs.T
+        cov = (cov + cov.T) / 2.0
+        w = cp.Variable(len(config.core_assets))
+        prob = cp.Problem(cp.Minimize(cp.quad_form(w, cp.psd_wrap(cov))),
+                          [cp.sum(w) == 1.0, w >= 0.0, w <= 0.80])
+        for solver in [cp.CLARABEL, cp.OSQP, cp.SCS]:
+            try:
+                prob.solve(solver=solver, verbose=False)
+            except Exception:
+                continue
+            if prob.status in ("optimal", "optimal_inaccurate") and w.value is not None:
+                target = np.maximum(w.value, 0.0)
+                return target / target.sum()
+        return None
 
-    for pos, date in enumerate(dates):
-        pre_trade = current.copy()
-        day_return = asset_returns.iloc[pos].to_numpy(dtype=float)
-        gross_return, post_return = _drift(pre_trade, day_return, date)
-        current = post_return.copy()
-        rebalance = pos in rebalance_positions
-        cost = turnover = 0.0
-
-        if rebalance:
-            returns_for_estimation = asset_returns.loc[:date].tail(LOOKBACK)
-            if len(returns_for_estimation) >= MIN_OBS:
-                cov = returns_for_estimation.cov().values
-                cov = (cov + cov.T) / 2.0
-                eigvals, eigvecs = np.linalg.eigh(cov)
-                eigvals = np.where(eigvals < 0, 0.0, eigvals) + RIDGE
-                cov = eigvecs @ np.diag(eigvals) @ eigvecs.T
-                cov = (cov + cov.T) / 2.0
-                w = cp.Variable(len(assets))
-                prob = cp.Problem(cp.Minimize(cp.quad_form(w, cp.psd_wrap(cov))),
-                                  [cp.sum(w) == 1.0, w >= 0.0, w <= 0.80])
-                solved = False
-                for solver in [cp.CLARABEL, cp.OSQP, cp.SCS]:
-                    try:
-                        prob.solve(solver=solver, verbose=False)
-                        if prob.status in ("optimal", "optimal_inaccurate") and w.value is not None:
-                            solved = True
-                            break
-                    except Exception:
-                        continue
-                if solved and w.value is not None:
-                    target = np.maximum(w.value, 0.0)
-                    ws = target.sum()
-                    if ws > 0:
-                        target = target / ws
-                    turnover = (float(np.abs(target).sum()) if not allocated
-                                else 0.5 * float(np.abs(target - current).sum()))
-                    cost = cost_mdl.cost_for_trade(target, current, assets, initial=not allocated)
-                    current = target.copy()
-                    allocated = True
-                    if first_allocation is None:
-                        first_allocation = pos
-                else:
-                    rebalance = False
-            else:
-                rebalance = False
-
-        net_return = (1.0 + gross_return) * (1.0 - cost) - 1.0
-        gross_l.append(gross_return); net_l.append(net_return)
-        costs_l.append(cost); turns_l.append(turnover)
-
-    if first_allocation is None:
-        raise ValueError("Min-variance: no allocation occurred.")
-    start = first_allocation
-    index = dates[start:]
-    return (pd.Series(gross_l[start:], index=index),
-            pd.Series(net_l[start:], index=index),
-            pd.Series(costs_l[start:], index=index),
-            pd.Series(turns_l[start:], index=index))
+    return _run_variant(prices, config, target_fn)
 
 
-def _run_volatility_rule(prices: pd.DataFrame, config: RegimeShiftConfig,
-                          start_date: pd.Timestamp) -> tuple:
-    """Simple rule: trailing 63-day realized vol threshold. No HMM."""
-    assets = config.core_assets
-    returns = prices[assets].pct_change().iloc[1:]
-    returns = returns.loc[returns.index >= start_date]
-    dates = pd.DatetimeIndex(returns.index)
-    eq_returns = prices["equity"].pct_change().iloc[1:]
-    cost_mdl = ExecutionCostModel.scenario("base", assets)
+def _run_volatility_rule(prices: pd.DataFrame, config: RegimeShiftConfig) -> tuple:
+    """Simple rule: trailing 63-day realized equity vol threshold. No HMM."""
+    window_len, high_vol, crisis_vol = 63, 0.20, 0.30
 
-    gross_l, net_l, costs_l, turns_l = [], [], [], []
-    current = np.zeros(len(assets))
-    allocated = False
-    WINDOW = 63
-    HIGH_VOL = 0.20
-    CRISIS_VOL = 0.30
+    def target_fn(date, features, returns, previous):
+        hist = returns["equity"].tail(window_len)
+        if len(hist) < window_len // 2:
+            return None
+        ann_vol = float(hist.std(ddof=1)) * np.sqrt(_ANN)
+        if ann_vol > crisis_vol:
+            return [0.10, 0.30, 0.60]
+        if ann_vol > high_vol:
+            return [0.35, 0.30, 0.35]
+        return [0.65, 0.20, 0.15]
 
-    for pos, date in enumerate(dates):
-        pre = current.copy()
-        day_r = returns.iloc[pos].to_numpy(dtype=float)
-        gross = float(np.dot(pre, day_r))
-        if np.any(pre):
-            wealth = 1.0 + gross
-            current = pre * (1.0 + day_r) / max(wealth, 1e-10)
-        else:
-            current = pre.copy()
-
-        rebalance = pos % config.rebalance_frequency == 0 and pos > 0
-        cost = turn = 0.0
-
-        if rebalance:
-            hist = eq_returns.loc[:date].tail(WINDOW)
-            if len(hist) >= WINDOW // 2:
-                ann_vol = float(hist.std(ddof=1)) * np.sqrt(_ANN)
-                if ann_vol > CRISIS_VOL:
-                    target = np.array([0.10, 0.30, 0.60])
-                elif ann_vol > HIGH_VOL:
-                    target = np.array([0.35, 0.30, 0.35])
-                else:
-                    target = np.array([0.65, 0.20, 0.15])
-                turn = (float(np.abs(target).sum()) if not allocated
-                        else 0.5 * float(np.abs(target - current).sum()))
-                cost = cost_mdl.cost_for_trade(target, current, assets, initial=not allocated)
-                current = target.copy()
-                allocated = True
-
-        net_r = (1.0 + gross) * (1.0 - cost) - 1.0
-        gross_l.append(gross); net_l.append(net_r)
-        costs_l.append(cost); turns_l.append(turn)
-
-    index = dates
-    return (pd.Series(gross_l, index=index),
-            pd.Series(net_l, index=index),
-            pd.Series(costs_l, index=index),
-            pd.Series(turns_l, index=index))
+    return _run_variant(prices, config, target_fn)
 
 
 # ===========================================================================
@@ -437,7 +261,7 @@ def run_ablation(prices: pd.DataFrame, config: RegimeShiftConfig,
     # C. Volatility-rule allocation
     logger.info("Running C: Volatility-rule allocation...")
     try:
-        g, n, c, t = _run_volatility_rule(prices, config, eval_start)
+        g, n, c, t = _run_volatility_rule(prices, config)
         n_aligned = n.reindex(rs.net_returns.index).dropna()
         g_a = g.reindex(n_aligned.index).fillna(0)
         c_a = c.reindex(n_aligned.index).fillna(0)
@@ -890,7 +714,7 @@ def run_hmm_diagnostics(backtest_result, output_dir: Path) -> pd.DataFrame:
         n_restarts = len(restarts) if restarts else 1
         converged_restarts = (sum(1 for r in restarts if r.get("converged", False))
                               if restarts else (1 if rec.get("converged") else 0))
-        best_seed = restarts[-1].get("seed", None) if restarts else None
+        best_seed = next((r.get("seed") for r in restarts if r.get("selected")), None)
         rows.append({
             "date": str(rec.get("date", ""))[:10] if rec.get("date") else "",
             "regime": rec.get("regime", ""),
