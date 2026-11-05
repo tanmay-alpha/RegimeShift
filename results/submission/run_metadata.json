@@ -1,6 +1,6 @@
 {
   "execution_model": "NEXT_CLOSE",
-  "execution_timing": "Return t-1-to-t accrues before close-t signal, execution, and cost; close-t target first earns t-to-t+1.",
+  "execution_timing": "Signal at close t from data through t; fill and cost at close t+1 after the t-to-t+1 return accrues on prior holdings; new target first earns t+1-to-t+2.",
   "tradability_label": "Index-level allocation simulation: equity uses ^NSEI, which is a signal/benchmark series and not a guaranteed executable fill.",
   "market_impact_and_capacity": "Not modeled because executable volume/ADV data is not included.",
   "cost_model": {
@@ -13,9 +13,9 @@
     "units": "one-way assumed bps"
   },
   "date_range": {
-    "start": "2010-10-05 00:00:00",
+    "start": "2010-10-06 00:00:00",
     "end": "2026-07-27 00:00:00",
-    "n_observations": 3732,
+    "n_observations": 3900,
     "original_start": "2010-01-04 00:00:00",
     "original_end": "2026-07-27 00:00:00"
   },
@@ -42,10 +42,10 @@
     "gold": 10.0,
     "bond": 10.0
   },
-  "rebalance_count": 178,
+  "rebalance_count": 186,
   "regime_counts": {
-    "Bull": 1428,
-    "Bear": 1233,
-    "Crisis": 1071
+    "Bear": 1402,
+    "Bull": 1385,
+    "Crisis": 1113
   }
 }

@@ -224,13 +224,14 @@ def _notebook_json(
     cells.append(_md(
         "### 4. Causal NEXT_CLOSE Execution Timing\n\n"
         "At close **t**:\n\n"
-        "1. Holdings established after close **t-1** earn the **t-1 → t** return.\n"
-        "2. Close **t** price becomes known.\n"
-        "3. Features, scaler, and HMM may use information strictly through **t**.\n"
-        "4. Regime and portfolio target are generated at close **t**.\n"
-        "5. Execution costs are paid at close **t** (applied to returned wealth).\n"
-        "6. New holdings first earn the **t → t+1** return.\n\n"
-        "This is the NEXT_CLOSE convention. No same-bar fills. No future data.\n\n"
+        "1. Holdings in place before close **t** earn the **t-1 → t** return.\n"
+        "2. Any target signalled at close **t-1** is traded now; costs are paid at close **t**.\n"
+        "3. Close **t** price becomes known; features, scaler, and HMM use information strictly through **t**.\n"
+        "4. On rebalance dates a new regime and target are generated (the signal).\n"
+        "5. That signal is **not** filled at close **t**; it is filled at close **t+1**.\n"
+        "6. The filled target first earns the **t+1 → t+2** return.\n\n"
+        "A one-bar gap separates every signal from its fill, so no target is traded on the close "
+        "that produced it. `execution_timeline.csv` records `signal_date` < `execution_date` on every fill.\n\n"
         "```\n"
         "Prices\n"
         "  ↓\n"
@@ -242,7 +243,7 @@ def _notebook_json(
         "  ↓\n"
         "Regime-conditioned CVXPY allocation\n"
         "  ↓\n"
-        "NEXT_CLOSE execution (costs at close t, return starts t→t+1)\n"
+        "NEXT_CLOSE execution (signal at close t, fill and costs at close t+1)\n"
         "  ↓\n"
         "Benchmark-aligned evaluation with identical cost model\n"
         "```"
@@ -251,9 +252,10 @@ def _notebook_json(
     # ---- 5. Leakage-Safe Features ----
     cells.append(_md(
         "### 5. Leakage-Safe Features\n\n"
-        "Seven base features computed from strictly trailing windows:\n"
-        "log returns, realized volatility (21d, 63d), price-to-MA ratios, "
-        "MACD signal, rolling drawdown, and cross-asset correlations.\n"
+        "Seven base features computed from strictly trailing windows: equity 1-day log return, "
+        "21d and 63d momentum, 21d realized volatility, 21d/63d volatility ratio, and 63d "
+        "equity–gold and equity–bond correlations. Correlation is set to 0 when one leg is "
+        "constant over the window (LIQUIDBEES printed a flat NAV through 2012), so no dates are dropped.\n"
         "VIX features are optional and omitted when VIX is not in the dataset.\n\n"
         "The StandardScaler is fitted only on the rolling training window "
         "(252 days through close **t**). No future data reaches the scaler."
@@ -282,15 +284,15 @@ def _notebook_json(
         "**No selection based on out-of-sample performance.**"
     ))
     cells.append(_code(
-        'from regime_shift.regime_model import fit_hmm\n'
+        'from regime_shift.regime_model import em_converged, em_iterations, fit_hmm\n'
         '\n'
         'train_end = raw_features.index[min(config.train_window, len(raw_features) - 1)]\n'
         'train_features = raw_features.loc[:train_end].tail(config.train_window)\n'
         'scaler = fit_feature_scaler(train_features)\n'
         'scaled_train = transform_features(scaler, train_features)\n'
         'hmm, hidden_states, trans_mat = fit_hmm(scaled_train, train_features, config=config.hmm_config)\n'
-        'print(f"HMM converged: {hmm.monitor_.converged}")\n'
-        'print(f"Iterations: {hmm.monitor_.n_iter}")\n'
+        'print(f"HMM converged (log-likelihood gain < tol, not iteration cap): {em_converged(hmm)}")\n'
+        'print(f"EM iterations used: {em_iterations(hmm)} of {config.hmm_config.n_iter}")\n'
         'print(f"Log-likelihood: {hmm.score(scaled_train.values):.2f}")\n'
         'print("Transition matrix:")\n'
         'display(trans_mat)\n'
@@ -458,7 +460,11 @@ def _notebook_json(
     cells.append(_md(sub_md))
 
     # ---- 14. Rolling-Origin Results ----
-    roll_md = "### 14. Rolling-Origin Evaluation\n\n"
+    roll_md = (
+        "### 14. Rolling-Origin Evaluation (Calendar Folds)\n\n"
+        "Each fold is a calendar slice of the single walk-forward run (the model is already "
+        "refit every 21 days on a trailing window), not an independent re-fit per fold.\n\n"
+    )
     if rolling_origin_summary is not None and not rolling_origin_summary.empty:
         rs_roll = rolling_origin_summary[rolling_origin_summary["strategy"] == "RegimeShift"][
             ["fold", "n_obs", "cagr", "sharpe", "max_drawdown"]]
@@ -496,29 +502,29 @@ def _notebook_json(
         hmm_md += "_Run `python scripts/run_research_suite.py` to generate HMM diagnostics._\n"
     cells.append(_md(hmm_md))
 
-    # ---- 17. Negative Findings ----
+    # ---- 17. Findings and Negative Findings ----
+    def _row(name, result):
+        m = result.metrics
+        return f"| {name} | {m['CAGR']:.2%} | {m['Sharpe']:.3f} | {m['Maximum Drawdown']:.2%} |\n"
+
+    rs_m, b6040_m, ew_m = strategy.metrics, bench_6040.metrics, bench_ew.metrics
     cells.append(_md(
-        "### 17. Negative Findings\n\n"
-        "**RegimeShift did not outperform the simpler static benchmarks on headline "
-        "risk-adjusted performance.**\n\n"
-        "Under corrected NEXT_CLOSE causal timing and base 10 bps transaction costs:\n\n"
+        "### 17. Findings and Negative Findings\n\n"
+        "Under NEXT_CLOSE timing (signal at close t, fill at close t+1) and base 10 bps costs:\n\n"
         "| Strategy | CAGR | Sharpe | Max Drawdown |\n"
         "|---|---|---|---|\n"
-        f"| RegimeShift | ~6.0% | ~0.40 | ~35.8% |\n"
-        f"| Static 60/40 | ~6.6% | ~0.70 | ~23.4% |\n"
-        f"| Equal Weight | ~8.8% | ~0.57 | ~33.0% |\n\n"
-        "(Read exact numbers from `results/submission/performance_summary.csv`.)\n\n"
-        "**What this research demonstrated:**\n"
-        "- The causal pipeline design (rolling train-only scaler+HMM, NEXT_CLOSE ordering) "
-        "is leak-free and reproducible.\n"
-        "- HMM regime detection produces interpretable Bull/Bear/Crisis states with "
-        "reasonable transition persistence.\n"
-        "- The added complexity of dynamic regime allocation does not generate alpha "
-        "over static equal-weight or 60/40 portfolios in this Indian multi-asset dataset.\n"
-        "- High turnover (3.3× annualised) relative to static benchmarks (~0.18×) "
-        "creates significant cost drag that offsets any gross diversification benefit.\n"
-        "- Bootstrap confidence intervals for paired Sharpe differences generally "
-        "include zero, consistent with no statistically significant outperformance."
+        + _row("RegimeShift", strategy) + _row("Static 60/40", bench_6040) + _row("Equal Weight", bench_ew)
+        + "\n(Same numbers as `results/submission/performance_summary.csv`.)\n"
+        + "\n**What this research demonstrated:**\n"
+        f"- Versus static 60/40, RegimeShift has Sharpe {rs_m['Sharpe']:.2f} vs {b6040_m['Sharpe']:.2f} and "
+        f"max drawdown {rs_m['Maximum Drawdown']:.1%} vs {b6040_m['Maximum Drawdown']:.1%}; the bootstrap "
+        "CI for the Sharpe difference includes zero, so the edge is not significant.\n"
+        f"- Equal weight (Sharpe {ew_m['Sharpe']:.2f}) beats RegimeShift; the paired bootstrap places "
+        "that Sharpe gap outside zero.\n"
+        "- The ablation attributes the drawdown reduction to the HMM regime signal; the CVXPY layer "
+        "adds turnover without beating fixed per-regime weights.\n"
+        f"- Turnover of {rs_m['Annualised Turnover']:.1f}× a year (vs {b6040_m['Annualised Turnover']:.2f}× "
+        "for 60/40) creates the main cost drag."
     ))
 
     # ---- 18. Limitations ----
@@ -535,8 +541,10 @@ def _notebook_json(
         "No segment is a pristine holdout.\n"
         "5. **Three assets only:** Broader diversification requires expanding the universe.\n"
         "6. **Gaussian HMM:** Student-t emissions may better capture fat tails.\n"
-        "7. **No alpha proven:** Positive CAGR reflects the underlying market uptrend, "
-        "not superior risk-adjusted returns."
+        "7. **No alpha proven:** Positive CAGR reflects the underlying market uptrend; "
+        "the Sharpe edge over 60/40 is not statistically significant.\n"
+        "8. **Risk-free rate is 0:** Sharpe ratios of cash-heavy portfolios are overstated, and "
+        "the LIQUIDBEES `Close` series omits most of its distributions."
     ))
 
     # ---- 19. Reproduction ----
