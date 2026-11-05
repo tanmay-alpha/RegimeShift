@@ -94,7 +94,7 @@ def _equity_drawdown_chart(frame: pd.DataFrame, path: Path) -> None:
     for column in frame.columns:
         wealth = (1 + frame[column]).cumprod()
         wealth.plot(ax=ax_eq, label=column, linewidth=1.3)
-        (wealth / wealth.cummax() - 1).plot(ax=ax_dd, label=column, linewidth=1.0)
+        (wealth / wealth.cummax().clip(lower=1.0) - 1).plot(ax=ax_dd, label=column, linewidth=1.0)
     ax_eq.set_title("Net wealth, identical dates and costs (base 10 bps, NEXT_CLOSE)")
     ax_eq.yaxis.set_major_formatter(mticker.FuncFormatter(lambda x, _: f"{x:.1f}x"))
     ax_eq.legend(fontsize=8, loc="upper left")

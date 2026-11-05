@@ -174,19 +174,13 @@ def _equity_curves_chart(result, benchmarks: dict, output_dir: str) -> str:
 
     fig, ax = plt.subplots(figsize=(14, 6))
 
-    # Normalize all curves to start at 1.0
-    def normalize(s):
-        s = s.dropna()
-        if len(s) == 0:
-            return s
-        return s / s.iloc[0]
 
     ax.plot(
-        result.net_equity.index, normalize(result.net_equity).values,
+        result.net_equity.index, result.net_equity.values,
         label="RegimeShift Net", color="#2E86AB", linewidth=1.5,
     )
     ax.plot(
-        result.gross_equity.index, normalize(result.gross_equity).values,
+        result.gross_equity.index, result.gross_equity.values,
         label="RegimeShift Gross", color="#2E86AB",
         linewidth=1.0, linestyle="--", alpha=0.7,
     )
@@ -194,16 +188,16 @@ def _equity_curves_chart(result, benchmarks: dict, output_dir: str) -> str:
     for name, bench in benchmarks.items():
         if bench.net_equity is not None and len(bench.net_equity) > 0:
             ax.plot(
-                bench.net_equity.index, normalize(bench.net_equity).values,
+                bench.net_equity.index, bench.net_equity.values,
                 label=f"{name} Net", linewidth=1.5,
             )
         if bench.gross_equity is not None and len(bench.gross_equity) > 0:
             ax.plot(
-                bench.gross_equity.index, normalize(bench.gross_equity).values,
+                bench.gross_equity.index, bench.gross_equity.values,
                 label=f"{name} Gross", linewidth=1.0, linestyle="--", alpha=0.7,
             )
 
-    ax.set_ylabel("Cumulative Return (normalised)", fontsize=11)
+    ax.set_ylabel("Wealth (initial capital = 1 before first return)", fontsize=11)
     ax.set_title("Portfolio Equity Curves", fontsize=13)
     ax.legend(loc="upper left", fontsize=9)
     ax.grid(True, alpha=0.3)
@@ -229,7 +223,7 @@ def _drawdowns_chart(result, benchmarks: dict, output_dir: str) -> str:
             return pd.Series(index=returns_s.index)
         # Always (1 + returns).cumprod(); never returns.cumprod()
         eq = (1.0 + returns_s).cumprod()
-        cummax = eq.cummax()
+        cummax = eq.cummax().clip(lower=1.0)
         return (eq / cummax - 1) * 100
 
     ax.fill_between(
