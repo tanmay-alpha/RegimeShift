@@ -886,3 +886,15 @@ class TestFeatureDefinitions:
         assert np.isfinite(clean.values).all(), (
             f"Non-finite values found: {clean.isna().sum().to_dict()}"
         )
+
+    def test_flat_bond_keeps_rows_with_zero_correlation(self):
+        """A constant NAV stretch (LIQUIDBEES 2012) must not drop dates from the sample."""
+        prices = _make_prices(periods=300, seed=7)
+        prices.iloc[50:200, prices.columns.get_loc("bond")] = 97.0
+        config = _make_feature_config()
+        features = compute_raw_features(prices, config)
+        clean = drop_feature_warmup(features, config=config)
+
+        assert clean.index.equals(features.index[63:])
+        flat_window = features.loc[prices.index[115]:prices.index[199], "equity_bond_correlation_63d"]
+        assert (flat_window == 0.0).all()

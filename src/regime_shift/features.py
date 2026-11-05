@@ -112,8 +112,16 @@ def _compute_rolling_correlation(
 
     Uses rolling(window).corr() which includes observations [t-window+1, t].
     No centered windows, no future data.
+
+    When either series is constant over a full window (e.g. LIQUIDBEES printed a
+    flat NAV through 2012) correlation is undefined; it is set to 0 (no
+    co-movement) so those dates stay in the sample instead of being dropped.
     """
-    return log_returns_x.rolling(window=window, min_periods=window).corr(log_returns_y)
+    corr = log_returns_x.rolling(window=window, min_periods=window).corr(log_returns_y)
+    std_x = log_returns_x.rolling(window=window, min_periods=window).std()
+    std_y = log_returns_y.rolling(window=window, min_periods=window).std()
+    flat = std_x.notna() & std_y.notna() & ((std_x <= 1e-12) | (std_y <= 1e-12))
+    return corr.mask(flat, 0.0).replace([np.inf, -np.inf], np.nan)
 
 
 # ---------------------------------------------------------------------------
