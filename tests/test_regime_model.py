@@ -817,20 +817,22 @@ class TestErrorConditions:
         with pytest.raises(Exception):  # hmmlearn raises various errors for unfitted models
             predict_current_state(unfitted, scaler, train_features, train_features, config)
 
-    def test_convergence_failure_logged(self):
-        """Non-convergence should produce a warning, not silently succeed."""
-        # Use very few iterations to force non-convergence
+    def test_iteration_cap_is_not_reported_as_converged(self):
+        """Hitting n_iter must be reported as non-convergence (hmmlearn's flag says True)."""
         train_features, _ = _make_training_and_test()
-        config = HMMConfig(n_iter=1, random_state=42)
+        config = HMMConfig(n_iter=2, tolerance=1e-12, random_state=42)
 
         scaler = fit_feature_scaler(train_features)
         scaled_train = transform_features(scaler, train_features)
         hmm, _, _ = fit_hmm(scaled_train, train_features, config)
 
-        # The model should still work but may not converge
         combined = pd.concat([train_features, train_features.iloc[:1]])
         solution = predict_current_state(hmm, scaler, combined, train_features, config)
-        assert solution.regime in ("Bull", "Bear", "Crisis")
+        assert hmm.monitor_.converged  # hmmlearn conflates the cap with convergence
+        assert solution.convergence is False
+        assert solution.n_iter == 2
+        assert solution.warning is not None
+        assert all(not r["converged"] and r["fallback_used"] for r in hmm._restart_diagnostics)
 
 
 # ---------------------------------------------------------------------------

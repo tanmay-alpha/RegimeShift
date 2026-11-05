@@ -38,6 +38,21 @@ _REGIME_LABELS = ["Bull", "Bear", "Crisis"]
 _REGIME_ORDER = ["Bull", "Bear", "Crisis"]
 
 
+def em_converged(hmm: GaussianHMM) -> bool:
+    """True only if EM stopped because the log-likelihood gain fell below ``tol``.
+
+    hmmlearn's ``ConvergenceMonitor.converged`` is also True when the iteration
+    cap is reached, so it cannot distinguish convergence from running out of budget.
+    """
+    history = hmm.monitor_.history
+    return len(history) >= 2 and (history[-1] - history[-2]) < hmm.monitor_.tol
+
+
+def em_iterations(hmm: GaussianHMM) -> int:
+    """Number of EM iterations actually performed (not the configured cap)."""
+    return int(hmm.monitor_.iter)
+
+
 @dataclass
 class StateStatistics:
     """
@@ -148,14 +163,14 @@ def fit_hmm(
         try:
             candidate.fit(scaled_features.values)
             log_likelihood = float(candidate.score(scaled_features.values))
-            restart_diagnostics.append({"seed": seed, "converged": bool(candidate.monitor_.converged), "n_iter": int(candidate.monitor_.n_iter), "log_likelihood": log_likelihood, "selected": False})
+            restart_diagnostics.append({"seed": seed, "converged": em_converged(candidate), "n_iter": em_iterations(candidate), "log_likelihood": log_likelihood, "selected": False})
             if np.isfinite(log_likelihood):
                 candidates.append((log_likelihood, candidate))
         except Exception as exc:
             restart_diagnostics.append({"seed": seed, "converged": False, "n_iter": 0, "log_likelihood": float("nan"), "selected": False, "error": str(exc)})
     if not candidates:
         raise RegimeDetectionError("All deterministic HMM restarts failed.")
-    converged = [item for item in candidates if item[1].monitor_.converged]
+    converged = [item for item in candidates if em_converged(item[1])]
     fallback_used = not bool(converged)
     pool = converged or candidates
     # Model selection uses training likelihood only; it never sees future P&L.
@@ -165,16 +180,6 @@ def fit_hmm(
         row["fallback_used"] = fallback_used
     if fallback_used:
         logger.warning("No HMM restart converged; using the highest finite in-window likelihood as a fallback.")
-
-    # Check convergence
-    if not hmm.monitor_.converged:
-        log_ll = hmm.score(scaled_features.values)
-        logger.warning(
-            "HMM did not converge after %d iterations (log-likelihood: %.4f). "
-            "Consider increasing n_iter or checking data quality.",
-            hmm.monitor_.n_iter,
-            log_ll,
-        )
 
     # Predict hidden states on training data
     try:
@@ -205,8 +210,8 @@ def fit_hmm(
     log_ll = float(hmm.score(scaled_features.values))
     logger.info(
         "HMM fitted: %d iterations, converged=%s, log-likelihood=%.2f",
-        hmm.monitor_.n_iter,
-        hmm.monitor_.converged,
+        em_iterations(hmm),
+        em_converged(hmm),
         log_ll,
     )
 
@@ -314,9 +319,9 @@ def predict_current_state(
 
     log_ll = float(hmm.score(transform_features(scaler, raw_training).values))
     warning = None
-    if not hmm.monitor_.converged:
+    if not em_converged(hmm):
         warning = (
-            f"HMM did not converge after {hmm.monitor_.n_iter} iterations. "
+            f"HMM did not converge after {em_iterations(hmm)} iterations. "
             "Results may be unreliable."
         )
 
@@ -325,8 +330,8 @@ def predict_current_state(
         probabilities=prob_series,
         transition_matrix=trans_mat,
         state_statistics=state_stats,
-        convergence=bool(hmm.monitor_.converged),
-        n_iter=int(hmm.monitor_.n_iter),
+        convergence=em_converged(hmm),
+        n_iter=em_iterations(hmm),
         log_likelihood=log_ll,
         warning=warning,
     )
