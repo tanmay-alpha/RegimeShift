@@ -1,0 +1,175 @@
+{
+  "attempt_id": "20261105T201410209382Z-c5bc6d2f",
+  "output_dir": "results/experiments/regime_intelligence_v1/20261105T201410209382Z-c5bc6d2f",
+  "dataset_path": "C:/Users/TANMAY/OneDrive/Desktop/quant/data/submission_market_data.csv",
+  "cost_scenario": "base",
+  "planned_strategies": [
+    "hmm_fixed",
+    "momentum_volatility",
+    "negative_control",
+    "static_6040",
+    "equal_weight"
+  ],
+  "started_strategies": [
+    "hmm_fixed",
+    "momentum_volatility",
+    "negative_control",
+    "static_6040",
+    "equal_weight"
+  ],
+  "n_obs": 3900,
+  "n_hmm_signal_closes": 186,
+  "start": "2010-10-06",
+  "end": "2026-07-27",
+  "status": "completed",
+  "specification": {
+    "regimeshift_config": {
+      "random_seed": 42,
+      "number_of_regimes": 3,
+      "train_window": 252,
+      "rebalance_frequency": 21,
+      "transaction_cost_bps": 5.0,
+      "execution_model": "NEXT_CLOSE",
+      "cost_scenario": "base",
+      "execution_cost_model": {
+        "name": "base",
+        "assets": {
+          "equity": {
+            "commission_bps": 0.0,
+            "half_spread_slippage_bps": 10.0,
+            "taxes_and_statutory_bps": 0.0
+          },
+          "gold": {
+            "commission_bps": 0.0,
+            "half_spread_slippage_bps": 10.0,
+            "taxes_and_statutory_bps": 0.0
+          },
+          "bond": {
+            "commission_bps": 0.0,
+            "half_spread_slippage_bps": 10.0,
+            "taxes_and_statutory_bps": 0.0
+          }
+        },
+        "market_impact_modeled": false
+      },
+      "annualization_factor": 252,
+      "minimum_training_observations": 126,
+      "equity_col": "equity",
+      "gold_col": "gold",
+      "bond_col": "bond",
+      "vix_col": "vix",
+      "tickers": {
+        "equity": {
+          "ticker": "^NSEI",
+          "kind": "price",
+          "description": "NIFTY 50 Index \u2014 NSE large-cap benchmark",
+          "currency": "INR",
+          "notes": "Exchange-adjusted daily close. yfinance history from ~2000."
+        },
+        "gold": {
+          "ticker": "GOLDBEES.NS",
+          "kind": "price",
+          "description": "Nippon India ETF Gold Bees \u2014 INR-denominated gold ETF (NSE)",
+          "currency": "INR",
+          "notes": "Tracks MCX gold prices in INR. Preferred over GC=F (USD) to avoid FX mismatch with INR equity returns. Gold currency policy: GC=F requires explicit USD\u2192INR FX conversion before computing returns; not yet implemented."
+        },
+        "bond": {
+          "ticker": "LIQUIDBEES.NS",
+          "kind": "price",
+          "description": "Nippon India Liquid Bees \u2014 INR-denominated liquid-bond / cash-equivalent proxy (NSE)",
+          "currency": "INR",
+          "notes": "Liquid/overnight Indian ETF tracking the Nifty Liquid Bond Index. Very low volatility \u2014 used as a defensive / cash-equivalent bucket. Has continuous NAV history back to 2009 via yfinance. Limitation: short duration. NOT a sovereign bond, government gilt, or 10-year G-Sec; does not provide long-term duration hedge. A previously used gilt-fund ticker was delisted from yfinance in 2026; LIQUIDBEES.NS is the replacement with continuous history from 2009."
+        },
+        "vix": {
+          "ticker": "^INDIAVIX",
+          "kind": "indicator",
+          "description": "India VIX \u2014 NSE implied volatility index (preferred)",
+          "currency": null,
+          "notes": "Preferred VIX for Indian market regime detection. Coverage from ~2008. Explicit fallback: use VIX_FALLBACK constant or override vix_ticker. There is NO silent automatic fallback to CBOE VIX."
+        },
+        "irx_yield": {
+          "ticker": "^IRX",
+          "kind": "yield",
+          "description": "13-Week US T-Bill Yield (%) \u2014 reference only, NOT a price series",
+          "currency": null,
+          "notes": "A yield expressed in percent (0\u201310 range). Must NOT be used as a portfolio price. Retained for reference; was incorrectly used as bond_ticker in Phase 1 draft."
+        },
+        "cboe_vix_fallback": {
+          "ticker": "^VIX",
+          "kind": "indicator",
+          "description": "CBOE VIX \u2014 US volatility index (explicit fallback only)",
+          "currency": null,
+          "notes": "Use only when ^INDIAVIX is unavailable and an explicit fallback is required. Must be set via vix_ticker override \u2014 never used automatically."
+        }
+      },
+      "data": {
+        "default_start": "2010-01-01",
+        "default_end": null,
+        "forward_fill_limit": 3,
+        "cache_dir": "data/cache",
+        "price_field": "Close"
+      },
+      "hmm_config": {
+        "n_components": 3,
+        "covariance_type": "diag",
+        "n_iter": 200,
+        "tolerance": 0.001,
+        "random_state": 42,
+        "n_restarts": 3,
+        "min_covar": 1e-06,
+        "minimum_training_observations": 50,
+        "crisis_volatility_weight": 1.0,
+        "crisis_vix_weight": 0.5,
+        "crisis_momentum_weight": -0.3
+      }
+    },
+    "strategies": [
+      "hmm_fixed",
+      "momentum_volatility",
+      "negative_control",
+      "static_6040",
+      "equal_weight"
+    ],
+    "regime_fixed_weights": {
+      "Bull": {
+        "equity": 0.65,
+        "gold": 0.2,
+        "bond": 0.15
+      },
+      "Bear": {
+        "equity": 0.35,
+        "gold": 0.3,
+        "bond": 0.35
+      },
+      "Crisis": {
+        "equity": 0.1,
+        "gold": 0.3,
+        "bond": 0.6
+      }
+    },
+    "uncertainty_alerts_exploratory": {
+      "normalized_entropy_gte": 0.8,
+      "maximum_posterior_lte": 0.6,
+      "combination": "OR"
+    },
+    "momentum_volatility": {
+      "window": 63,
+      "high_vol_gt": 0.2,
+      "crisis_vol_gt": 0.3,
+      "bear_momentum_lte": 0.0
+    },
+    "negative_control": {
+      "seed": 1729,
+      "generator": "PCG64",
+      "assignment": "IID uniform Bull/Bear/Crisis at eligible signal closes"
+    },
+    "bounds": {
+      "max_price_rows": 6000,
+      "max_signal_closes": 256,
+      "strategy_trials": 5,
+      "parameter_search": false
+    },
+    "vix_policy": "omit, matching the existing research suite",
+    "timestamp_convention": "Each row is a close-to-close return date t (Asia/Kolkata trading date, tz-naive). gross_return(t) is earned by holdings in place before close t; transaction_cost(t) is paid at close t on the trade that fills at close t; a target signalled at close t (data through t) fills at close t+1 and first earns t+1 -> t+2."
+  }
+}

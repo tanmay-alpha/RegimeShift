@@ -183,19 +183,16 @@ def compute_performance_metrics(
     else:
         sharpe = mean_excess / std_excess * np.sqrt(annualization_factor)
 
-    # Sortino ratio (downside deviation of excess returns)
-    downside_excess = excess[excess < 0]
-    if len(downside_excess) > 0:
-        downside_dev = float(np.sqrt((downside_excess ** 2).mean()))
-        if downside_dev <= epsilon:
-            sortino = 0.0 if abs(mean_excess) <= epsilon else float("nan")
-        else:
-            sortino = mean_excess / downside_dev * np.sqrt(annualization_factor)
-    else:
+    # Sortino ratio: target downside deviation sqrt(sum(min(excess, 0)^2) / N)
+    # over ALL N observations (Sortino & Price 1994), not just the negative ones.
+    downside_dev = float(np.sqrt((np.minimum(excess.to_numpy(), 0.0) ** 2).mean()))
+    if downside_dev <= epsilon:
         sortino = 0.0 if abs(mean_excess) <= epsilon else float("nan")
+    else:
+        sortino = mean_excess / downside_dev * np.sqrt(annualization_factor)
 
     # Maximum drawdown (positive 0â€“1 value)
-    cummax = equity_curve.cummax()
+    cummax = equity_curve.cummax().clip(lower=1.0)
     drawdown = equity_curve / cummax - 1
     max_dd = float(abs(drawdown.min()))
     max_dd = max(0.0, min(1.0, max_dd))

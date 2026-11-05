@@ -27,12 +27,20 @@ dependencies = [
 Repository = "https://github.com/tanmay-alpha/RegimeShift"
 Issues = "https://github.com/tanmay-alpha/RegimeShift/issues"
 
+[project.scripts]
+regimeshift = "regime_shift.cli:main"
+
 [project.optional-dependencies]
+app = [
+    "streamlit>=1.40",
+    "plotly>=5.18",
+]
 dev = [
     "pytest>=7.0.0",
     "jupyter>=1.0.0",
     "nbconvert>=7.0.0",
     "ruff>=0.1.0",
+    "lxml>=4.9",
 ]
 
 [tool.setuptools.packages.find]

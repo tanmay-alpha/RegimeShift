@@ -39,13 +39,16 @@ _REGIME_ORDER = ["Bull", "Bear", "Crisis"]
 
 
 def em_converged(hmm: GaussianHMM) -> bool:
-    """True only if EM stopped because the log-likelihood gain fell below ``tol``.
+    """True only when the finite absolute likelihood change is below ``tol``.
 
     hmmlearn's ``ConvergenceMonitor.converged`` is also True when the iteration
     cap is reached, so it cannot distinguish convergence from running out of budget.
     """
     history = hmm.monitor_.history
-    return len(history) >= 2 and (history[-1] - history[-2]) < hmm.monitor_.tol
+    if len(history) < 2:
+        return False
+    change = history[-1] - history[-2]
+    return bool(np.isfinite(change) and abs(change) < hmm.monitor_.tol)
 
 
 def em_iterations(hmm: GaussianHMM) -> int:

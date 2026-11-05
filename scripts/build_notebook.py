@@ -92,8 +92,10 @@ def _notebook_json(
     perf_summary: pd.DataFrame,
     ablation_summary: pd.DataFrame | None,
     subperiod_summary: pd.DataFrame | None,
-    rolling_origin_summary: pd.DataFrame | None,
-    bootstrap_diff: pd.DataFrame | None,
+    calendar_attribution_summary: pd.DataFrame | None,
+    walk_forward_summary: pd.DataFrame | None,
+    walk_forward_selections: pd.DataFrame | None,
+    bootstrap_paired_differences: pd.DataFrame | None,
     hmm_diag: pd.DataFrame | None,
     tickers: dict,
     vix_included: bool,
@@ -402,7 +404,10 @@ def _notebook_json(
     cells.append(_md(
         "### 11. Official Aligned Results\n\n"
         "All strategies share the same evaluation dates, NEXT_CLOSE execution, "
-        "base 10 bps cost model, and risk-free rate of 0."
+        "base 10 bps cost model, and risk-free rate of 0. "
+        "Sortino is sqrt(252) times mean daily excess return divided by target downside "
+        "deviation: sqrt(mean(min(daily excess return, 0)^2)), using all observations, "
+        "not the standard deviation of negative returns alone."
     ))
     cells.append(_code(
         'from regime_shift.metrics import compute_performance_metrics\n'
@@ -434,7 +439,7 @@ def _notebook_json(
 
     ablation_md = "### 12. Ablation Study Results\n\n"
     if ablation_summary is not None and not ablation_summary.empty:
-        ab_cols = ["strategy", "sharpe", "cagr", "max_drawdown", "ann_turnover"]
+        ab_cols = ["strategy", "sharpe", "sharpe_vs_cash", "cagr", "max_drawdown", "ann_turnover"]
         ablation_md += _to_md_table(ablation_summary[ab_cols]) + "\n\n"
     else:
         ablation_md += "_Run `python scripts/run_research_suite.py` to generate ablation results._\n\n"
@@ -452,37 +457,69 @@ def _notebook_json(
         "holdout because the full historical sample was inspected during earlier project development.\n\n"
     )
     if subperiod_summary is not None and not subperiod_summary.empty:
-        rs_sub = subperiod_summary[subperiod_summary["strategy"] == "RegimeShift"][
-            ["period", "n_obs", "cagr", "sharpe", "max_drawdown"]]
+        rs_sub = subperiod_summary[subperiod_summary["strategy"] == "regimeshift"][
+            ["window", "n_obs", "start", "end", "cagr", "sharpe", "sharpe_vs_cash", "max_drawdown"]]
         sub_md += _to_md_table(rs_sub) + "\n"
     else:
         sub_md += "_Run `python scripts/run_research_suite.py` to generate subperiod results._\n"
     cells.append(_md(sub_md))
 
-    # ---- 14. Rolling-Origin Results ----
-    roll_md = (
-        "### 14. Rolling-Origin Evaluation (Calendar Folds)\n\n"
-        "Each fold is a calendar slice of the single walk-forward run (the model is already "
-        "refit every 21 days on a trailing window), not an independent re-fit per fold.\n\n"
+    # ---- 14. Attribution versus genuine walk-forward selection ----
+    calendar_md = (
+        "### 14. Calendar Attribution and Walk-Forward Selection\n\n"
+        "`calendar_attribution_summary.csv` slices a single causal strategy run by "
+        "calendar window; these are descriptive attribution windows, not independent "
+        "model-selection folds.\n\n"
     )
-    if rolling_origin_summary is not None and not rolling_origin_summary.empty:
-        rs_roll = rolling_origin_summary[rolling_origin_summary["strategy"] == "RegimeShift"][
-            ["fold", "n_obs", "cagr", "sharpe", "max_drawdown"]]
-        roll_md += _to_md_table(rs_roll) + "\n"
+    if calendar_attribution_summary is not None and not calendar_attribution_summary.empty:
+        calendar_rows = calendar_attribution_summary[
+            calendar_attribution_summary["strategy"] == "regimeshift"
+        ][["window", "n_obs", "start", "end", "cagr", "sharpe", "sharpe_vs_cash", "max_drawdown"]]
+        calendar_md += _to_md_table(calendar_rows) + "\n\n"
     else:
-        roll_md += "_Run `python scripts/run_research_suite.py` to generate rolling-origin results._\n"
-    cells.append(_md(roll_md))
+        calendar_md += "_Run `python scripts/run_research_suite.py` to generate calendar attribution._\n\n"
+    calendar_md += (
+        "`walk_forward_summary.csv` evaluates genuine annual candidate selection: "
+        "trailing validation returns end at the prior year's last close; the chosen "
+        "candidate is filled at the next session's close, with switch costs. "
+        "Fixed candidates and the selected stream use identical evaluation dates. "
+        "The selection ledger records validation boundaries and decisions in "
+        "`walk_forward_selections.csv`. This causal selection remains retrospective: "
+        "the candidate set and research design were developed with historical data visible; "
+        "no pristine holdout or prospective evidence is claimed.\n\n"
+    )
+    if walk_forward_summary is not None and not walk_forward_summary.empty:
+        calendar_md += _to_md_table(walk_forward_summary[
+            ["strategy", "n_obs", "start", "end", "cagr", "sharpe", "sharpe_vs_cash", "max_drawdown"]
+        ]) + "\n\n"
+    else:
+        calendar_md += "_Run `python scripts/run_research_suite.py` to generate walk-forward results._\n\n"
+    if walk_forward_selections is not None and not walk_forward_selections.empty:
+        calendar_md += _to_md_table(walk_forward_selections[
+            ["evaluation_year", "decision_close", "fill_close", "validation_start", "validation_end", "selected"]
+        ]) + "\n"
+    cells.append(_md(calendar_md))
 
     # ---- 15. Bootstrap Uncertainty ----
-    boot_md = "### 15. Bootstrap Uncertainty (Paired Moving-Block, n=2000, block=21)\n\n"
-    if bootstrap_diff is not None and not bootstrap_diff.empty:
-        boot_md += _to_md_table(bootstrap_diff) + "\n\n"
-        boot_md += (
-            "No significance is claimed when zero lies inside a confidence interval. "
-            "All results are retrospective causal simulation data only."
-        )
+    boot_md = "### 15. Bootstrap Uncertainty (Paired Moving-Block)\n\n"
+    if bootstrap_paired_differences is not None and not bootstrap_paired_differences.empty:
+        boot_md += _to_md_table(bootstrap_paired_differences[
+            ["strategy", "benchmark", "return_basis", "metric", "observed_diff",
+             "ci_lower", "ci_upper", "p_value", "p_value_holm", "significant_holm_5pct",
+             "n_valid", "block_len", "n_boot", "seed"]
+        ]) + "\n\n"
     else:
-        boot_md += "_Run `python scripts/run_research_suite.py` to generate bootstrap results._\n"
+        boot_md += "_Run `python scripts/run_research_suite.py` to generate bootstrap results._\n\n"
+    boot_md += (
+        "`bootstrap_paired_differences.csv` reports strategy-minus-benchmark differences "
+        "from paired resampling of identical dates, without zero filling. `return_basis` "
+        "distinguishes net returns from excess-over-cash returns. The reported intervals "
+        "are marginal, unadjusted uncertainty intervals, not stand-alone significance tests. "
+        "Use `p_value_holm` and `significant_holm_5pct` for the Holm-adjusted comparison "
+        "family across metrics, benchmarks and return bases; a CI excluding zero alone "
+        "does not establish an edge. Bootstrap assumptions and retrospective model "
+        "development limit interpretation even after multiplicity adjustment."
+    )
     cells.append(_md(boot_md))
 
     # ---- 16. HMM Diagnostics ----
@@ -517,14 +554,15 @@ def _notebook_json(
         + "\n(Same numbers as `results/submission/performance_summary.csv`.)\n"
         + "\n**What this research demonstrated:**\n"
         f"- Versus static 60/40, RegimeShift has Sharpe {rs_m['Sharpe']:.2f} vs {b6040_m['Sharpe']:.2f} and "
-        f"max drawdown {rs_m['Maximum Drawdown']:.1%} vs {b6040_m['Maximum Drawdown']:.1%}; the bootstrap "
-        "CI for the Sharpe difference includes zero, so the edge is not significant.\n"
-        f"- Equal weight (Sharpe {ew_m['Sharpe']:.2f}) beats RegimeShift; the paired bootstrap places "
-        "that Sharpe gap outside zero.\n"
-        "- The ablation attributes the drawdown reduction to the HMM regime signal; the CVXPY layer "
-        "adds turnover without beating fixed per-regime weights.\n"
-        f"- Turnover of {rs_m['Annualised Turnover']:.1f}× a year (vs {b6040_m['Annualised Turnover']:.2f}× "
-        "for 60/40) creates the main cost drag."
+        f"max drawdown {rs_m['Maximum Drawdown']:.1%} vs {b6040_m['Maximum Drawdown']:.1%}.\n"
+        f"- Equal weight has Sharpe {ew_m['Sharpe']:.2f}. These descriptive rankings "
+        "do not establish statistical significance; consult the return-basis-specific, "
+        "Holm-adjusted paired comparisons above.\n"
+        "- Ablations describe differences between complete strategies; they do not "
+        "identify a causal contribution of the HMM or optimizer in isolation.\n"
+        f"- Annualised turnover is {rs_m['Annualised Turnover']:.1f}× "
+        f"(vs {b6040_m['Annualised Turnover']:.2f}× for 60/40); "
+        "the assumed cost model translates trading into return drag."
     ))
 
     # ---- 18. Limitations ----
@@ -541,10 +579,16 @@ def _notebook_json(
         "No segment is a pristine holdout.\n"
         "5. **Three assets only:** Broader diversification requires expanding the universe.\n"
         "6. **Gaussian HMM:** Student-t emissions may better capture fat tails.\n"
-        "7. **No alpha proven:** Positive CAGR reflects the underlying market uptrend; "
-        "the Sharpe edge over 60/40 is not statistically significant.\n"
-        "8. **Risk-free rate is 0:** Sharpe ratios of cash-heavy portfolios are overstated, and "
-        "the LIQUIDBEES `Close` series omits most of its distributions."
+        "7. **No alpha proven:** Positive CAGR or a favourable unadjusted confidence interval "
+        "does not establish incremental alpha or prospective performance.\n"
+        "8. **Cash-proxy limitations:** Zero-risk-free Sharpe is not excess-over-cash Sharpe. "
+        "The canonical LIQUIDBEES series approximately matches vendor adjusted close; "
+        "distribution records observed only for 2013–September 2025 leave total-return completeness unverified. "
+        "metrics are proxy-relative sensitivity measures, not verified investable excess returns. "
+        "Incomplete cash history must not be zero-filled; cash-complete comparisons "
+        "must use identical dates for every candidate."
+        " Historical spike/reversal repair examines later observations, so trailing-only model and "
+        "next-session execution causality are conditional on ex-post-cleaned data, not point-in-time inputs."
     ))
 
     # ---- 19. Reproduction ----
@@ -569,6 +613,9 @@ def _notebook_json(
         "python scripts/verify_release.py\n"
         "```"
     ))
+
+    for position, cell in enumerate(cells):
+        cell["id"] = f"regimeshift-{position:02d}"
 
     nb = {
         "cells": cells,
@@ -633,15 +680,19 @@ if __name__ == "__main__":
     research_dir = _Path("results/research")
     ablation_summary = None
     subperiod_summary = None
-    rolling_origin_summary = None
-    bootstrap_diff = None
+    calendar_attribution_summary = None
+    walk_forward_summary = None
+    walk_forward_selections = None
+    bootstrap_paired_differences = None
     hmm_diag = None
 
     for attr, fname in [
         ("ablation_summary", "ablation_summary.csv"),
         ("subperiod_summary", "subperiod_summary.csv"),
-        ("rolling_origin_summary", "rolling_origin_summary.csv"),
-        ("bootstrap_diff", "bootstrap_benchmark_differences.csv"),
+        ("calendar_attribution_summary", "calendar_attribution_summary.csv"),
+        ("walk_forward_summary", "walk_forward_summary.csv"),
+        ("walk_forward_selections", "walk_forward_selections.csv"),
+        ("bootstrap_paired_differences", "bootstrap_paired_differences.csv"),
         ("hmm_diag", "hmm_diagnostics.csv"),
     ]:
         fp = research_dir / fname
@@ -651,8 +702,6 @@ if __name__ == "__main__":
         else:
             print(f"  {fname} not found — run scripts/run_research_suite.py first")
 
-    # hmm_diag was loaded from file above; no fallback import needed
-    # (run `python scripts/run_research_suite.py` to generate hmm_diagnostics.csv)
 
     tickers = {
         "equity": cfg.tickers.equity_ticker,
@@ -671,8 +720,10 @@ if __name__ == "__main__":
         perf_summary=None,
         ablation_summary=ablation_summary,
         subperiod_summary=subperiod_summary,
-        rolling_origin_summary=rolling_origin_summary,
-        bootstrap_diff=bootstrap_diff,
+        calendar_attribution_summary=calendar_attribution_summary,
+        walk_forward_summary=walk_forward_summary,
+        walk_forward_selections=walk_forward_selections,
+        bootstrap_paired_differences=bootstrap_paired_differences,
         hmm_diag=hmm_diag,
         tickers=tickers,
         vix_included=False,

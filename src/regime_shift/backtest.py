@@ -214,6 +214,13 @@ def prepare_walk_forward_inputs(prices: pd.DataFrame, config: RegimeShiftConfig)
         feature_prices[config.vix_col] = prices[config.vix_col]
     raw_features = drop_feature_warmup(compute_raw_features(feature_prices, config.feature_config), config=config.feature_config)
     common = raw_features.index.intersection(asset_returns.index)
+    if len(common):
+        execution_index = asset_returns.loc[common[0]:].index
+        if not common.equals(execution_index):
+            raise ValueError(
+                "Internal feature gaps would delete execution sessions and held-portfolio returns. "
+                "Repair the dataset or feature definition; execution dates cannot be dropped."
+            )
     raw_features, asset_returns = raw_features.loc[common], asset_returns.loc[common]
     minimum = config.minimum_training_observations + config.rebalance_frequency
     if len(common) < minimum:

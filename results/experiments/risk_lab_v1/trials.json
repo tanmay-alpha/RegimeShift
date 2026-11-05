@@ -1,0 +1,232 @@
+{
+  "status": "completed",
+  "error": null,
+  "summary": {
+    "data_diagnostics": {
+      "data_path": "C:\\Users\\TANMAY\\OneDrive\\Desktop\\quant\\data\\submission_market_data.csv",
+      "ffill_limit": 3,
+      "ffill_cells_total": 2,
+      "ffill_cells_per_asset": {
+        "equity": 0,
+        "gold": 2,
+        "bond": 0
+      },
+      "spike_cells_masked": {
+        "equity": 0,
+        "gold": 2,
+        "bond": 0
+      },
+      "dates_dropped": 0,
+      "rows_after_load": 4090
+    },
+    "common_start": "2010-10-06",
+    "common_end": "2026-07-27",
+    "n_obs": 3900,
+    "planned_trials": 28,
+    "attempted_trials": 28,
+    "completed_trials": 28,
+    "failed_trials": 0,
+    "candidate_definitions": 7,
+    "novel_variants": 4,
+    "cost_scenarios": 4,
+    "selection_rule": "none; report every prespecified variant and baseline"
+  },
+  "trials": [
+    {
+      "strategy": "equal_risk_contribution",
+      "cost_bps": 5,
+      "status": "completed",
+      "n_obs": 3900,
+      "first_fill": "2010-10-06"
+    },
+    {
+      "strategy": "lw_min_variance",
+      "cost_bps": 5,
+      "status": "completed",
+      "n_obs": 3900,
+      "first_fill": "2010-10-06"
+    },
+    {
+      "strategy": "turnover_min_variance",
+      "cost_bps": 5,
+      "status": "completed",
+      "n_obs": 3900,
+      "first_fill": "2010-10-06"
+    },
+    {
+      "strategy": "vol_target_equal_weight",
+      "cost_bps": 5,
+      "status": "completed",
+      "n_obs": 3900,
+      "first_fill": "2010-10-06"
+    },
+    {
+      "strategy": "min_variance",
+      "cost_bps": 5,
+      "status": "completed",
+      "n_obs": 3900,
+      "first_fill": "2010-10-06"
+    },
+    {
+      "strategy": "static_6040",
+      "cost_bps": 5,
+      "status": "completed",
+      "n_obs": 3900,
+      "first_fill": "2010-10-06"
+    },
+    {
+      "strategy": "equal_weight",
+      "cost_bps": 5,
+      "status": "completed",
+      "n_obs": 3900,
+      "first_fill": "2010-10-06"
+    },
+    {
+      "strategy": "equal_risk_contribution",
+      "cost_bps": 10,
+      "status": "completed",
+      "n_obs": 3900,
+      "first_fill": "2010-10-06"
+    },
+    {
+      "strategy": "lw_min_variance",
+      "cost_bps": 10,
+      "status": "completed",
+      "n_obs": 3900,
+      "first_fill": "2010-10-06"
+    },
+    {
+      "strategy": "turnover_min_variance",
+      "cost_bps": 10,
+      "status": "completed",
+      "n_obs": 3900,
+      "first_fill": "2010-10-06"
+    },
+    {
+      "strategy": "vol_target_equal_weight",
+      "cost_bps": 10,
+      "status": "completed",
+      "n_obs": 3900,
+      "first_fill": "2010-10-06"
+    },
+    {
+      "strategy": "min_variance",
+      "cost_bps": 10,
+      "status": "completed",
+      "n_obs": 3900,
+      "first_fill": "2010-10-06"
+    },
+    {
+      "strategy": "static_6040",
+      "cost_bps": 10,
+      "status": "completed",
+      "n_obs": 3900,
+      "first_fill": "2010-10-06"
+    },
+    {
+      "strategy": "equal_weight",
+      "cost_bps": 10,
+      "status": "completed",
+      "n_obs": 3900,
+      "first_fill": "2010-10-06"
+    },
+    {
+      "strategy": "equal_risk_contribution",
+      "cost_bps": 20,
+      "status": "completed",
+      "n_obs": 3900,
+      "first_fill": "2010-10-06"
+    },
+    {
+      "strategy": "lw_min_variance",
+      "cost_bps": 20,
+      "status": "completed",
+      "n_obs": 3900,
+      "first_fill": "2010-10-06"
+    },
+    {
+      "strategy": "turnover_min_variance",
+      "cost_bps": 20,
+      "status": "completed",
+      "n_obs": 3900,
+      "first_fill": "2010-10-06"
+    },
+    {
+      "strategy": "vol_target_equal_weight",
+      "cost_bps": 20,
+      "status": "completed",
+      "n_obs": 3900,
+      "first_fill": "2010-10-06"
+    },
+    {
+      "strategy": "min_variance",
+      "cost_bps": 20,
+      "status": "completed",
+      "n_obs": 3900,
+      "first_fill": "2010-10-06"
+    },
+    {
+      "strategy": "static_6040",
+      "cost_bps": 20,
+      "status": "completed",
+      "n_obs": 3900,
+      "first_fill": "2010-10-06"
+    },
+    {
+      "strategy": "equal_weight",
+      "cost_bps": 20,
+      "status": "completed",
+      "n_obs": 3900,
+      "first_fill": "2010-10-06"
+    },
+    {
+      "strategy": "equal_risk_contribution",
+      "cost_bps": 50,
+      "status": "completed",
+      "n_obs": 3900,
+      "first_fill": "2010-10-06"
+    },
+    {
+      "strategy": "lw_min_variance",
+      "cost_bps": 50,
+      "status": "completed",
+      "n_obs": 3900,
+      "first_fill": "2010-10-06"
+    },
+    {
+      "strategy": "turnover_min_variance",
+      "cost_bps": 50,
+      "status": "completed",
+      "n_obs": 3900,
+      "first_fill": "2010-10-06"
+    },
+    {
+      "strategy": "vol_target_equal_weight",
+      "cost_bps": 50,
+      "status": "completed",
+      "n_obs": 3900,
+      "first_fill": "2010-10-06"
+    },
+    {
+      "strategy": "min_variance",
+      "cost_bps": 50,
+      "status": "completed",
+      "n_obs": 3900,
+      "first_fill": "2010-10-06"
+    },
+    {
+      "strategy": "static_6040",
+      "cost_bps": 50,
+      "status": "completed",
+      "n_obs": 3900,
+      "first_fill": "2010-10-06"
+    },
+    {
+      "strategy": "equal_weight",
+      "cost_bps": 50,
+      "status": "completed",
+      "n_obs": 3900,
+      "first_fill": "2010-10-06"
+    }
+  ]
+}

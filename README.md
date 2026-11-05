@@ -1,30 +1,12 @@
-# RegimeShift — Causal Regime-Allocation Research
+# RegimeShift — Quantitative Regime & Portfolio Risk Laboratory
 
-RegimeShift is a reproducible, index-level Indian multi-asset allocation study.
-It uses rolling train-only features, a three-state Gaussian HMM and a CVXPY
-regime-conditioned constrained optimizer, evaluated under causal NEXT_CLOSE
-execution with stated per-asset cost assumptions.
+An offline Indian-market research laboratory for testing whether regime models and portfolio optimization improve risk control **after costs and against simple alternatives**. Python engine, reproducible CLI, executed notebook, optional Streamlit/Plotly researcher interface. No price-prediction product, brokerage integration or live trading.
 
-**Research question:** Does HMM regime detection improve risk-adjusted returns
-versus static benchmarks for a three-asset Indian portfolio — NIFTY 50,
-GOLDBEES.NS gold, LIQUIDBEES.NS liquid-bond — under realistic cost assumptions?
+**Finding:** complexity has not established an advantage. The Gaussian HMM allocation does not reliably beat equal weight or simpler regime rules. Negative controls and cash-relative metrics are first-class outputs, not hidden failures.
 
-**Answer (corrected experiment):** Mixed. RegimeShift beats static 60/40 on Sharpe
-(0.81 vs 0.76) and max drawdown (14.5% vs 23.4%), but loses to equal weight
-(Sharpe 1.18), and the paired bootstrap shows that gap is statistically significant.
-The edge over 60/40 is not significant. Simpler ablations (HMM + fixed weights,
-minimum variance) match or beat the CVXPY optimizer.
+## Validated historical experiment
 
----
-
-## Results
-
-Official output is in `results/submission/` and uses `NEXT_CLOSE` causal
-execution (signal at close t, fill at close t+1), three deterministic HMM restarts,
-and the **base scenario (10 bps one-way per asset)**. 3,900 trading days,
-2010-10-06 → 2026-07-27, identical for strategy and benchmarks.
-
-**`^NSEI` is not a directly executable fill — this is an index-level simulation.**
+Three price proxies: NIFTY 50 (`^NSEI`), GOLDBEES, LIQUIDBEES. Signal at close t, fill at next session close t+1, first return t+1 → t+2. Base cost assumption: **10 bps per unit of absolute traded asset weight**, not a measured spread. All paired comparisons share exactly **3,900 dates, 2010-10-06 through 2026-07-27**; missing strategy returns are never filled with zero.
 
 | Strategy | Net CAGR | Net Sharpe | Max Drawdown |
 |---|---:|---:|---:|
@@ -32,173 +14,100 @@ and the **base scenario (10 bps one-way per asset)**. 3,900 trading days,
 | Static 60/40 | 7.15% | 0.755 | 23.39% |
 | Equal Weight | 8.92% | 1.179 | 14.95% |
 
-_Source: `results/submission/performance_summary.csv` (`scripts/verify_release.py` fails if this table drifts). Full methodology in the notebook._
+Source: `results/submission/performance_summary.csv`; `scripts/verify_release.py` checks these rows. Sharpe uses rf=0 here. The research suite also reports Sharpe of daily return minus the cash proxy: **0.450 for RegimeShift versus 0.720 for equal weight**. The cash proxy itself has incomplete distribution history.
 
----
+The corrected paired moving-block analysis uses 2,000 draws, seed 42, block sensitivity 10/21/63 sessions and Holm adjustment across 24 comparisons. RegimeShift's Sharpe difference against equal weight is **not significant after this adjustment** (adjusted p about 0.874). This supersedes the old marginal-interval significance claim. DSR and CSCV are exploratory selection-bias diagnostics with explicitly incomplete trial-history and independence assumptions, not evidence of alpha.
 
-## Causal Execution Timing
+## What the laboratory does
 
-```
-At close t:
-  1. Holdings in place before close t earn the t-1 → t return
-  2. Any target signalled at close t-1 is traded now; costs paid at close t
-  3. Close t price becomes known
-  4. Features / HMM / optimizer fitted on data ≤ t  (no future data)
-  5. New target signalled — NOT filled until close t+1
-  6. Filled target first earns t+1 → t+2
-```
+- **Scientific accounting:** gross/net returns, actual modeled turnover and costs in every subperiod; one strict sample contract; initial capital included in drawdown; target-downside Sortino over all observations.
+- **Regime intelligence:** filtered latent-state probabilities, normalized entropy, exploratory uncertainty alerts, transition persistence, censored regime spells, state-partition stability on overlapping refit windows, explanatory state feature means.
+- **Fair model controls:** HMM + optimizer, no-regime optimizer, volatility rule, HMM fixed weights, momentum/volatility baseline and seeded IID regime negative control. No calibrated future-crash claim.
+- **Portfolio laboratory:** constrained minimum variance, equal-risk contribution, Ledoit–Wolf covariance, turnover-penalized allocation and unlevered volatility targeting. Seven candidates × four cost assumptions (5/10/20/50 bps): **all 28 trials completed**.
+- **Stress analysis:** historical replay with inherited holdings, distinct hypothetical correlation/concentration shocks, actual trade-delta cost sensitivity. No invented spreads, liquidity or overnight prices.
+- **Research controls:** calendar attribution clearly separated from annual walk-forward strategy selection; decision/validation/evaluation ledger; paired bootstrap, exploratory DSR/CSCV; versioned attempts and hash-bound manifests, including failures.
+- **Forward protocol:** immutable local source/config/data-prefix freeze, incremental new-row evaluation, mutation and overlap rejection. No local clock can certify prospective status; outputs explicitly decline that certification.
+- **Researcher workflow:** validated JSON configurations; choose existing variants; inspect allocations, wealth, drawdown, turnover, costs and regime diagnostics; signal-linked allocation explanations; export generated artifacts without redistributing source prices.
 
-The one-bar signal-to-fill gap means no target is ever traded on the close that
-produced it. `tests/test_causal_execution.py` pins this with a price jump on the
-bar between signal and fill that the strategy must not earn.
+### Negative findings worth discussing
 
-`results/submission/execution_timeline.csv` records signal, execution, return,
-pre-trade, target, post-trade and drifted weights for every trading day.
+The fixed-weight HMM achieved Sharpe 0.892; the momentum/volatility rule 0.987; a seeded random-regime control 1.025 over the same dates. One random seed is a diagnostic, not a formal null distribution, but the result undermines a strong claim that the HMM labels add value.
 
----
+Minimum variance and risk parity largely exploit the near-cash leg. At 10 bps, equal-risk contribution had CAGR 5.14%, volatility 2.47% and Sharpe over cash 0.699, versus equal weight's CAGR 8.92%, volatility 7.48% and Sharpe over cash 0.720. Lower drawdown is not free excess return. The first walk-forward rule, scored on rf=0 Sharpe, chose minimum variance every year; that failed research design is retained alongside a separately labelled cash-relative selection attempt.
 
-## Data Quality Fixes
+## Run it
 
-| Issue | Effect before fix | Fix |
-|---|---|---|
-| `GOLDBEES.NS` printed 0.3355 instead of ~33.6 on 2019-12-19/20 (~100× unit error) | −34% / +53% fake strategy days; set the 35.8% headline drawdown | `data._mask_transient_spikes` masks one-day >2× moves that revert within 5 rows, then the 3-day forward-fill bridges them. A non-reverting >2× move raises `DataValidationError`. |
-| `LIQUIDBEES.NS` NAV flat through 2012 → 63d equity–bond correlation undefined | 169 dates silently dropped from strategy and benchmark returns | Correlation is 0 when either leg is constant over the window |
-| hmmlearn reports `converged=True` when EM hits `n_iter` | Convergence filter was a no-op; logs showed `n_iter=200` | `regime_model.em_converged` requires log-likelihood gain < `tol`; actual EM iterations are logged (median 12) |
----
-
-## Transaction Costs and Tradability
-
-| Scenario | One-way cost per asset |
-|---|---|
-| optimistic | 5 bps |
-| **base (official)** | **10 bps** |
-| stressed | 20 bps |
-
-These are **assumed-cost scenarios**, not sourced measurements of spreads or
-fills. Market impact and capacity are excluded (volume/ADV data absent).
-
-`^NSEI` is an index series. `GOLDBEES.NS` and `LIQUIDBEES.NS` are ETF proxies.
-An executable equity claim requires a separately verified ETF dataset with
-common history, corporate-action treatment, and liquidity audit.
-
----
-
-## Asset Universe
-
-| Role | Ticker | Description |
-|---|---|---|
-| Equity | `^NSEI` | NIFTY 50 — **index, not directly executable** |
-| Gold | `GOLDBEES.NS` | Nippon India ETF Gold Bees |
-| Defensive | `LIQUIDBEES.NS` | Nippon India Liquid Bees — short-duration cash proxy |
-| VIX (feature only) | `^INDIAVIX` | Optional — omitted from submitted CSV |
-
----
-
-## Research Validation
-
-The research suite (`scripts/run_research_suite.py`) produces:
-
-1. **Ablation study**: 7 strategies, all run through the same lagged-fill event engine
-   (`backtest.simulate_lagged_execution`) on identical dates and costs.
-
-   | Variant | Net Sharpe | Max DD | Turnover/yr |
-   |---|---:|---:|---:|
-   | Full RegimeShift (HMM + CVXPY) | 0.81 | 14.5% | 3.2× |
-   | No-regime optimizer | 0.77 | 26.3% | 1.0× |
-   | Volatility rule | 0.84 | 25.6% | 0.5× |
-   | HMM + fixed weights | 0.89 | 15.2% | 1.7× |
-   | Minimum variance | 2.12 | 4.4% | 0.1× |
-   | Static 60/40 | 0.76 | 23.4% | 0.2× |
-   | Equal weight | 1.18 | 15.0% | 0.2× |
-
-   The HMM drives the drawdown reduction (no-regime optimizer: 26% DD). The CVXPY
-   layer adds turnover without improving on fixed regime weights. Minimum variance's
-   Sharpe is inflated by `rf = 0` and a near-cash `LIQUIDBEES` leg (2.3% vol).
-2. **Chronological subperiod analysis**: Development (2010–18), Validation
-   (2019–21), Retrospective Evaluation (2022–26).
-3. **Calendar-fold slices**: 5 folds (2013–15, 2016–18, 2019–21, 2022–24, 2025–26),
-   which are slices of one walk-forward run, not independent re-fits. RegimeShift
-   beats 60/40 in 2 folds and equal weight in 1.
-4. **Paired moving-block bootstrap**: 2,000 samples, block=21, seed=42. Sharpe
-   difference vs 60/40 is +0.05 (95% CI −0.45 to +0.56, not significant); vs equal
-   weight it is −0.37 (95% CI −0.72 to −0.02, significant underperformance).
-5. **HMM stability diagnostics**: 186 rolling fits, all converged by tolerance;
-   state occupancy Bull 35% / Bear 36% / Crisis 28%.
-
-**Disclosure:** No historical split is a pristine holdout — the full sample was
-inspected during development. HMM restarts are selected by training log-likelihood
-only; no performance-driven parameter changes were made after the protocol was frozen.
-
----
-
-## Reproduce
+Use a dedicated Python 3.11 virtual environment; the optional UI must not share an
+incompatible FastAPI/Starlette installation. Exercised dependency versions are in
+`config/reproducibility_constraints.txt`.
 
 ```bash
-pip install -e ".[dev]"
+python -m venv .venv
+# Activate .venv (Windows: .venv\Scripts\activate; POSIX: source .venv/bin/activate)
+pip install -e ".[dev,app]" -c config/reproducibility_constraints.txt
 
-# Official experiment (base 10 bps, NEXT_CLOSE)
-python run_submission.py \
-    --data-path data/submission_market_data.csv \
-    --cost-scenario base \
-    --output-dir results/submission
+# Explicit historical preparation; preserves the source and emits hash/repair diagnostics.
+# Refuses to overwrite: use a new destination for another preparation attempt.
+python -m regime_shift.cli prepare-data \
+  --input data/submission_market_data.csv \
+  --output data/cache/validated_market_data.csv
 
-# Research validation suite
-python scripts/run_research_suite.py \
-    --data-path data/submission_market_data.csv \
-    --output-dir results/research
+# Reproducible CLI; inspect/export never fit models.
+python -m regime_shift.cli run --config config/laboratory.json
+python -m regime_shift.cli inspect
+python -m regime_shift.cli export results/experiments/YOUR_RUN --output reproduction.zip
 
-# Rebuild submission notebook
+# Local interface; models run only after explicit form submission.
+streamlit run research_app.py
+```
+
+Core research reproductions:
+
+```bash
+python run_submission.py --data-path data/submission_market_data.csv \
+  --cost-scenario base --output-dir results/submission
+python scripts/run_research_suite.py
+python scripts/run_regime_intelligence.py
+python scripts/run_risk_lab.py
 python scripts/build_notebook.py
-
-# Tests
+python -m jupyter nbconvert --to notebook --execute notebooks/RegimeShift_Submission.ipynb \
+  --inplace --ExecutePreprocessor.timeout=3600
 python -m pytest -q
 python scripts/verify_release.py
 ```
 
----
+## Execution and data limitations
 
-## Repository Layout
+1. **Index-level, not executable performance.** `^NSEI` cannot be bought. Yahoo ETF history is not an independent corporate-action/liquidity audit; NIFTYBEES was investigated but has not replaced the research universe.
+2. **Only conditional execution causality.** Models use history through signal close; fills occur on the following close. The legacy bad-print repair examines up to five later observations to identify reversals. Prepared data are therefore **ex-post cleaned**, not point-in-time. No end-to-end causal-data claim is made.
+3. **Cash-proxy distributions are incomplete.** Canonical LIQUIDBEES values approximately match Yahoo adjusted close, not raw close. Vendor distribution records observed in the audit span 2013–September 2025; flat earlier/later stretches are material limitations. The suite reports that span separately, without certifying completeness.
+4. **Costs are scenarios.** Market impact, capacity, measured spreads, dividends unavailable from source, executable opens and overnight-gap stress are not invented.
+5. **Everything historical is retrospective.** Prior development inspected the complete sample. Post-dataset and post-release are not synonyms for unseen or prospective. No real trading profitability claim.
+6. **Uncertainty is conditional.** Gaussian HMM state posteriors are not calibrated crash probabilities; annualized ratios and IID DSR approximations have dependence and selection limitations. Repeated experiments do not create independent evidence.
 
+## Architecture and evidence
+
+```text
+src/regime_shift/             data, features, HMM, optimizer, causal event engine, metrics
+src/regime_shift/research/    authoritative spec, strict accounting, comparisons, stats,
+                             regime/risk diagnostics, workflow, registry, forward protocol
+src/regime_shift/cli.py       UI-independent researcher commands
+research_app.py              optional Streamlit/Plotly interface
+config/                      protocol and explicit experiment configurations
+results/submission/          validated original-universe experiment
+results/research/            comparative and chronological research outputs
+results/experiments/         versioned laboratory attempts and manifests
+results/registry/            append-only attempt logs, including failures
+results/archive/protocol_v2/  preserved historical evidence, not current validation
 ```
-src/regime_shift/      Causal engine: features, HMM, portfolio, backtest, metrics
-config/                Research protocol and frozen configuration YAML
-data/                  Canonical market data CSV (yfinance-sourced, CRLF-normalised)
-results/submission/    Official experiment artefacts (hashed, manifest-bound)
-results/research/      Research validation outputs (generated by run_research_suite.py)
-notebooks/             Submission notebook (generated by build_notebook.py)
-scripts/               build_notebook.py, run_research_suite.py, cost_sensitivity.py, verify_release.py
-tests/                 Timing, leakage, bad-print, convergence, data, HMM, metrics, cost-model tests
-config/research_protocol.yaml  Experiment protocol v2 (hypothesis, splits, cost scenarios, v2 correctness changes)
-```
 
----
+- [Scientific audit and reference decisions](docs/scientific_audit.md)
+- [Regime diagnostics and negative controls](docs/regime_intelligence.md)
+- [Portfolio risk and stress methodology](docs/risk_lab.md)
+- [Research workflow and artifact schemas](docs/research_workflow.md)
+- [Forward-evaluation integrity protocol](docs/forward_evaluation.md)
+- [Technical walkthrough](docs/technical_walkthrough.md)
 
-## Integrity
+Design references: [Qlib](https://github.com/microsoft/qlib), [LEAN](https://github.com/QuantConnect/Lean), [vectorbt](https://github.com/polakowo/vectorbt), [Probability of Backtest Overfitting](https://www.davidhbailey.com/dhbpapers/backtest-prob.pdf), [Deflated Sharpe Ratio](https://doi.org/10.3905/jpm.2014.40.5.094), [official NSE historical reports](https://www.nseindia.com/all-reports). These inform methodology; none was added as a platform dependency.
 
-- `results/submission/experiment_manifest.json` binds all outputs to:
-  dataset SHA-256, config hash, git commit, and result hashes.
-- Static benchmarks use the **identical** event ordering, cost model, and
-  date range as RegimeShift — no benchmark-period cherry-picking.
-- No strategy parameters were changed after inspecting the retrospective evaluation
-  period. Protocol v2 changed only correctness (fill lag, bad prints, dropped dates,
-  convergence test); see `protocol_changes_v2` in `config/research_protocol.yaml`.
-- `scripts/verify_release.py` re-validates manifests and output consistency.
-
----
-
-## Limitations
-
-1. **Index-level simulation** — `^NSEI` results are not executable fills.
-2. **Assumed costs** — not measured; market impact excluded.
-3. **Short-duration bond** — LIQUIDBEES.NS provides no rate hedge.
-4. **Retrospective evaluation** — no pristine holdout exists.
-5. **Three assets only** — narrow universe limits diversification.
-6. **Gaussian HMM** — Student-t tails may be more appropriate.
-7. **No alpha proven** — positive CAGR reflects the underlying market uptrend.
-8. **Risk-free rate is 0** — Sharpe ratios of cash-heavy portfolios (minimum
-   variance, Crisis allocations) are overstated; `LIQUIDBEES` `Close` also omits
-   most of its distributions.
-
----
-
-_IIT Bombay Summer Quant 2026 submission. Data sourced from Yahoo Finance via yfinance; subject to original provider terms._
+Originally developed for the IIT Bombay Summer Quant 2026 submission. Yahoo Finance/yfinance data remain subject to provider terms; code license does not grant market-data redistribution rights.

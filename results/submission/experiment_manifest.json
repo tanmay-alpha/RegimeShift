@@ -26,8 +26,8 @@
   "dataset_hash_policy": "CRLF and LF normalized to LF before hashing",
   "dataset_path": "data/submission_market_data.csv",
   "dataset_sha256_canonical": "290c783af9fb803334388090c3b72df7a31f5fd580de62bb7a905250777226e7",
-  "experiment_id": "20261105T175939Z-28df7530",
-  "generated_from_commit": "28df75303b93b59f566426a74153cfdc23f7bd0f",
+  "experiment_id": "20261105T210924Z-60b8b0e4",
+  "generated_from_commit": "60b8b0e418b8e68657cdf2eff3f7437a0b304390",
   "ignored_generation_paths": [
     "results/submission",
     "results/research",
@@ -86,14 +86,14 @@
   },
   "result_file_sha256": {
     "daily_results.csv": "fd13e7553037a6b0dd6b17dafc7b4509e1b6db44c9eaaa9aac1f731d2b13892c",
-    "drawdowns.png": "25a5662f9001ef1f0affa67b99cad915963db2f912e8e87bbfc780baf71788b7",
-    "equity_curves.png": "42ba0f8919ab4a5df4013483dd4b3e4091b00505e0aa9cdc7674c8587b83ec75",
+    "drawdowns.png": "dec365fe7cdb7441c145c8ab7b696ef2b330fa8452d55fdf8fe790d175472f7c",
+    "equity_curves.png": "92413f1dc135ee722cd0efdda508622c316c3734b2cf9c13b46e1937d796ce72",
     "execution_timeline.csv": "64ce9f8601c7f60c6f902053bd9f96e069183ec99f288e01f15e24d602921dce",
-    "performance_summary.csv": "97ace0c9253dd5ac026e87cd578b4d9f1e003c15db78947a248b5cdb0b242b63",
+    "performance_summary.csv": "1a526395194db637256ba091b4eb2b8b509a1c22c72d3872cd6de509c3fb00d4",
     "portfolio_weights.png": "734b9f8cd8e1860a75f385c2a65f40690d5ac867050eae056d86857b4d1c2d53",
     "regime_price_chart.png": "168caf1fd99ffedf63af8bee7166cc6cae82889a6076d7283fd8b64540b863b7",
     "regime_probabilities.png": "843c1aa694e34795469c15f36a5da8d192d020f003c68d8e97d19933fec92ab0",
-    "regimes.csv": "2a0a9c6b772f8a3ae6d59e5303944c9069eb119fe1f9c0bda053923860342288",
+    "regimes.csv": "fc7c887ba73ec43bc9f8891b672c3090ea804e2311648a5b8f07d4214857abb7",
     "run_metadata.json": "803462007c20b1468b246c9c0d3aa805cf441ad489b57b6b9952157acff2fd20",
     "transition_matrix.csv": "8bc1bfbeefb2d5c2489262fe0e70066b95407a0ee3cdc85138eb01db39f9a43d",
     "transition_matrix.png": "096eb449fcd571385f5aa8962096068077c721f7b25ae5ffe7ea4a2e5c739bec",
@@ -103,6 +103,6 @@
     "platform": "Windows-10-10.0.26300-SP0",
     "python": "3.11.9"
   },
-  "source_tree_dirty_before_generation": true,
-  "timestamp_utc": "2026-11-05T17:59:39.915637+00:00"
+  "source_tree_dirty_before_generation": false,
+  "timestamp_utc": "2026-11-05T21:09:24.677939+00:00"
 }

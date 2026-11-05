@@ -212,3 +212,23 @@ class TestEquityMath:
         d = m.to_dict()
         for v in d.values():
             assert v is None or isinstance(v, (float, int))
+
+
+def test_sortino_downside_deviation_uses_full_sample_length():
+    """Downside deviation is sqrt(sum(min(r - rf, 0)^2) / N) over ALL N observations.
+
+    Dividing by the number of negative observations only overstates downside
+    risk and understates Sortino by sqrt(N / N_negative).
+    """
+    returns = pd.Series([0.02, -0.01, 0.03, -0.02], index=pd.bdate_range("2020-01-01", periods=4))
+    m = compute_performance_metrics(returns, annualization_factor=252)
+    downside_dev = np.sqrt((0.01 ** 2 + 0.02 ** 2) / 4)
+    assert m.sortino_ratio == pytest.approx(returns.mean() / downside_dev * np.sqrt(252))
+
+
+def test_drawdown_includes_initial_capital_before_first_return():
+    returns = pd.Series([-0.20, 0.10], index=pd.bdate_range("2020-01-01", periods=2))
+    assert compute_performance_metrics(returns).maximum_drawdown == pytest.approx(0.20)
+    from regime_shift.research.stats import max_drawdown_rows
+
+    assert max_drawdown_rows(returns.to_numpy()[None, :])[0] == pytest.approx(0.20)

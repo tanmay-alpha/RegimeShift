@@ -1,0 +1,82 @@
+{
+  "experiment_id": "v3-20261105T204459641968Z-9156033c",
+  "description": "Independent research comparison",
+  "protocol_version": 3,
+  "created_utc": "2026-11-05T20:45:27+00:00",
+  "git_commit": "cb7210f3647c4896d331a0646545c5fbdefd304d",
+  "source_tree_dirty": true,
+  "dataset_path": "data/cache/validated_market_data.csv",
+  "dataset_sha256_canonical": "0c469d0a72be5fc8a77b8a18d89692758bb61f5bf08a171e359d67b7b259cec4",
+  "config": {
+    "schema_version": 1,
+    "description": "Independent research comparison",
+    "dataset_path": "data/cache/validated_market_data.csv",
+    "strategies": [
+      "regimeshift",
+      "static_6040",
+      "equal_weight"
+    ],
+    "evaluation": {
+      "start": "2012-01-01",
+      "end": "2025-12-31"
+    },
+    "engine": {
+      "train_window": 252,
+      "rebalance_frequency": 21,
+      "minimum_training_observations": 126,
+      "random_seed": 42,
+      "hmm_n_iter": 200,
+      "hmm_n_restarts": 3,
+      "transaction_cost_bps": 10.0
+    }
+  },
+  "environment": {
+    "python": "3.11.9",
+    "platform": "Windows-10-10.0.26300-SP0",
+    "numpy": "2.4.6",
+    "pandas": "2.2.2",
+    "scipy": "1.17.1",
+    "scikit-learn": "1.5.2",
+    "hmmlearn": "0.3.3",
+    "cvxpy": "1.9.2"
+  },
+  "outputs": {
+    "attempt.json": "f52c436c726be4300947a5dc28ca5b8be755bf6167a6d63ac2990ad66e0514ff",
+    "config.json": "60ac74a69242ca2d5e6b09e3fbfd90cbe050573ec668826bce83e888d86f077c",
+    "diagnostics.json": "cb0b92863cf1d3f693e1eaa14c419e656e4ec46bd23c42ce0c6e7127d9d17794",
+    "equal_weight/accounting.csv": "62400bf4baf69d13c194ed9f2a51fe34db3ea1502d7bb2869071c0bf9cbaf93d",
+    "equal_weight/explanations.csv": "8c83cb204129c7863ddeb6b98bfc636a55e5ff0823ba4b4304ff0cd7013a5813",
+    "equal_weight/weights.csv": "7a4b2da5e5f12102b3fe4f09c0ff0d3951392f2ad091c84f5cd662e35a390e3b",
+    "metadata.json": "26e413f34d4261283c81fe5f586200480269dce7b3c6cf5c294fff9a0d2528cd",
+    "metrics.csv": "790e8bbed843ded5fc81d611dd6828b1964f6383381f6e441a33cf0dd309ff3a",
+    "metrics.json": "6dc6ef5f89d4f53b3f7b129c8757fcce91091b76d514ada08f4685f40ab45816",
+    "reference_events.csv": "3be3ef0e70ba41998d77562472ae00983394b9b38cfa6c9cded766bf393f109d",
+    "regime_probabilities.csv": "f880e599f608a7570fb57347ca7d83c31d5fcd9c93cff6aacc351b6c019399fe",
+    "regimeshift/accounting.csv": "987da9a9f930cb55c8ca3732cbfa2762460a8b93226cddbbf070c0ed0f1e36d7",
+    "regimeshift/explanations.csv": "f36a584485eacd9d40b5e5540535692aa746f72f17560c1406ac9a0c70dfd8b8",
+    "regimeshift/weights.csv": "d0516209ff351c837da3411e09301abe61dd0808fae14274e7f1f3b404b70ae7",
+    "static_6040/accounting.csv": "d7b0bc467caf1850b0659023893e28ad4a5bf4bfc402a236551a4dfb7be90cc6",
+    "static_6040/explanations.csv": "3e68653a070755a1b079d719e34018c3acc1f7a706596e87035fb56d46505e03",
+    "static_6040/weights.csv": "331a17c44956e91d362cf3722e847ea91e68d19e929c329e0296cc89af2cb956"
+  },
+  "status": "completed",
+  "error": null,
+  "summary": {
+    "strategies": [
+      "regimeshift",
+      "static_6040",
+      "equal_weight"
+    ],
+    "computed_strategies": [
+      "regimeshift",
+      "static_6040",
+      "equal_weight"
+    ],
+    "start": "2012-01-02",
+    "end": "2025-12-31",
+    "n_obs": 3452,
+    "evaluation_type": "chronological_attribution",
+    "output_dir": "results\\experiments\\v3-20261105T204459641968Z-9156033c"
+  },
+  "workflow_schema_version": 1
+}

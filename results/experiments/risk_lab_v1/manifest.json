@@ -1,0 +1,188 @@
+{
+  "experiment_id": "risk_lab_v1",
+  "description": "Run the fixed risk_lab_v1 experiment on canonical local data, without downloads.",
+  "protocol_version": 3,
+  "created_utc": "2026-11-05T20:14:32+00:00",
+  "git_commit": "cb7210f3647c4896d331a0646545c5fbdefd304d",
+  "source_tree_dirty": true,
+  "dataset_path": "C:/Users/TANMAY/OneDrive/Desktop/quant/data/submission_market_data.csv",
+  "dataset_sha256_canonical": "290c783af9fb803334388090c3b72df7a31f5fd580de62bb7a905250777226e7",
+  "config": {
+    "risk_lab": {
+      "max_weight": 0.8,
+      "turnover_penalty": 0.01,
+      "target_volatility": 0.1,
+      "contribution_tolerance": 0.002
+    },
+    "engine": {
+      "random_seed": 42,
+      "number_of_regimes": 3,
+      "train_window": 252,
+      "rebalance_frequency": 21,
+      "transaction_cost_bps": 5.0,
+      "execution_model": "NEXT_CLOSE",
+      "cost_scenario": "base",
+      "execution_cost_model": null,
+      "annualization_factor": 252,
+      "minimum_training_observations": 126,
+      "equity_col": "equity",
+      "gold_col": "gold",
+      "bond_col": "bond",
+      "vix_col": "vix",
+      "tickers": {
+        "equity": {
+          "ticker": "^NSEI",
+          "kind": "price",
+          "description": "NIFTY 50 Index \u2014 NSE large-cap benchmark",
+          "currency": "INR",
+          "notes": "Exchange-adjusted daily close. yfinance history from ~2000."
+        },
+        "gold": {
+          "ticker": "GOLDBEES.NS",
+          "kind": "price",
+          "description": "Nippon India ETF Gold Bees \u2014 INR-denominated gold ETF (NSE)",
+          "currency": "INR",
+          "notes": "Tracks MCX gold prices in INR. Preferred over GC=F (USD) to avoid FX mismatch with INR equity returns. Gold currency policy: GC=F requires explicit USD\u2192INR FX conversion before computing returns; not yet implemented."
+        },
+        "bond": {
+          "ticker": "LIQUIDBEES.NS",
+          "kind": "price",
+          "description": "Nippon India Liquid Bees \u2014 INR-denominated liquid-bond / cash-equivalent proxy (NSE)",
+          "currency": "INR",
+          "notes": "Liquid/overnight Indian ETF tracking the Nifty Liquid Bond Index. Very low volatility \u2014 used as a defensive / cash-equivalent bucket. Has continuous NAV history back to 2009 via yfinance. Limitation: short duration. NOT a sovereign bond, government gilt, or 10-year G-Sec; does not provide long-term duration hedge. A previously used gilt-fund ticker was delisted from yfinance in 2026; LIQUIDBEES.NS is the replacement with continuous history from 2009."
+        },
+        "vix": {
+          "ticker": "^INDIAVIX",
+          "kind": "indicator",
+          "description": "India VIX \u2014 NSE implied volatility index (preferred)",
+          "currency": null,
+          "notes": "Preferred VIX for Indian market regime detection. Coverage from ~2008. Explicit fallback: use VIX_FALLBACK constant or override vix_ticker. There is NO silent automatic fallback to CBOE VIX."
+        },
+        "irx_yield": {
+          "ticker": "^IRX",
+          "kind": "yield",
+          "description": "13-Week US T-Bill Yield (%) \u2014 reference only, NOT a price series",
+          "currency": null,
+          "notes": "A yield expressed in percent (0\u201310 range). Must NOT be used as a portfolio price. Retained for reference; was incorrectly used as bond_ticker in Phase 1 draft."
+        },
+        "cboe_vix_fallback": {
+          "ticker": "^VIX",
+          "kind": "indicator",
+          "description": "CBOE VIX \u2014 US volatility index (explicit fallback only)",
+          "currency": null,
+          "notes": "Use only when ^INDIAVIX is unavailable and an explicit fallback is required. Must be set via vix_ticker override \u2014 never used automatically."
+        }
+      },
+      "data": {
+        "default_start": "2010-01-01",
+        "default_end": null,
+        "forward_fill_limit": 3,
+        "cache_dir": "data/cache",
+        "price_field": "Close"
+      },
+      "hmm_config": {
+        "n_components": 3,
+        "covariance_type": "diag",
+        "n_iter": 200,
+        "tolerance": 0.001,
+        "random_state": 42,
+        "n_restarts": 3,
+        "min_covar": 1e-06,
+        "minimum_training_observations": 50,
+        "crisis_volatility_weight": 1.0,
+        "crisis_vix_weight": 0.5,
+        "crisis_momentum_weight": -0.3
+      }
+    },
+    "cost_bps": [
+      5,
+      10,
+      20,
+      50
+    ],
+    "timestamp_convention": "Each row is a close-to-close return date t (Asia/Kolkata trading date, tz-naive). gross_return(t) is earned by holdings in place before close t; transaction_cost(t) is paid at close t on the trade that fills at close t; a target signalled at close t (data through t) fills at close t+1 and first earns t+1 -> t+2.",
+    "historical_windows": [
+      [
+        "euro_crisis_2011",
+        "2011-07-01",
+        "2011-12-31"
+      ],
+      [
+        "covid_2020",
+        "2020-02-01",
+        "2020-04-30"
+      ],
+      [
+        "inflation_2022",
+        "2022-01-01",
+        "2022-12-31"
+      ]
+    ],
+    "hypothetical": {
+      "asset_shocks": [
+        -0.2,
+        -0.1,
+        -0.02
+      ],
+      "correlation": 0.9,
+      "correlation_blend": 0.5,
+      "concentration_transfer": 0.25
+    },
+    "source_sha256": {
+      "scripts\\run_risk_lab.py": "c070e9d46329eea8a2ece3df0b965ad0804eb0199de4bfd2a6399bae13d16951",
+      "src\\regime_shift\\research\\risk_lab.py": "fe6a94dd93ac9f1db0273b82d784274c35b333de5a1ca5cde205cf3d8b8aa4e6"
+    }
+  },
+  "environment": {
+    "python": "3.11.9",
+    "platform": "Windows-10-10.0.26300-SP0",
+    "numpy": "2.4.6",
+    "pandas": "2.2.2",
+    "scipy": "1.17.1",
+    "scikit-learn": "1.5.2",
+    "hmmlearn": "0.3.3",
+    "cvxpy": "1.9.2"
+  },
+  "outputs": {
+    "daily_accounting.csv": "56a213b22ea5a2cb6cf7ce5b279eb92a2175d0267dec32e05e95bb99876cf913",
+    "historical_replay.csv": "839004a9f46c8b335354d2d18c5c091459a98c593f4a8f006a71ca1e470b1a5b",
+    "hypothetical_stress.csv": "83eb0f3287a699f9aeeccb640c8496befef850b034c6717eec61e4fe36616a3c",
+    "metrics.csv": "65a545824e023a1453a1750eacec59a387c860eea9de5068c2c8781b30e51316",
+    "risk_contributions.csv": "a70fcce4c27537569c41a4349259726dec7ce0dffa9d6b4f11a7661b9dbcf7aa",
+    "trade_deltas.csv": "cdd09043ccad5b296d9df322e4df001c49e5088fc6635cdc3b00e80c45d10aca",
+    "trials.json": "8f73e24000ed2b3bd66189d5917140affc50697828822df5abbc077f40d76a04",
+    "weights.csv": "3761f8f35368d5fc4aad9ced5f6bc884651b6539ccda8c7b4738fe5fa5584171"
+  },
+  "status": "completed",
+  "error": null,
+  "trial_summary": {
+    "data_diagnostics": {
+      "data_path": "C:\\Users\\TANMAY\\OneDrive\\Desktop\\quant\\data\\submission_market_data.csv",
+      "ffill_limit": 3,
+      "ffill_cells_total": 2,
+      "ffill_cells_per_asset": {
+        "equity": 0,
+        "gold": 2,
+        "bond": 0
+      },
+      "spike_cells_masked": {
+        "equity": 0,
+        "gold": 2,
+        "bond": 0
+      },
+      "dates_dropped": 0,
+      "rows_after_load": 4090
+    },
+    "common_start": "2010-10-06",
+    "common_end": "2026-07-27",
+    "n_obs": 3900,
+    "planned_trials": 28,
+    "attempted_trials": 28,
+    "completed_trials": 28,
+    "failed_trials": 0,
+    "candidate_definitions": 7,
+    "novel_variants": 4,
+    "cost_scenarios": 4,
+    "selection_rule": "none; report every prespecified variant and baseline"
+  }
+}
