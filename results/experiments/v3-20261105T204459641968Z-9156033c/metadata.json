@@ -1,0 +1,68 @@
+{
+  "caveats": [
+    "Research only: no orders, broker connectivity, live trading, or vendor downloads.",
+    "Prepared history may contain ex-post price repairs; preparation is separate from strict experiment ingestion and is not point-in-time.",
+    "The equity proxy (^NSEI) is an index, not directly tradable; the bond leg is a liquid/cash proxy, not a duration hedge.",
+    "Costs are assumed flat one-way bps, not calibrated execution estimates; taxes, impact and capacity are not established.",
+    "Evaluation is chronological attribution of a continuous run, not independent refitting or an untouched holdout.",
+    "Descriptive comparisons and HMM probabilities do not establish significance, causal explanations, or future performance.",
+    "HMM state names are training-derived interpretations; posterior uncertainty is conditional on the fitted model, not calibrated forecast confidence."
+  ],
+  "timestamp_convention": "Each row is a close-to-close return date t (Asia/Kolkata trading date, tz-naive). gross_return(t) is earned by holdings in place before close t; transaction_cost(t) is paid at close t on the trade that fills at close t; a target signalled at close t (data through t) fills at close t+1 and first earns t+1 -> t+2.",
+  "return_units": "Simple (arithmetic) daily returns as decimals; 0.01 = 1%.",
+  "cost_units": "Fraction of portfolio wealth paid at the fill close; costs are one-way bps per unit of traded weight.",
+  "turnover_units": "One-way turnover 0.5 * sum(|w_target - w_pre_trade|) per fill; the initial allocation from cash counts as sum(|w_target|) = 1.0.",
+  "drawdown_units": "Signed fraction below high-water mark including starting wealth 1; <=0.",
+  "evaluation_type": "chronological_attribution",
+  "computed_strategies": [
+    "regimeshift",
+    "static_6040",
+    "equal_weight"
+  ],
+  "published_strategies": [
+    "regimeshift",
+    "static_6040",
+    "equal_weight"
+  ],
+  "dataset_rows": 4090,
+  "engine_rows_through_end": 3948,
+  "raw_data_exported": false,
+  "probability_source": "Reference RegimeShift HMM, last known signal at each close; not the executed target's signal necessarily.",
+  "hmm_fixed_explanation": "Reference HMM signal regime under the same deterministic configuration; not separately instrumented ablation diagnostics.",
+  "engine_metadata": {
+    "execution_model": "NEXT_CLOSE",
+    "execution_timing": "Signal at close t from data through t; fill and cost at close t+1 after the t-to-t+1 return accrues on prior holdings; new target first earns t+1-to-t+2.",
+    "tradability_label": "Index-level allocation simulation: equity uses ^NSEI, which is a signal/benchmark series and not a guaranteed executable fill.",
+    "market_impact_and_capacity": "Not modeled because executable volume/ADV data is not included.",
+    "cost_model": {
+      "name": "legacy_flat_assumption",
+      "assets": {
+        "equity": 10.0,
+        "gold": 10.0,
+        "bond": 10.0
+      },
+      "units": "one-way assumed bps"
+    },
+    "date_range": {
+      "start": "2010-10-06 00:00:00",
+      "end": "2025-12-31 00:00:00",
+      "n_observations": 3758,
+      "original_start": "2010-01-04 00:00:00",
+      "original_end": "2025-12-31 00:00:00"
+    },
+    "configured_tickers": {
+      "equity": "^NSEI",
+      "gold": "GOLDBEES.NS",
+      "bond": "LIQUIDBEES.NS"
+    },
+    "vix_included": false,
+    "train_window": 252,
+    "rebalance_frequency": 21,
+    "hmm_n_restarts": 3,
+    "data_file": "",
+    "data_sha256": "",
+    "random_seed": 42,
+    "risk_free_rate": 0.0,
+    "annualization_factor": 252
+  }
+}

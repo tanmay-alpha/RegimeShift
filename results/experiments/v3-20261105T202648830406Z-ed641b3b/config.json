@@ -1,0 +1,26 @@
+{
+  "schema_version": 1,
+  "description": "Canonical retrospective regime-allocation comparison; ex-post-prepared index-level data",
+  "dataset_path": "data/cache/validated_market_data.csv",
+  "strategies": [
+    "regimeshift",
+    "vol_rule",
+    "hmm_fixed",
+    "min_variance",
+    "static_6040",
+    "equal_weight"
+  ],
+  "evaluation": {
+    "start": "2010-10-06",
+    "end": "2026-07-27"
+  },
+  "engine": {
+    "train_window": 252,
+    "rebalance_frequency": 21,
+    "minimum_training_observations": 126,
+    "random_seed": 42,
+    "hmm_n_iter": 200,
+    "hmm_n_restarts": 3,
+    "transaction_cost_bps": 10.0
+  }
+}

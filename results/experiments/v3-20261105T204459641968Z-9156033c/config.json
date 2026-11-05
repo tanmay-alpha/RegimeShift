@@ -1,0 +1,23 @@
+{
+  "schema_version": 1,
+  "description": "Independent research comparison",
+  "dataset_path": "data/cache/validated_market_data.csv",
+  "strategies": [
+    "regimeshift",
+    "static_6040",
+    "equal_weight"
+  ],
+  "evaluation": {
+    "start": "2012-01-01",
+    "end": "2025-12-31"
+  },
+  "engine": {
+    "train_window": 252,
+    "rebalance_frequency": 21,
+    "minimum_training_observations": 126,
+    "random_seed": 42,
+    "hmm_n_iter": 200,
+    "hmm_n_restarts": 3,
+    "transaction_cost_bps": 10.0
+  }
+}

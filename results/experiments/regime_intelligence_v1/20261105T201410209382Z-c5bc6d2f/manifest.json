@@ -1,0 +1,230 @@
+{
+  "experiment_id": "regime_intelligence_v1",
+  "description": "Run the frozen regime_intelligence_v1 experiment on an existing local CSV.",
+  "protocol_version": 3,
+  "created_utc": "2026-11-05T20:14:38+00:00",
+  "git_commit": "cb7210f3647c4896d331a0646545c5fbdefd304d",
+  "source_tree_dirty": true,
+  "dataset_path": "C:/Users/TANMAY/OneDrive/Desktop/quant/data/submission_market_data.csv",
+  "dataset_sha256_canonical": "290c783af9fb803334388090c3b72df7a31f5fd580de62bb7a905250777226e7",
+  "config": {
+    "regimeshift_config": {
+      "random_seed": 42,
+      "number_of_regimes": 3,
+      "train_window": 252,
+      "rebalance_frequency": 21,
+      "transaction_cost_bps": 5.0,
+      "execution_model": "NEXT_CLOSE",
+      "cost_scenario": "base",
+      "execution_cost_model": {
+        "name": "base",
+        "assets": {
+          "equity": {
+            "commission_bps": 0.0,
+            "half_spread_slippage_bps": 10.0,
+            "taxes_and_statutory_bps": 0.0
+          },
+          "gold": {
+            "commission_bps": 0.0,
+            "half_spread_slippage_bps": 10.0,
+            "taxes_and_statutory_bps": 0.0
+          },
+          "bond": {
+            "commission_bps": 0.0,
+            "half_spread_slippage_bps": 10.0,
+            "taxes_and_statutory_bps": 0.0
+          }
+        },
+        "market_impact_modeled": false
+      },
+      "annualization_factor": 252,
+      "minimum_training_observations": 126,
+      "equity_col": "equity",
+      "gold_col": "gold",
+      "bond_col": "bond",
+      "vix_col": "vix",
+      "tickers": {
+        "equity": {
+          "ticker": "^NSEI",
+          "kind": "price",
+          "description": "NIFTY 50 Index \u2014 NSE large-cap benchmark",
+          "currency": "INR",
+          "notes": "Exchange-adjusted daily close. yfinance history from ~2000."
+        },
+        "gold": {
+          "ticker": "GOLDBEES.NS",
+          "kind": "price",
+          "description": "Nippon India ETF Gold Bees \u2014 INR-denominated gold ETF (NSE)",
+          "currency": "INR",
+          "notes": "Tracks MCX gold prices in INR. Preferred over GC=F (USD) to avoid FX mismatch with INR equity returns. Gold currency policy: GC=F requires explicit USD\u2192INR FX conversion before computing returns; not yet implemented."
+        },
+        "bond": {
+          "ticker": "LIQUIDBEES.NS",
+          "kind": "price",
+          "description": "Nippon India Liquid Bees \u2014 INR-denominated liquid-bond / cash-equivalent proxy (NSE)",
+          "currency": "INR",
+          "notes": "Liquid/overnight Indian ETF tracking the Nifty Liquid Bond Index. Very low volatility \u2014 used as a defensive / cash-equivalent bucket. Has continuous NAV history back to 2009 via yfinance. Limitation: short duration. NOT a sovereign bond, government gilt, or 10-year G-Sec; does not provide long-term duration hedge. A previously used gilt-fund ticker was delisted from yfinance in 2026; LIQUIDBEES.NS is the replacement with continuous history from 2009."
+        },
+        "vix": {
+          "ticker": "^INDIAVIX",
+          "kind": "indicator",
+          "description": "India VIX \u2014 NSE implied volatility index (preferred)",
+          "currency": null,
+          "notes": "Preferred VIX for Indian market regime detection. Coverage from ~2008. Explicit fallback: use VIX_FALLBACK constant or override vix_ticker. There is NO silent automatic fallback to CBOE VIX."
+        },
+        "irx_yield": {
+          "ticker": "^IRX",
+          "kind": "yield",
+          "description": "13-Week US T-Bill Yield (%) \u2014 reference only, NOT a price series",
+          "currency": null,
+          "notes": "A yield expressed in percent (0\u201310 range). Must NOT be used as a portfolio price. Retained for reference; was incorrectly used as bond_ticker in Phase 1 draft."
+        },
+        "cboe_vix_fallback": {
+          "ticker": "^VIX",
+          "kind": "indicator",
+          "description": "CBOE VIX \u2014 US volatility index (explicit fallback only)",
+          "currency": null,
+          "notes": "Use only when ^INDIAVIX is unavailable and an explicit fallback is required. Must be set via vix_ticker override \u2014 never used automatically."
+        }
+      },
+      "data": {
+        "default_start": "2010-01-01",
+        "default_end": null,
+        "forward_fill_limit": 3,
+        "cache_dir": "data/cache",
+        "price_field": "Close"
+      },
+      "hmm_config": {
+        "n_components": 3,
+        "covariance_type": "diag",
+        "n_iter": 200,
+        "tolerance": 0.001,
+        "random_state": 42,
+        "n_restarts": 3,
+        "min_covar": 1e-06,
+        "minimum_training_observations": 50,
+        "crisis_volatility_weight": 1.0,
+        "crisis_vix_weight": 0.5,
+        "crisis_momentum_weight": -0.3
+      }
+    },
+    "strategies": [
+      "hmm_fixed",
+      "momentum_volatility",
+      "negative_control",
+      "static_6040",
+      "equal_weight"
+    ],
+    "regime_fixed_weights": {
+      "Bull": {
+        "equity": 0.65,
+        "gold": 0.2,
+        "bond": 0.15
+      },
+      "Bear": {
+        "equity": 0.35,
+        "gold": 0.3,
+        "bond": 0.35
+      },
+      "Crisis": {
+        "equity": 0.1,
+        "gold": 0.3,
+        "bond": 0.6
+      }
+    },
+    "uncertainty_alerts_exploratory": {
+      "normalized_entropy_gte": 0.8,
+      "maximum_posterior_lte": 0.6,
+      "combination": "OR"
+    },
+    "momentum_volatility": {
+      "window": 63,
+      "high_vol_gt": 0.2,
+      "crisis_vol_gt": 0.3,
+      "bear_momentum_lte": 0.0
+    },
+    "negative_control": {
+      "seed": 1729,
+      "generator": "PCG64",
+      "assignment": "IID uniform Bull/Bear/Crisis at eligible signal closes"
+    },
+    "bounds": {
+      "max_price_rows": 6000,
+      "max_signal_closes": 256,
+      "strategy_trials": 5,
+      "parameter_search": false
+    },
+    "vix_policy": "omit, matching the existing research suite",
+    "timestamp_convention": "Each row is a close-to-close return date t (Asia/Kolkata trading date, tz-naive). gross_return(t) is earned by holdings in place before close t; transaction_cost(t) is paid at close t on the trade that fills at close t; a target signalled at close t (data through t) fills at close t+1 and first earns t+1 -> t+2."
+  },
+  "environment": {
+    "python": "3.11.9",
+    "platform": "Windows-10-10.0.26300-SP0",
+    "numpy": "2.4.6",
+    "pandas": "2.2.2",
+    "scipy": "1.17.1",
+    "scikit-learn": "1.5.2",
+    "hmmlearn": "0.3.3",
+    "cvxpy": "1.9.2"
+  },
+  "outputs": {
+    "attempt.json": "e6ab433466bba4be255b4dcc59bed98b7d97ce6871af9eb3d5a3b6c9042ad200",
+    "daily_accounting.csv": "25c246b17fdcd0238e7fbcde77e37a74fb34d467ad86c6598db5acb94417d0d3",
+    "diagnostics.csv": "6f943164a1e834f367e8b245569c86eb7796a1be3ef6c50552796ae81b1ca61c",
+    "feature_means.csv": "a11266055286c8454637f2168a21fe23b69cce730a0dd73be626a2e65ea1c3f6",
+    "net_returns.csv": "04907285a2d45dbbb4b6c36d599826d3ffdff48756dc2216e1ac8935c90e8a2f",
+    "persistence.csv": "0bc5fbcf1adf313c7c5630f95e983bfad4817bfc156aa817b725920186ca8e38",
+    "restarts.csv": "82988867eb4f81451f5e17bb22b6aa15fcdcdd961f837e703a9d6b020f985246",
+    "same_index_comparisons.csv": "aca1dde265421ba89eaec948e8d88ea383df13c2cf5635bdc2a796213fed0a10",
+    "signals.csv": "339ddcfebfdcba0f551b8d690132f3e1c72267d59eeae5c30f477fe42ca76c0a",
+    "spells.csv": "320dc5d720b21c457d7e3c1a83c3303194de8855ef641c56f3af1130762bb19c",
+    "stability.csv": "054dcee6078559c898035095ff4ff8c82b6fc26afb594fdaeb378dd85f1fe713",
+    "strategy_metrics.csv": "7715b8cce4fb066eec54a60e60868deeb1adf63acff7a5bc7b766af9a9acab40",
+    "transitions.csv": "bbd500775981e12916d40c4fa61661dfbf4148d84f099f81f33aff5edb1dea4e"
+  },
+  "attempt_id": "20261105T201410209382Z-c5bc6d2f",
+  "evaluation_type": "full_sample",
+  "data_diagnostics": {
+    "data_path": "C:\\Users\\TANMAY\\OneDrive\\Desktop\\quant\\data\\submission_market_data.csv",
+    "ffill_limit": 3,
+    "ffill_cells_total": 2,
+    "ffill_cells_per_asset": {
+      "equity": 0,
+      "gold": 2,
+      "bond": 0
+    },
+    "spike_cells_masked": {
+      "equity": 0,
+      "gold": 2,
+      "bond": 0
+    },
+    "dates_dropped": 0,
+    "rows_after_load": 4090
+  },
+  "comparison": "Identical engine, eligibility, date index and per-asset costs; no filling.",
+  "posterior_interpretation": "Latent state at signal close; not a future crash probability.",
+  "source_sha256": {
+    "scripts/run_regime_intelligence.py": "3dc754cef855fa54a409db03047a605ef2f9fc4a869ed81d5b30223b9b4b3b88",
+    "src/regime_shift/research/regime_intelligence.py": "decb9323514d5fd9e60be21300ac750e9b01586e39ca5d7c367699324c565ab2"
+  },
+  "output_dir": "results/experiments/regime_intelligence_v1/20261105T201410209382Z-c5bc6d2f",
+  "cost_scenario": "base",
+  "planned_strategies": [
+    "hmm_fixed",
+    "momentum_volatility",
+    "negative_control",
+    "static_6040",
+    "equal_weight"
+  ],
+  "started_strategies": [
+    "hmm_fixed",
+    "momentum_volatility",
+    "negative_control",
+    "static_6040",
+    "equal_weight"
+  ],
+  "n_obs": 3900,
+  "n_hmm_signal_closes": 186,
+  "start": "2010-10-06",
+  "end": "2026-07-27"
+}

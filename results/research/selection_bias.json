@@ -1,0 +1,45 @@
+{
+  "dsr_regimeshift": {
+    "n_trials": 7,
+    "sr_threshold_per_period": 0.04257845877838012,
+    "sr_threshold_annualised": 0.675912078816053,
+    "psr_vs_zero": 0.9992391640402446,
+    "dsr": 0.7051914936209756
+  },
+  "dsr_regimeshift_excess_over_cash": {
+    "n_trials": 7,
+    "sr_threshold_per_period": 0.011021466093911135,
+    "sr_threshold_annualised": 0.17496035020691592,
+    "psr_vs_zero": 0.960792323582696,
+    "dsr": 0.8587883561284271
+  },
+  "trial_set": [
+    "regimeshift",
+    "no_regime_optimizer",
+    "vol_rule",
+    "hmm_fixed",
+    "min_variance",
+    "static_6040",
+    "equal_weight"
+  ],
+  "trial_set_note": "Registered trials only. Unrecorded development iterations before protocol v2 are not counted, so the DSR threshold is a lower bound.",
+  "cscv_net": {
+    "pbo": 0.0,
+    "n_combinations": 12870,
+    "n_trials": 7,
+    "n_splits": 16,
+    "median_logit": 1.9459101490553132,
+    "is_oos_slope": -0.9849040171247719,
+    "prob_oos_loss": 0.0
+  },
+  "cscv_excess_over_cash": {
+    "pbo": 0.3146853146853147,
+    "n_combinations": 12870,
+    "n_trials": 7,
+    "n_splits": 16,
+    "median_logit": 1.0986122886681098,
+    "is_oos_slope": -1.0021969557546189,
+    "prob_oos_loss": 0.01655011655011655
+  },
+  "cscv_note": "CSCV estimates how often the in-sample best of these fixed trials ranks below the median out-of-sample. It is not a chronological test. On rf = 0 Sharpe the near-cash min-variance trial wins every split, so PBO = 0 there says nothing about skill."
+}
