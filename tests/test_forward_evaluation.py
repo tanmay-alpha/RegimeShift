@@ -103,6 +103,7 @@ def test_rewritten_historical_prices_are_rejected_without_cleaning(experiment):
     with pytest.raises(forward.ForwardIntegrityError, match="rewritten"):
         evaluate(exp)
     assert not exp.calls
+    assert records(exp)[-1]["n_trials"] == 0
 
 
 @pytest.mark.parametrize("kind", ["cutoff", "duplicate", "unsorted", "missing", "intraday"])
@@ -150,6 +151,7 @@ def test_initial_entry_and_baselines_have_identical_dates_and_real_costs(experim
     assert [date for date, _ in exp.calls] == list(exp.prices.index[259:280:5])
     assert result["evaluation_type"] == "post_release_unverified"
     assert result["prospective_certified"] is False
+    assert records(exp)[-1]["n_trials"] == daily.strategy.nunique() == 3
 
 
 def test_incremental_replay_preserves_holdings_and_rejects_repeated_period(experiment):

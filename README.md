@@ -37,8 +37,14 @@ Minimum variance and risk parity largely exploit the near-cash leg. At 10 bps, e
 
 ## Run it
 
+Use a dedicated Python 3.11 virtual environment; the optional UI must not share an
+incompatible FastAPI/Starlette installation. Exercised dependency versions are in
+`config/reproducibility_constraints.txt`.
+
 ```bash
-pip install -e ".[dev,app]"
+python -m venv .venv
+# Activate .venv (Windows: .venv\Scripts\activate; POSIX: source .venv/bin/activate)
+pip install -e ".[dev,app]" -c config/reproducibility_constraints.txt
 
 # Explicit historical preparation; preserves the source and emits hash/repair diagnostics.
 # Refuses to overwrite: use a new destination for another preparation attempt.

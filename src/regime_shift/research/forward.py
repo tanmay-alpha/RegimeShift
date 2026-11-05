@@ -181,7 +181,7 @@ def _lock(directory: Path):
 
 def _registry(directory: Path, *, status: str, phase: str, dataset_path: Path,
               summary: Mapping, error=None) -> dict:
-    return register_attempt(experiment_id=directory.name, status=status, n_trials=1 if phase == "evaluate" else 0,
+    return register_attempt(experiment_id=directory.name, status=status, n_trials=summary.get("n_trials", 0),
                             summary={"phase": phase, **summary}, dataset_path=dataset_path,
                             registry_dir=directory.parent / "registry", error=error)
 
@@ -307,7 +307,8 @@ def _accepted_history(directory: Path, records: list[dict], manifest: Mapping,
     return frames
 
 
-def _run_frozen(prices: pd.DataFrame, config: RegimeShiftConfig, cutoff: pd.Timestamp) -> tuple[dict, Any]:
+def _run_frozen(prices: pd.DataFrame, config: RegimeShiftConfig, cutoff: pd.Timestamp,
+                on_trial_start=None) -> tuple[dict, Any]:
     ctx = build_context(prices, config)
     positions = ctx.asset_returns.index.get_indexer([cutoff])
     if positions[0] < 0:
@@ -323,10 +324,14 @@ def _run_frozen(prices: pd.DataFrame, config: RegimeShiftConfig, cutoff: pd.Time
         portfolio = optimize_portfolio(regime, returns, previous, config=config.portfolio_config)
         return Signal(np.array([portfolio.weights[a] for a in ctx.assets], dtype=float))
 
+    if on_trial_start is not None:
+        on_trial_start("regimeshift")
     trace = simulate_lagged_execution(ctx.asset_returns, schedule, signal_fn, _cost_model(config, None))
     runs = {"regimeshift": StrategyRun.from_result("regimeshift", trace)}
     for strategy_id, weights in (("static_6040", static_60_40_weights()),
                                  ("equal_weight", equal_weight_weights())):
+        if on_trial_start is not None:
+            on_trial_start(strategy_id)
         benchmark = run_benchmark(prices, weights, config, rebalance_flags=trace.executed,
                                   start_date=trace.net.index[0])
         runs[strategy_id] = StrategyRun.from_result(strategy_id, benchmark)
@@ -358,6 +363,7 @@ def evaluate_forward(experiment_dir: str | Path, *, dataset_path: str | Path,
     attempt_dir = attempts / attempt_id
     attempt_dir.mkdir(exist_ok=False)
     stamp = None
+    trials_started: list[str] = []
     try:
         with _lock(directory):
             stamp = _timestamp(observed_at)
@@ -387,7 +393,8 @@ def evaluate_forward(experiment_dir: str | Path, *, dataset_path: str | Path,
                 raise ForwardIntegrityError("Incremental dates exceed the declared observation date.")
             input_record = _input_record(dataset, incremental)
             prices = pd.concat([*frames, incremental])
-            runs, ctx = _run_frozen(prices, config, _date(manifest["cutoff"]))
+            runs, ctx = _run_frozen(prices, config, _date(manifest["cutoff"]),
+                                    on_trial_start=trials_started.append)
             # Replay from original cash entry; only new dates are reported. Later
             # batches retain holdings and do not invent a fresh initial allocation.
             selected = {sid: run.on_index(incremental.index) for sid, run in runs.items()}
@@ -413,11 +420,12 @@ def evaluate_forward(experiment_dir: str | Path, *, dataset_path: str | Path,
                       "observed_at": stamp.isoformat(), "input": input_record,
                       "evaluation_type": _classification(manifest, incremental.index),
                       "prospective_certified": False, "timestamp_authority": "unverified_local_clock",
-                      "n_trials": 1, "outputs": {name: sha256_file(attempt_dir / name)
+                      "n_trials": len(trials_started), "outputs": {name: sha256_file(attempt_dir / name)
                           for name in ("summary.csv", "daily_accounting.csv")}}
             _write_new(attempt_dir / "result.json", result)
             _registry(directory, status="completed", phase="evaluate", dataset_path=dataset,
                       summary={"attempt_id": attempt_id, "freeze_sha256": freeze_hash,
+                               "n_trials": len(trials_started), "trials_started": trials_started,
                                "observed_at": stamp.isoformat(), "evaluation_type": result["evaluation_type"],
                                "result_sha256": sha256_file(attempt_dir / "result.json"),
                                "request_sha256": sha256_file(attempt_dir / "request.json")})
@@ -427,6 +435,8 @@ def evaluate_forward(experiment_dir: str | Path, *, dataset_path: str | Path,
                    "requested_dataset": str(dataset), "error": f"{type(exc).__name__}: {exc}"}
         _write_new(attempt_dir / "failure.json", failure)
         failure_summary = {key: value for key, value in failure.items() if key != "error"}
+        failure_summary["n_trials"] = len(trials_started)
+        failure_summary["trials_started"] = trials_started
         failure_summary["failure_sha256"] = sha256_file(attempt_dir / "failure.json")
         if (attempt_dir / "request.json").is_file():
             failure_summary["request_sha256"] = sha256_file(attempt_dir / "request.json")
