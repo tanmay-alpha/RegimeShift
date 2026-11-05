@@ -135,6 +135,24 @@ def _check_readme_results(summary: pd.DataFrame) -> None:
             raise SystemExit(f"README result differs from validated output: {expected}")
 
 
+def _check_output_hashes(root: Path, hashes: dict) -> None:
+    if not hashes:
+        raise SystemExit(f"No output hashes recorded in {root}.")
+    for name, digest in hashes.items():
+        path = (root / name).resolve()
+        if not path.is_relative_to(root.resolve()) or not path.is_file():
+            raise SystemExit(f"Invalid or absent manifest output: {name}")
+        if _sha256(path) != digest:
+            raise SystemExit(f"Output checksum mismatch: {path}")
+
+
+def _check_experiments() -> None:
+    """Validate generated outputs without requiring redistribution of their input datasets."""
+    for manifest_path in (ROOT / "results" / "experiments").rglob("manifest.json"):
+        record = json.loads(manifest_path.read_text(encoding="utf-8"))
+        _check_output_hashes(manifest_path.parent, record.get("outputs", {}))
+
+
 def main() -> int:
     # --- Official submission artefacts ---
     required = [
@@ -147,6 +165,7 @@ def main() -> int:
 
     manifest = json.loads((RESULTS / "experiment_manifest.json").read_text(encoding="utf-8"))
     metadata = json.loads((RESULTS / "run_metadata.json").read_text(encoding="utf-8"))
+    _check_output_hashes(RESULTS, manifest.get("result_file_sha256", {}))
 
     # Dataset hash
     if manifest.get("dataset_sha256_canonical") != _sha256(DATA):
@@ -212,6 +231,7 @@ def main() -> int:
 
     # --- Research outputs ---
     _check_research()
+    _check_experiments()
 
     print("Release verification passed.")
     return 0
