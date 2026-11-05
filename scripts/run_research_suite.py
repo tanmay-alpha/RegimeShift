@@ -166,8 +166,7 @@ def parse_args() -> argparse.Namespace:
     return p.parse_args()
 
 
-def main() -> int:
-    args = parse_args()
+def run_suite(args, trials_started: list) -> int:
     out = Path(args.output_dir)
     out.mkdir(parents=True, exist_ok=True)
 
@@ -179,7 +178,7 @@ def main() -> int:
         prices = prices.drop(columns=[config.vix_col])
 
     logger.info("Running 7 strategies on one engine...")
-    runs, rs_result, ctx = run_core_suite(prices, config)
+    runs, rs_result, ctx = run_core_suite(prices, config, on_trial_start=trials_started.append)
     ordered = list(runs.values())
     cash = ctx.cash_returns
 
@@ -209,12 +208,17 @@ def main() -> int:
     # it selects the near-cash min-variance book every year.  Attempt B scores excess over cash.
     wf_rows, wf_logs, wf_runs = [], [], {}
     for basis, cash_arg in (("sharpe_rf0", None), ("sharpe_vs_cash", cash)):
+        trials_started.append(f"walk_forward_{basis}")
         wf = walk_forward_select(runs, ctx.asset_returns, _cost_model(ctx.config, None),
                                  lookback_years=WALK_FORWARD_LOOKBACK_YEARS,
                                  strategy_id=f"walk_forward_{basis}", cash_returns=cash_arg)
         wf_runs[basis] = wf.run
         wf_logs.append(wf.selections.assign(selection_score=basis))
-        table = metrics_table([wf.run] + [r.on_index(wf.run.index) for r in ordered], cash)
+        from regime_shift.research.evaluation import restart_from_cash
+        table = metrics_table(
+            [wf.run] + [restart_from_cash(r, wf.run.index, _cost_model(ctx.config, None)) for r in ordered],
+            cash,
+        )
         wf_rows.append(table.assign(selection_score=basis, evaluation_type="walk_forward_selection"))
     pd.concat(wf_logs).to_csv(out / "walk_forward_selections.csv", index=False)
     wf_table = pd.concat(wf_rows, ignore_index=True)
@@ -291,6 +295,20 @@ def main() -> int:
                                   wf_sel.loc[("sharpe_vs_cash", "walk_forward_sharpe_vs_cash"), "sharpe_vs_cash"])})
     logger.info("Research suite complete: %s", out)
     return 0
+
+
+def main() -> int:
+    args = parse_args()
+    trials_started: list = []
+    try:
+        return run_suite(args, trials_started)
+    except Exception as exc:
+        register_attempt(
+            experiment_id="research_suite", status="failed", n_trials=len(trials_started),
+            dataset_path=args.data_path, error=f"{type(exc).__name__}: {exc}",
+            summary={"trials_started": trials_started},
+        )
+        raise
 
 
 if __name__ == "__main__":

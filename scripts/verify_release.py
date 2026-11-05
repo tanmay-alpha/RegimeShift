@@ -87,31 +87,52 @@ def _check_hygiene() -> None:
 
 
 def _check_research() -> None:
-    """Section 27 — Required research output files present."""
+    """Research outputs exist, are hash-bound to their manifest, and are internally consistent."""
     required_research = [
-        "ablation_summary.csv",
-        "rolling_origin_summary.csv",
-        "subperiod_summary.csv",
-        "bootstrap_confidence_intervals.csv",
-        "bootstrap_benchmark_differences.csv",
-        "hmm_diagnostics.csv",
+        "manifest.json", "ablation_summary.csv", "daily_accounting.csv", "subperiod_summary.csv",
+        "calendar_attribution_summary.csv", "walk_forward_summary.csv", "walk_forward_selections.csv",
+        "bootstrap_paired_differences.csv", "selection_bias.json", "hmm_diagnostics.csv",
     ]
     missing = [f for f in required_research if not (RESEARCH / f).exists()]
     if missing:
         raise SystemExit(
             f"Required research outputs missing (run scripts/run_research_suite.py): {missing}"
         )
+    manifest = json.loads((RESEARCH / "manifest.json").read_text(encoding="utf-8"))
+    if manifest.get("dataset_sha256_canonical") != _sha256(DATA):
+        raise SystemExit("Research manifest dataset hash does not match the canonical dataset.")
+    for name, digest in manifest.get("outputs", {}).items():
+        if _sha256(RESEARCH / name) != digest:
+            raise SystemExit(f"Research output {name} does not match its manifest hash.")
+
+    ablation = pd.read_csv(RESEARCH / "ablation_summary.csv")
+    if ablation["n_obs"].nunique() != 1 or ablation["start"].nunique() != 1 or ablation["end"].nunique() != 1:
+        raise SystemExit("Ablation strategies must share one evaluation index.")
+    for fname in ("subperiod_summary.csv", "calendar_attribution_summary.csv"):
+        table = pd.read_csv(RESEARCH / fname)
+        if table.groupby("window")["n_obs"].nunique().max() != 1:
+            raise SystemExit(f"{fname}: strategies differ in observations within a window.")
+        bench = table[table["strategy"].isin(["static_6040", "equal_weight"])]
+        if (bench["ann_turnover"] <= 0).any() or (bench["cost_drag"] <= 0).any():
+            raise SystemExit(f"{fname}: benchmark rows report zero turnover or cost (accounting regression).")
 
 
 def _check_readme_results(summary: pd.DataFrame) -> None:
-    """README headline table must quote performance_summary.csv net rows exactly."""
+    """Headline rows quote the validated official net metrics."""
     readme = (ROOT / "README.md").read_text(encoding="utf-8")
     net = summary.set_index("Strategy")
-    for label, row_name in (("**RegimeShift**", "RegimeShift Net"), ("Static 60/40", "Static 60/40 Net"), ("Equal Weight", "Equal Weight Net")):
-        r = net.loc[row_name]
-        expected = f"| {label} | {r['CAGR']:.2%} | {r['Sharpe']:.3f} | {r['Maximum Drawdown']:.2%} |"
+    for label, row_name in (
+        ("**RegimeShift**", "RegimeShift Net"),
+        ("Static 60/40", "Static 60/40 Net"),
+        ("Equal Weight", "Equal Weight Net"),
+    ):
+        row = net.loc[row_name]
+        expected = (
+            f"| {label} | {row['CAGR']:.2%} | {row['Sharpe']:.3f} | "
+            f"{row['Maximum Drawdown']:.2%} |"
+        )
         if expected not in readme:
-            raise SystemExit(f"README results row out of sync with performance_summary.csv; expected: {expected}")
+            raise SystemExit(f"README result differs from validated output: {expected}")
 
 
 def main() -> int:

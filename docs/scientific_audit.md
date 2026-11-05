@@ -6,6 +6,25 @@ Baseline revision: `66e9409`. Local baseline: 279 tests passed; release verifica
 
 Historical evidence is preserved in `results/archive/protocol_v2/`, committed as `7482030`. Its files are evidence of the old methodology, not current validated outputs. No raw market data were replaced.
 
+### Why the older README contradicted its cited CSV
+
+Direct inspection of revision `28df753` confirms the reported discrepancy:
+
+| Artifact at `28df753` | Static 60/40 CAGR | Equal-weight CAGR | Observations |
+|---|---:|---:|---:|
+| README headline | 7.20% | 8.95% | Not stated |
+| Research ablation benchmark rows | 7.198% | 8.952% | 3,901 |
+| Cited submission net rows | 6.60% | 8.75% | 3,732 |
+
+The README quoted the research benchmarks' longer calendar while citing the submission
+summary's shorter strategy-aligned horizon. Undefined correlation on the constant-price
+bond leg removed strategy feature dates, whereas benchmark construction retained price
+dates. Subsequent protocol-v2 fixes made those correlations zero, restored the missing
+sessions, moved fills one session later and regenerated the headline table. The current
+canonical source is the validated submission output, not either historical headline.
+PR #3's description also explicitly records the old 3,732-observation horizon; PR #5
+claimed identical research dates despite the unequal ablation CSV above.
+
 ## Confirmed defects and repairs
 
 | Defect | Root cause | Repair and behavioral proof |

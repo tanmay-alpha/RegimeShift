@@ -44,7 +44,7 @@ METRICS: Dict[str, MetricSpec] = {m.key: m for m in [
                "mean(r_net - r_cash) / std(r_net - r_cash, ddof=1) * sqrt(252); r_cash = LIQUIDBEES 'bond' leg"),
     MetricSpec("sortino", "Sortino (rf = 0)", "ratio",
                "mean(r_net) / sqrt(mean(min(r_net, 0)^2)) * sqrt(252); mean over all N days"),
-    MetricSpec("max_drawdown", "Maximum drawdown", "fraction", "max(1 - W_t / max_{s<=t} W_s), W = cumprod(1 + r_net)"),
+    MetricSpec("max_drawdown", "Maximum drawdown", "fraction", "max(1 - W_t / max(1, max_{s<=t} W_s)), W = cumprod(1 + r_net); initial capital W_0=1"),
     MetricSpec("calmar", "Calmar", "ratio", "cagr / max_drawdown"),
     MetricSpec("ann_turnover", "Annualised turnover", "x/yr", "sum(turnover) * 252 / N"),
     MetricSpec("ann_cost", "Annualised cost", "fraction/yr", "sum(transaction_cost) * 252 / N"),

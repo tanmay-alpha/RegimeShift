@@ -167,10 +167,9 @@ def test_walk_forward_selection_uses_only_prior_data_and_charges_switch_cost():
 
 def test_all_variants_share_first_fill_and_index(monkeypatch):
     """Variants start on RegimeShift's first fill, so initial-allocation costs are inside every sample."""
-    from tests.test_causal_execution import _fast_model
-
     from regime_shift.config import RegimeShiftConfig
     from regime_shift.research.strategies import run_core_suite
+    from tests.test_causal_execution import _fast_model
 
     _fast_model(monkeypatch)
     rng = np.random.default_rng(5)

@@ -190,14 +190,24 @@ ABLATION_TARGETS: Dict[str, Callable[[ResearchContext], TargetFn]] = {
 
 
 def run_core_suite(prices: pd.DataFrame, config: RegimeShiftConfig,
-                   variants: Optional[Sequence[str]] = None) -> tuple[Dict[str, StrategyRun], BacktestResult, ResearchContext]:
+                   variants: Optional[Sequence[str]] = None,
+                   on_trial_start: Optional[Callable[[str], None]] = None,
+                   ) -> tuple[Dict[str, StrategyRun], BacktestResult, ResearchContext]:
     """RegimeShift, the frozen ablations and both static benchmarks on one verified index."""
     ctx = build_context(prices, config)
+    def starting(strategy_id: str) -> None:
+        if on_trial_start is not None:
+            on_trial_start(strategy_id)
+
+    starting("regimeshift")
     rs, rs_result = run_regimeshift(ctx)
     runs: Dict[str, StrategyRun] = {"regimeshift": rs}
     for strategy_id in (variants if variants is not None else ABLATION_TARGETS):
+        starting(strategy_id)
         runs[strategy_id] = run_target_strategy(ctx, strategy_id, ABLATION_TARGETS[strategy_id](ctx))
+    starting("static_6040")
     runs["static_6040"] = run_fixed_benchmark(ctx, "static_6040", static_60_40_weights(), rs_result)
+    starting("equal_weight")
     runs["equal_weight"] = run_fixed_benchmark(ctx, "equal_weight", equal_weight_weights(), rs_result)
     require_common_index(runs.values())
     return runs, rs_result, ctx

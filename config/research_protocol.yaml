@@ -1,31 +1,51 @@
-protocol_version: 2
-protocol_changes_v2: "Correctness fixes only, no parameter changes: (1) signal at close t is filled at close t+1 instead of close t; (2) transient unit-error prints (GOLDBEES 2019-12-19/20, ~100x) are masked and forward-filled; (3) correlation with a constant-price leg is 0 instead of NaN, so 2012 dates are no longer dropped; (4) HMM convergence means log-likelihood gain < tol, not hitting n_iter."
-objective: "Evaluate whether regime-conditioned allocation improves risk-adjusted outcomes under causal close-only execution."
-hypothesis: "HMM regime information may improve risk control; it is not assumed to create alpha."
-data_history_disclosure: "The full historical sample was inspected before this protocol. No historical segment is a pristine holdout."
+protocol_version: 3
+objective: "Evaluate whether regime information improves Indian multi-asset portfolio risk after assumed costs."
+hypothesis: "HMM allocation may control risk; alpha or profitability is not assumed."
+data_history_disclosure: "The full historical sample and intermediate v3 results were inspected. Every historical split and model-selection attempt is retrospective; no pristine holdout exists."
 asset_universe:
-  equity: "^NSEI signal and benchmark series; index-level simulation, not a guaranteed executable fill"
-  gold: "GOLDBEES.NS"
-  defensive: "LIQUIDBEES.NS"
+  equity: "^NSEI index; not an executable security"
+  gold: "GOLDBEES.NS vendor adjusted-price proxy"
+  defensive: "LIQUIDBEES.NS vendor adjusted-price cash proxy; distribution completeness unverified"
+data_quality:
+  canonical_csv: "data/submission_market_data.csv"
+  preprocessing: "Spike-and-reversion masking uses up to five future observations. This is ex-post historical repair, not point-in-time data."
+  causality_claim: "Causal model signals and next-close execution conditional on the retrospectively cleaned dataset only."
+  cash_proxy_distribution_window: ["2013-01-01", "2025-09-30"]
+  cash_proxy_window_note: "Vendor distribution-record span observed during audit, not certification of complete total returns."
 execution:
   model: NEXT_CLOSE
-  sequence: "At close t current weights earn t-1-to-t, any target signalled at close t-1 is traded and costs paid, then data through t is fit and a new target is signalled; that target is filled at close t+1 and first earns t+1-to-t+2."
+  sequence: "Holdings earn the return ending t; prior-close target fills and costs are paid at t; new signal uses data through t and fills at t+1, first earning t+1-to-t+2."
+  excluded: "Instrument fill guarantees, volume-constrained capacity, measured spreads and market impact."
 cost_scenarios:
   optimistic: 5
   base: 10
   stressed: 20
-  units: "one-way assumed bps per asset trade; not measured spreads"
-  excluded: "Market impact and capacity are excluded because volume/ADV data is absent."
+  units: "Assumed one-way bps per unit of absolute traded asset weight."
 splits:
   development: ["2010-01-01", "2018-12-31"]
   validation: ["2019-01-01", "2021-12-31"]
   retrospective_evaluation: ["2022-01-01", "2026-12-31"]
-  label: "Retrospective evaluation period; not a pristine holdout because full-sample results were inspected during earlier development."
+  interpretation: "Calendar attribution of continuous online runs; not independent model-selection folds."
+walk_forward_selection:
+  validation_years: 3
+  decision: "Last close before each evaluation year."
+  execution: "First session close of evaluation year; selector starts in cash and pays entry."
+  attempt_A: "Maximum trailing net Sharpe at rf=0; retained despite always selecting near-cash minimum variance."
+  attempt_B: "Maximum trailing Sharpe of net returns minus cash proxy; added retrospectively after inspecting attempt A."
+  claim: "Retrospective test of fixed selection rules; not independent evidence of discovery."
 hmm:
   states: 3
   covariance_type: diag
   restarts: 3
-  selection: "highest training-window log likelihood among restarts whose EM log-likelihood gain fell below tol; all restarts if none did"
-parameter_policy: "Parameters are frozen from development/validation. No performance-driven changes using retrospective results."
-benchmarks: ["Static 60/40", "Equal Weight"]
-future_lockbox: "Data after the committed dataset end date; evaluate only frozen, versioned configuration without parameter changes."
+  selection: "Highest finite training likelihood among tolerance-converged restarts, finite-likelihood fallback disclosed."
+  probabilities: "Filtered latent-state posterior at signal closes; not calibrated probabilities of future crashes."
+statistics:
+  annualization: 252
+  sortino: "Mean excess return / sqrt(mean(min(excess,0)^2)) * sqrt(252), denominator over all dates."
+  drawdown: "Running wealth peak includes initial capital 1.0."
+  bootstrap: "Paired moving blocks 10/21/63 days, 2000 draws, seed 42; observation-centred two-sided tests, Holm family adjustment."
+  dsr: "IID/non-normality approximation conditional on supplied correlated trial set; historical development trial count incomplete."
+  cscv: "Fixed-trial selection-rank diagnostic; never a substitute for chronological validation."
+parameter_policy: "No performance-driven tuning presented as unseen evaluation. Every attempt and negative result is retained."
+future_evaluation: "Freeze source/config/training policy and dataset prefix before ingesting later local observations; post-release is not automatically prospective. No live trading."
+historical_evidence: "results/archive/protocol_v2; original code and releases remain in git history."

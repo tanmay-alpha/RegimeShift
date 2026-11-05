@@ -8,7 +8,10 @@ on:
 
 jobs:
   test:
-    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -16,5 +19,12 @@ jobs:
           python-version: '3.11'
       - run: pip install -e ".[dev]"
       - run: python -m compileall src
+      - name: Lint research laboratory
+        run: >-
+          ruff check src/regime_shift/research src/regime_shift/cli.py research_app.py
+          scripts/run_research_suite.py scripts/run_regime_intelligence.py
+          scripts/run_risk_lab.py scripts/forward_evaluation.py
+      - name: Build wheel
+        run: pip wheel . --no-deps --wheel-dir dist
       - run: python -m pytest -q
       - run: python scripts/verify_release.py

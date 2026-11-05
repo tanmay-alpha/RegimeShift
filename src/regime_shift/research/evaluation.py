@@ -101,6 +101,30 @@ class StrategyRun:
         )
 
 
+def restart_from_cash(run: StrategyRun, index: pd.DatetimeIndex, cost_model) -> StrategyRun:
+    """Restart a causal shadow strategy at the first close, paying entry from cash.
+
+    The first close's return is zero; its post-trade weights become the held book.
+    Later closes replicate the shadow strategy. Use for fair cold-start comparisons,
+    not calendar attribution, where inherited holdings must remain unchanged.
+    """
+    sliced = run.on_index(index)
+    if sliced.weights is None:
+        raise ValueError("Post-trade weights are required to restart from cash.")
+    gross, net, costs, turnover = (
+        getattr(sliced, name).copy() for name in ("gross", "net", "costs", "turnover")
+    )
+    target = sliced.weights.iloc[0].to_numpy(dtype=float)
+    costs.iloc[0] = cost_model.cost_for_trade(
+        target, np.zeros(len(target)), list(sliced.weights.columns), initial=True,
+    )
+    gross.iloc[0] = 0.0
+    net.iloc[0] = -costs.iloc[0]
+    turnover.iloc[0] = float(np.abs(target).sum())
+    return StrategyRun(sliced.strategy_id, gross, net, costs, turnover,
+                       weights=sliced.weights, info={**sliced.info, "initial_book": "cash"})
+
+
 def require_common_index(runs: Iterable[StrategyRun]) -> pd.DatetimeIndex:
     """Return the shared index of ``runs`` or raise :class:`MisalignedSamplesError`."""
     runs = list(runs)
