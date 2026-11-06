@@ -356,7 +356,12 @@ def inspect_experiment(output_dir: str | Path) -> dict:
 
 
 def list_experiments(results_dir: str | Path = DEFAULT_RESULTS) -> list[Path]:
-    return sorted((p.parent for p in Path(results_dir).glob("*/manifest.json")), reverse=True)
+    """Discover compatible workflow reports, retaining both completed and failed attempts."""
+    return sorted(
+        (path.parent for path in Path(results_dir).glob("*/manifest.json")
+         if inspect_experiment(path.parent).get("workflow_schema_version") == SCHEMA_VERSION),
+        reverse=True,
+    )
 
 
 def load_table(output_dir: str | Path, name: str, strategy: str | None = None) -> pd.DataFrame:
