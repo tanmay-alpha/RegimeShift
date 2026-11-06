@@ -273,3 +273,16 @@ def test_explanations_use_executed_signal_not_new_unfilled_regime(research_case,
     assert explanations.loc[case.dates[240], "regime_for_held_target"] == "Bear"
     assert pd.Timestamp(explanations.loc[case.dates[240], "signal_date_for_held_target"]) == case.dates[239]
     assert "equity <=.40" in explanations.loc[case.dates[240], "rule_explanation"]
+
+
+def test_inspector_discovers_only_compatible_workflow_artifacts(tmp_path):
+    for name, manifest in {
+        "completed": {"workflow_schema_version": 1, "status": "completed"},
+        "failed": {"workflow_schema_version": 1, "status": "failed"},
+        "risk_lab": {"experiment_id": "risk_lab_v1", "status": "completed"},
+        "future_schema": {"workflow_schema_version": 2, "status": "completed"},
+    }.items():
+        directory = tmp_path / name
+        directory.mkdir()
+        (directory / "manifest.json").write_text(json.dumps(manifest), encoding="utf-8")
+    assert {path.name for path in list_experiments(tmp_path)} == {"completed", "failed"}

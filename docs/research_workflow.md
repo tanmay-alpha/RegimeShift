@@ -88,6 +88,10 @@ python -m regime_shift.cli export results/experiments/EXPERIMENT_ID --output rep
 accepts `--results-dir`. Run output identifies the versioned directory. A failed
 attempt exits with status 1 and identifies its saved failure directory.
 `inspect` and `export` read existing artifacts and never fit a model.
+The workflow inspector discovers only manifests with its supported
+`workflow_schema_version`, retaining successful and failed workflow attempts.
+Specialized risk-lab and regime-intelligence outputs use their own report schemas;
+they are not offered as incompatible choices in the workflow dashboard.
 
 Python callers use the same functions:
 
